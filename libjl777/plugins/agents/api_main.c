@@ -5,7 +5,7 @@
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 #include <stdint.h>
-#include "ccgi.h"
+#include "../ccgi/ccgi.h"
 #include "nn.h"
 #include "includes/cJSON.h"
 #include "pair.h"
