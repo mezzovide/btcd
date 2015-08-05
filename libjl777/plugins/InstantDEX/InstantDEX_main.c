@@ -223,7 +223,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         else if ( SUPERNET.iamrelay <= 1 )
         {
             retstr = InstantDEX_parser(forwarder,sender,valid,jsonstr,json);
-//printf("InstantDEX_parser return.(%s)\n",retstr);
+printf("InstantDEX_parser return.(%s)\n",retstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
         //else sprintf(retbuf,"{\"error\":\"method %s not found\"}",methodstr);
         //portable_mutex_unlock(&plugin->mutex);

@@ -62,6 +62,13 @@ void *issue_cgicall(void *_ptr)
     if ( plugin[0] == 0 )
         copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"plugin"));
     copy_cJSON(method,cJSON_GetObjectItem(ptr->json,"method"));
+    if ( strcmp(plugin,"InstantDEX") == 0 )
+    {
+        char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origargstr,cJSON *origargjson);
+        if ( (str= InstantDEX_parser(SUPERNET.NXTADDR,SUPERNET.NXTADDR,1,ptr->jsonstr,ptr->json)) != 0 )
+            printf("InstantDEX returned.(%s)\n",str);
+        return(str);
+    }
     timeout = get_API_int(cJSON_GetObjectItem(ptr->json,"timeout"),SUPERNET.PLUGINTIMEOUT);
     broadcaststr = cJSON_str(cJSON_GetObjectItem(ptr->json,"broadcast"));
     fprintf(stderr,"sock.%d (%s) API RECV.(%s)\n",ptr->sock,broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
