@@ -15,9 +15,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include "includes/cJSON.h"
-#include "sophia/kv777.c"
-#include "utils/system777.c"
+#include "../includes/cJSON.h"
+#include "../KV/kv777.c"
+#include "../common/system777.c"
 
 #endif
 #else

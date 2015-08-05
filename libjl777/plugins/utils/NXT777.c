@@ -17,7 +17,7 @@
 #include "../uthash.h"
 #include "../utils/bits777.c"
 #include "../utils/utils777.c"
-#include "../utils/system777.c"
+#include "../common/system777.c"
 #include "../coins/coins777.c"
 
 #include "tweetnacl.h"
@@ -35,9 +35,12 @@ int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 #define MAX_NXTADDR_LEN MAX_NXT_STRLEN
 
 #define GENESISACCT "1739068987193023818"  // NXT-MRCC-2YLS-8M54-3CMAJ
-#define GENESISBLOCK "2680262203532249785"
-#define NXT_GENESISTIME 1385294400
+#define GENESISPUBKEYSTR "1259ec21d31a30898d7cd1609f80d9668b4778e3d97e941044b39f0c44d2e51b"
+#define GENESISPRIVKEYSTR "1259ec21d31a30898d7cd1609f80d9668b4778e3d97e941044b39f0c44d2e51b"
 #define GENESIS_SECRET "It was a bright cold day in April, and the clocks were striking thirteen."
+#define GENESISBLOCK "2680262203532249785"
+
+#define NXT_GENESISTIME 1385294400
 
 #define DEFAULT_NXT_DEADLINE 720
 #define issue_curl(cmdstr) bitcoind_RPC(0,"curl",cmdstr,0,0,0)
@@ -190,6 +193,8 @@ int32_t update_msig_info(struct multisig_addr *msig,int32_t syncflag,char *sende
 struct NXT_acct *get_nxt64bits(int32_t *createdp,uint64_t nxt64bits);
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecret);
 
+extern bits256 GENESIS_PUBKEY,GENESIS_PRIVKEY;
+
 #endif
 #else
 #ifndef crypto777_NXT777_c
@@ -207,6 +212,8 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecr
 #else
 #include "curve25519-donna.c"
 #endif
+
+bits256 GENESIS_PUBKEY,GENESIS_PRIVKEY;
 
 bits256 curve25519(bits256 mysecret,bits256 theirpublic)
 {
@@ -1004,79 +1011,6 @@ uint64_t calc_circulation(int32_t minconfirms,struct mgw777 *mgw,uint32_t height
     return(circulation * mgw->ap_mult);
 }
 
-int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra)
-{
-    uint64_t revkey[2]; void *obj;
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-    {
-        revkey[0] = assetidbits, revkey[1] = ind;
-        //printf("set ind.%d <- txid.%llu\n",ind,(long long)extra->txidbits);
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && sp_set(obj,"value",extra,sizeof(*extra)) == 0 )
-            return(sp_set(DB_NXTtxids->db,obj));
-        else
-        {
-            sp_destroy(obj);
-            printf("error NXT_add_assettxid rev %llu ind.%d\n",(long long)extra->txidbits,ind);
-        }
-    }
-    return(-1);
-}
-
-int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t ind)
-{
-    void *obj,*result,*value; uint64_t revkey[2]; int32_t len = 0;
-    memset(extra,0,sizeof(*extra));
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-    {
-        revkey[0] = assetidbits, revkey[1] = ind;
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
-        {
-            value = sp_get(result,"value",&len);
-            if ( len == sizeof(*extra) )
-                memcpy(extra,value,len);
-            else printf("NXT_revassettxid mismatched len.%d vs %ld\n",len,sizeof(*extra));
-            sp_destroy(result);
-        } //else sp_destroy(obj);
-    }
-    return(len);
-}
-
-int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int32_t valuelen,uint32_t ind,struct extra_info *extra)
-{
-    void *obj;
-    if ( value != 0 )
-    {
-        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-        {
-            extra->assetidbits = assetidbits, extra->txidbits = txidbits, extra->ind = ind;
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",value,valuelen) == 0 )
-                sp_set(DB_NXTtxids->db,obj);
-            else
-            {
-                sp_destroy(obj);
-                printf("error NXT_add_assettxid %llu ind.%d\n",(long long)txidbits,ind);
-            }
-        }
-        NXT_set_revassettxid(assetidbits,ind,extra);
-    }
-    return(0);
-}
-
-char *NXT_assettxid(uint64_t assettxid)
-{
-    void *obj,*result,*value; int32_t len; char *retstr = 0;
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-    {
-        if ( sp_set(obj,"key",&assettxid,sizeof(assettxid)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
-        {
-            value = sp_get(result,"value",&len);
-            retstr = clonestr(value);
-            sp_destroy(result);
-        }// else sp_destroy(obj);
-    }
-    return(retstr);
-}
-
 uint64_t _set_NXT_sender(char *sender,cJSON *txobj)
 {
     cJSON *senderobj;
@@ -1221,186 +1155,6 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
     return(coinv);
 }
 
-char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
-{
-    void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; struct extra_info extra; char *txidjsonstr = 0; cJSON *json,*txobj;
-    printf("NXT_txidstr.(%s) write.%d ind.%d\n",txid,writeflag,ind);
-    if ( txid[0] != 0 && (txidjsonstr= _issue_getTransaction(txid)) != 0 )
-    {
-        flag = writeflag;
-        if ( (json= cJSON_Parse(txidjsonstr)) != 0 )
-        {
-            free(txidjsonstr);
-            cJSON_DeleteItemFromObject(json,"requestProcessingTime");
-            cJSON_DeleteItemFromObject(json,"confirmations");
-            cJSON_DeleteItemFromObject(json,"transactionIndex");
-            txidjsonstr = cJSON_Print(json);
-            free_json(json);
-        } else printf("PARSE ERROR.(%s)\n",txidjsonstr);
-        _stripwhite(txidjsonstr,' ');
-        slen = (int32_t)strlen(txidjsonstr)+1;
-        txidbits = calc_nxt64bits(txid);
-        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-        {
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
-            {
-                value = sp_get(result,"value",&len);
-                if ( value != 0 )
-                {
-                    if ( len != slen || strcmp(value,txidjsonstr) != 0 )
-                        printf("mismatched NXT_txidstr ind.%d for %llu: lens %d vs %d (%s) vs (%s)\n",ind,(long long)txidbits,slen,len,txidjsonstr,value);
-                    else flag = 0;
-                }
-                sp_destroy(result);
-            } //else sp_destroy(obj);
-        }
-        if ( flag != 0 )
-        {
-            int32_t mgw_markunspent(char *txidstr,int32_t vout,int32_t status);
-            NXT_revassettxid(&extra,mgw->assetidbits,ind);
-            savedbits = extra.txidbits;
-            memset(&extra,0,sizeof(extra));
-            if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
-            {
-                extra.vout = process_assettransfer(&extra.height,&extra.senderbits,&extra.receiverbits,&extra.amount,&extra.flags,extra.coindata,0,mgw,txobj);
-                free_json(txobj);
-                if ( extra.vout >= 0 )
-                {
-                    mgw_markunspent(extra.coindata,extra.vout,MGW_DEPOSITDONE);
-                    printf("MARK DEPOSITDONE %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
-                }
-            } else extra.vout = -1;
-            printf("for %llu.%d oldval.%llu -> newval flags.%d %llu (%s v%d %.8f)\n",(long long)mgw->assetidbits,ind,(long long)savedbits,extra.flags,(long long)txidbits,extra.coindata,extra.vout,dstr(extra.amount));
-            NXT_add_assettxid(mgw->assetidbits,txidbits,txidjsonstr,slen,ind,&extra);
-        }
-    }
-    return(txidjsonstr);
-}
-
-int32_t NXT_assettransfers(struct mgw777 *mgw,uint64_t *txids,long max,int32_t firstindex,int32_t lastindex)
-{
-    char cmd[1024],txid[64],*jsonstr,*txidstr; cJSON *transfers,*array;
-    int32_t i,n = 0; uint64_t txidbits,revkey[2];
-    sprintf(cmd,"requestType=getAssetTransfers&asset=%s",mgw->assetidstr);
-    if ( firstindex >= 0 && lastindex >= firstindex )
-        sprintf(cmd + strlen(cmd),"&firstIndex=%u&lastIndex=%u",firstindex,lastindex);
-    revkey[0] = mgw->assetidbits;
-    //printf("issue.(%s) max.%ld\n",cmd,max);
-    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
-    {
-        //printf("(%s) -> (%s)\n",cmd,jsonstr);
-        if ( (transfers = cJSON_Parse(jsonstr)) != 0 )
-        {
-            if ( (array= cJSON_GetObjectItem(transfers,"transfers")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-            {
-                for (i=0; i<n; i++)
-                {
-                    copy_cJSON(txid,cJSON_GetObjectItem(cJSON_GetArrayItem(array,i),"assetTransfer"));
-                    if ( txid[0] != 0 && (txidbits= calc_nxt64bits(txid)) != 0 )
-                    {
-                        if ( i < max )
-                            txids[i] = txidbits;
-                        if ( firstindex < 0 && lastindex <= firstindex )
-                        {
-                            if ( (txidstr= NXT_txidstr(mgw,txid,1,n - i)) != 0 )
-                                free(txidstr);
-                        }
-                    }
-                }
-            } free_json(transfers);
-        } free(jsonstr);
-    }
-    //if ( firstindex < 0 || lastindex <= firstindex )
-    //    printf("assetid.(%s) -> %d entries\n",mgw->assetidstr,n);
-    return(n);
-}
-
-int32_t NXT_mark_withdrawdone(struct mgw777 *mgw,uint64_t redeemtxid)
-{
-    int32_t i,count; struct extra_info extra;
-    if ( NXT_revassettxid(&extra,mgw->assetidbits,0) == sizeof(extra) )
-    {
-        //printf("got extra ind.%d\n",extra.ind);
-        count = extra.ind;
-        for (i=1; i<=count; i++)
-        {
-            NXT_revassettxid(&extra,mgw->assetidbits,i);
-            if ( extra.txidbits == redeemtxid != 0 && (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
-            {
-                extra.flags |= MGW_WITHDRAWDONE;
-                printf("NXT_mark_withdrawdone %s.%llu %.8f\n",mgw->coinstr,(long long)redeemtxid,dstr(extra.amount));
-                NXT_set_revassettxid(mgw->assetidbits,i,&extra);
-                return(i);
-            }
-            //fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
-        }
-    }
-    return(-1);
-}
-
-int32_t update_NXT_assettransfers(struct mgw777 *mgw)
-{
-    int32_t len,verifyflag = 0;
-    uint64_t txids[100],mostrecent; int32_t i,count = 0; char txidstr[128],nxt_txid[64],*txidjsonstr; struct extra_info extra;
-    mgw->assetidbits = calc_nxt64bits(mgw->assetidstr);
-    mgw->withdrawsum = mgw->numwithdraws = 0;
-    if ( (len= NXT_revassettxid(&extra,mgw->assetidbits,0)) == sizeof(extra) )
-    {
-        //printf("got extra ind.%d\n",extra.ind);
-        count = extra.ind;
-        for (i=1; i<=count; i++)
-        {
-            NXT_revassettxid(&extra,mgw->assetidbits,i);
-            if ( (extra.flags & MGW_PENDINGREDEEM) != 0 && (extra.flags & MGW_WITHDRAWDONE) == 0 )
-            {
-                int32_t mgw_update_redeem(struct mgw777 *mgw,struct extra_info *extra);
-                expand_nxt64bits(nxt_txid,extra.txidbits);
-                if ( in_jsonarray(mgw->limbo,nxt_txid) != 0 || mgw_update_redeem(mgw,&extra) != 0 )
-                {
-                    extra.flags |= MGW_WITHDRAWDONE;
-                    NXT_set_revassettxid(mgw->assetidbits,i,&extra);
-                }
-            }
-            //fprintf(stderr,"%llu.%d ",(long long)extra.txidbits,extra.flags);
-        }
-        //fprintf(stderr,"sequential tx.%d\n",count);
-        NXT_revassettxid(&extra,mgw->assetidbits,count);
-        mostrecent = extra.txidbits;
-        //NXT_revassettxid(&extra,mgw->assetidbits,count+1);
-        //if ( extra.txidbits != 0 )
-        //    mostrecent = extra.txidbits;
-        //printf("mostrecent.%llu count.%d\n",(long long)mostrecent,count);
-        for (i=0; i<sizeof(txids)/sizeof(*txids); i++)
-        {
-            if ( NXT_assettransfers(mgw,&txids[i],1,i,i) == 1 && txids[i] == mostrecent )
-            {
-                if ( i != 0 )
-                    printf("asset.(%s) count.%d i.%d mostrecent.%llu vs %llu\n",mgw->assetidstr,count,i,(long long)mostrecent,(long long)txids[i]);
-                while ( i-- > 0 )
-                {
-                    expand_nxt64bits(txidstr,txids[i]);
-                    if ( (txidjsonstr= NXT_txidstr(mgw,txidstr,1,++count)) != 0 )
-                        free(txidjsonstr);
-                }
-                break;
-            }
-        }
-        if ( i == 100 )
-            count = 0;
-    } else printf("cant get count len.%d\n",len);
-    if ( count == 0 )
-        count = NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
-    if ( NXT_revassettxid(&extra,mgw->assetidbits,0) != sizeof(extra) || extra.ind != count )
-    {
-        memset(&extra,0,sizeof(extra));
-        extra.ind = count;
-        NXT_set_revassettxid(mgw->assetidbits,0,&extra);
-    }
-    if ( verifyflag != 0 )
-        NXT_assettransfers(mgw,txids,sizeof(txids)/sizeof(*txids) - 1,-1,-1);
-    return(count);
-}
-
 uint64_t calc_txid(unsigned char *buf,int32_t len)
 {
     uint64_t txid,hash[4];
@@ -1470,8 +1224,11 @@ uint64_t RS_decode(char *rs)
 int32_t RS_encode(char *rsaddr,uint64_t id)
 {
     int32_t a,code[] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    int32_t inp[32],out[32],i,pos = 0,len = 0;
+    int32_t inp[32],out[32],i,j,fb,pos = 0,len = 0;
     char acc[64];
+    memset(inp,0,sizeof(inp));
+    memset(out,0,sizeof(out));
+    memset(acc,0,sizeof(acc));
     sprintf(acc,"%lld",(long long)id);
     for (a=0; *(acc+a) != '\0'; a++)
         len ++;
@@ -1507,7 +1264,7 @@ int32_t RS_encode(char *rsaddr,uint64_t id)
     int32_t p[] = {0, 0, 0, 0};
     for (i=12; i>=0; i--)
     {
-        int32_t fb = code[i] ^ p[3];
+        fb = code[i] ^ p[3];
         p[3] = p[2] ^ gmult(30, fb);
         p[2] = p[1] ^ gmult(6, fb);
         p[1] = p[0] ^ gmult(9, fb);
@@ -1518,7 +1275,7 @@ int32_t RS_encode(char *rsaddr,uint64_t id)
     code[15] = p[2];
     code[16] = p[3];
     strcpy(rsaddr,"NXT-");
-    int32_t j=4;
+    j=4;
     for (i=0; i<17; i++)
     {
         rsaddr[j++] = alphabet[code[cwmap[i]]];
@@ -1569,9 +1326,12 @@ void set_NXTpubkey(char *NXTpubkey,char *NXTacct)
         if ( memcmp(&pubkey,zerokey,sizeof(stats->pubkey)) != 0 )
             memcpy(stats->pubkey,&pubkey,sizeof(stats->pubkey));
     } else memcpy(&pubkey,stats->pubkey,sizeof(pubkey));
+#ifdef INSIDE_MGW
     if ( DB_NXTaccts != 0 )
         db777_add(0,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
-    else kv777_write(SUPERNET.NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
+    else
+#endif
+        kv777_write(SUPERNET.NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
     if ( NXTpubkey != 0 )
     {
         int32_t init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
@@ -1583,17 +1343,23 @@ struct NXT_acct *get_nxt64bits(int32_t *createdp,uint64_t nxt64bits)
 {
     static struct NXT_acct N,*np;
     int32_t len = sizeof(N);
+#ifdef INSIDE_MGW
     if ( DB_NXTaccts != 0 )
         np = db777_get(&N,&len,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits));
-    else np = kv777_read(SUPERNET.NXTaccts,&nxt64bits,sizeof(nxt64bits),&N,&len);
+    else
+#endif
+        np = kv777_read(SUPERNET.NXTaccts,&nxt64bits,sizeof(nxt64bits),&N,&len,0);
     if ( np == 0 )
     {
         np = calloc(1,sizeof(*np));
         np->nxt64bits = nxt64bits, expand_nxt64bits(np->NXTaddr,nxt64bits);
+#ifdef INSIDE_MGW
         if ( DB_NXTaccts != 0 )
             db777_add(1,0,DB_NXTaccts,&nxt64bits,sizeof(nxt64bits),np,sizeof(*np));
-        else kv777_write(SUPERNET.NXTaccts,&nxt64bits,sizeof(nxt64bits),&N,sizeof(*np));
-       *createdp = 1;
+        else
+#endif
+            kv777_write(SUPERNET.NXTaccts,&nxt64bits,sizeof(nxt64bits),&N,sizeof(*np));
+        *createdp = 1;
     } else *createdp = 0;
     return(np);
 }
@@ -1603,6 +1369,112 @@ struct NXT_acct *get_NXTacct(int32_t *createdp,char *NXTaddr)
     return(get_nxt64bits(createdp,calc_nxt64bits(NXTaddr)));
 }
 
+void teststuff()
+{
+    if ( 0 )
+    {
+        int i,j; bits256 seed,privkeys[12],pubkeys[12],shared[8][8],shared2[8][8],basepoint,tmp3,tmp,BAc,BCa,CAb,CBa,ACb,ABc,a,b,c,A,B,C,Ca,Cb,Ba,Ab,Ac,Bc,tmp4,D,E,F,G,H,d,e,f,g,h,De,Ed,tmp2,X,Y,x,y,Z,Q,z,q;
+        bits256 curve25519(bits256,bits256);
+        memset(&basepoint,0,sizeof(basepoint));
+        basepoint.bytes[0] = 9;
+        for (i=0; i<10; i++)
+        {
+            randombytes(seed.bytes,sizeof(seed));
+            calc_sha256(0,privkeys[i].bytes,seed.bytes,sizeof(seed));
+            privkeys[i].bytes[0] &= 248, privkeys[i].bytes[31] &= 127, privkeys[i].bytes[31] |= 64;
+            curve25519_donna(pubkeys[i].bytes,privkeys[i].bytes,basepoint.bytes);
+        }
+        A = privkeys[0], a = pubkeys[0];
+        B = privkeys[1], b = pubkeys[1];
+        C = privkeys[2], c = pubkeys[2];
+        D = privkeys[3], d = pubkeys[3];
+        E = privkeys[4], e = pubkeys[4];
+        F = privkeys[5], f = pubkeys[5];
+        G = privkeys[6], g = pubkeys[6];
+        H = privkeys[7], h = pubkeys[7];
+        X = privkeys[8], x = pubkeys[8];
+        Y = privkeys[9], y = pubkeys[9];
+        Z = privkeys[10], z = pubkeys[10];
+        Q = privkeys[11], q = pubkeys[11];
+        
+        Ab = curve25519(A,b);
+        Ac = curve25519(A,c);
+        Ca = curve25519(C,a);
+        Cb = curve25519(C,b);
+        Bc = curve25519(B,c);
+        Ba = curve25519(B,a);
+        
+        ACb = curve25519(A,Cb);
+        ABc = curve25519(A,Bc);
+        BAc = curve25519(B,Ac);
+        BCa = curve25519(B,Ca);
+        CAb = curve25519(C,Ab);
+        CBa = curve25519(C,Ba);
+        
+        De = curve25519(D,e);
+        Ed = curve25519(E,d);
+        //tmp = curve25519(Ab,De);
+        //tmp2 = curve25519(Ba,De);
+        //tmp = curve25519(ABc,De);
+        //tmp2 = curve25519(BCa,De);
+        //tmp = curve25519(TRIO(A,B,c),TRIO(H,G,f));
+        //tmp2 = curve25519(TRIO(B,A,c),TRIO(G,H,f));
+#define DUO(X,y) curve25519(X,y)
+#define TRIO(X,Y,z) curve25519(X,DUO(Y,z))
+#define SIX(A,B,C,H,G,a,c,f) curve25519(TRIO(A,B,c),TRIO(H,G,f))
+        tmp = curve25519(curve25519(ABc,De),DUO(G,f));
+        tmp2 = curve25519(curve25519(BCa,De),DUO(G,f));
+        
+        tmp = curve25519(curve25519(curve25519(ABc,De),DUO(G,f)),DUO(X,y));
+        tmp2 = curve25519(curve25519(curve25519(BCa,De),DUO(G,f)),DUO(X,y));
+        
+        tmp = curve25519(curve25519(curve25519(curve25519(curve25519(A,curve25519(B,c)),curve25519(D,e)),curve25519(G,f)),curve25519(X,y)),curve25519(Z,q));
+        tmp2 = curve25519(curve25519(curve25519(curve25519(curve25519(B,curve25519(A,c)),curve25519(D,e)),curve25519(G,f)),curve25519(X,y)),curve25519(Z,q));
+        
+        tmp3 = curve25519(curve25519(curve25519(curve25519(curve25519(A,curve25519(B,c)),curve25519(G,f)),curve25519(D,e)),curve25519(X,y)),curve25519(Z,q));
+        tmp4 = curve25519(curve25519(curve25519(curve25519(curve25519(B,curve25519(A,c)),curve25519(G,f)),curve25519(D,e)),curve25519(X,y)),curve25519(Z,q));
+        //tmp2 = curve25519(curve25519(curve25519(curve25519(BCa,De),DUO(G,f)),DUO(X,y)),DUO(Z,q));
+        printf("Ab.%08x Ac.%08x Ba.%08x Bc.%08x Ca.%08x Cb.%08x | ACb.%08x ABc.%08x BAc.%08x BCa.%08x | %08x %08x %08x %08x\n",(uint32_t)Ab.txid,(uint32_t)Ac.txid,(uint32_t)Ba.txid,(uint32_t)Bc.txid,(uint32_t)Ca.txid,(uint32_t)Cb.txid,(uint32_t)ACb.txid,(uint32_t)ABc.txid,(uint32_t)BAc.txid,(uint32_t)BCa.txid,(uint32_t)tmp.txid,(uint32_t)tmp2.txid,(uint32_t)tmp3.txid,(uint32_t)tmp.txid);
+        getchar();
+        for (i=0; i<8; i++)
+        {
+            tmp = privkeys[i];
+            memset(tmp4.bytes,0,sizeof(tmp4));
+            for (j=0; j<8; j++)
+            {
+                if ( i != j )
+                {
+                    curve25519_donna(shared[i][j].bytes,privkeys[i].bytes,pubkeys[j].bytes);
+                    //curve25519_donna(tmp3.bytes,privkeys[i].bytes,pubkeys[(j+1)%8].bytes);
+                    printf("%08x ",(uint32_t)shared[i][j].txid);
+                    //tmp4.txid ^= tmp2.txid;
+                    //curve25519_donna(tmp4.bytes,tmp2.bytes,tmp3.bytes);
+                    //tmp = tmp2;
+                }
+            }
+            printf("pubkey.%llx privkey.%llx\n",(long long)pubkeys[i].txid,(long long)privkeys[i].txid);
+        }
+        printf("\n");
+        for (i=0; i<8; i++)
+        {
+            tmp = privkeys[i];
+            memset(tmp4.bytes,0,sizeof(tmp4));
+            for (j=0; j<8; j++)
+            {
+                if ( i != j )
+                {
+                    curve25519_donna(shared2[i][j].bytes,shared[i][j].bytes,shared[i][(j+1)%8].bytes);
+                    printf("%08x ",(uint32_t)shared2[i][j].txid);
+                }
+            }
+            printf("pubkey.%llx privkey.%llx\n",(long long)pubkeys[i].txid,(long long)privkeys[i].txid);
+        }
+        getchar();
+        for (j=0; j<8; j++)
+        {
+        }
+    }
+}
 #endif
 #endif
 

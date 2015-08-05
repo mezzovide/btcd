@@ -33,7 +33,7 @@
 #include <memory.h>
 #include <sys/time.h>
 
-#define SATOSHIDEN 100000000L
+#define SATOSHIDEN ((uint64_t)100000000L)
 #define dstr(x) ((double)(x) / SATOSHIDEN)
 #define MAX_JSON_FIELD 2048 // on the big side
 
@@ -158,8 +158,30 @@ extern "C"
 #define cJSON_SetIntValue(object,val)			((object)?(object)->valueint=(object)->valuedouble=(val):(val))
     
     char *cJSON_str(cJSON *json);
- 
-void copy_cJSON(char *dest,cJSON *obj);
+    char *jstr(cJSON *json,char *field);
+    char *jprint(cJSON *json,int32_t freeflag);
+    int32_t jint(cJSON *json,char *field);
+    uint32_t juint(cJSON *json,char *field);
+    char *jstri(cJSON *json,int32_t i);
+    int32_t jinti(cJSON *json,int32_t i);
+    uint32_t juinti(cJSON *json,int32_t i);
+    uint64_t j64bitsi(cJSON *json,int32_t i);
+    double jdoublei(cJSON *json,int32_t i);
+    double jdouble(cJSON *json,char *field);
+    cJSON *jobj(cJSON *json,char *field);
+    cJSON *jarray(int32_t *nump,cJSON *json,char *field);
+    cJSON *jitem(cJSON *array,int32_t i);
+    uint64_t j64bits(cJSON *json,char *field);
+    void jadd(cJSON *json,char *field,cJSON *item);
+    void jaddstr(cJSON *json,char *field,char *str);
+    void jaddnum(cJSON *json,char *field,double num);
+    void jadd64bits(cJSON *json,char *field,uint64_t nxt64bits);
+    void jaddi(cJSON *json,cJSON *item);
+    void jaddistr(cJSON *json,char *str);
+    void jaddinum(cJSON *json,double num);
+    void jaddi64bits(cJSON *json,uint64_t nxt64bits);
+
+    void copy_cJSON(char *dest,cJSON *obj);
     cJSON *gen_list_json(char **list);
     int32_t extract_cJSON_str(char *dest,int32_t max,cJSON *json,char *field);
 

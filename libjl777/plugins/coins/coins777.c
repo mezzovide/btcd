@@ -7,6 +7,7 @@
 //
 // code goes so fast, might need to change /proc/sys/net/ipv4/tcp_tw_recycle to have a 1 in it
 //
+//#define INSIDE_MGW
 
 #ifdef DEFINES_ONLY
 #ifndef crypto777_coins777_h
@@ -15,12 +16,15 @@
 #include "../uthash.h"
 #include "../cJSON.h"
 #include "../utils/huffstream.c"
-#include "../utils/system777.c"
-#include "../sophia/kv777.c"
-#include "../sophia/db777.c"
+#include "../common/system777.c"
+#include "../KV/kv777.c"
 #include "../utils/files777.c"
 #include "../utils/utils777.c"
-#include "gen1pub.c"
+#include "../utils/bits777.c"
+#include "gen1.c"
+#ifdef INSIDE_MGW
+#include "../mgw/db777.c"
+#endif
 
 #define OP_RETURN_OPCODE 0x6a
 #define RAMCHAIN_PTRSBUNDLE 4096
@@ -58,13 +62,6 @@ struct cointx_info
     uint32_t nlocktime;
     // end bitcoin txcalc_nxt64bits
     char signedtx[];
-};
-
-struct sha256_state
-{
-    uint64_t length;
-    uint32_t state[8],curlen;
-    uint8_t buf[64];
 };
 
 struct coin777_state
@@ -176,8 +173,6 @@ struct coin777 *coin777_find(char *coinstr,int32_t autocreate);
 int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *userpass,uint32_t blocknum);
 void rawblock_patch(struct rawblock *raw);
 
-void update_sha256(unsigned char hash[256 >> 3],struct sha256_state *state,unsigned char *src,int32_t len);
-struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize);
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
 void coin777_disprawblock(struct rawblock *raw);
 
@@ -210,6 +205,10 @@ int32_t coin777_RWaddrtx(int32_t writeflag,struct coin777 *coin,uint32_t addrind
 int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info *extra);
 int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t ind);
 int32_t NXT_mark_withdrawdone(struct mgw777 *mgw,uint64_t redeemtxid);
+
+#ifdef INSIDE_MGW
+struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize);
+#endif
 
 #endif
 #else
@@ -334,6 +333,7 @@ int32_t parse_block(void *state,uint64_t *creditsp,uint64_t *debitsp,uint32_t *t
     return(numtx);
 }
 
+#ifdef INSIDE_MGW
 // coin777 DB funcs
 void *coin777_getDB(void *dest,int32_t *lenp,void *transactions,struct db777 *DB,void *key,int32_t keylen)
 {
@@ -1308,7 +1308,7 @@ uint64_t coin777_ledgerhash(char *ledgerhash,struct coin777_hashes *H)
     bits256 hashbits;
     if ( H != 0 )
     {
-        calc_sha256(0,hashbits.bytes,(uint8_t *)(void *)((uint64_t)H + sizeof(H->ledgerhash)),sizeof(*H) - sizeof(H->ledgerhash));
+        calc_sha256(0,hashbits.bytes,(uint8_t *)(void *)((uint64_t)H + sizeof(H->ledgerhash)),(int32_t)(sizeof(*H) - sizeof(H->ledgerhash)));
         H->ledgerhash = hashbits.txid;
         if ( ledgerhash != 0 )
             ledgerhash[0] = 0, init_hexbytes_noT(ledgerhash,hashbits.bytes,sizeof(hashbits));
@@ -1862,6 +1862,7 @@ int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,
     } else printf("blocknum.%d > RTblocknum.%d - minconfirms.%d\n",blocknum,RTblocknum,minconfirms);
     return(0);
 }
+#endif
 
 #endif
 #endif

@@ -5,6 +5,8 @@
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 
+#ifdef INSIDE_MGW
+
 #ifdef DEFINES_ONLY
 #ifndef crypto777_ramchain_h
 #define crypto777_ramchain_h
@@ -14,10 +16,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include "../includes/cJSON.h"
-#include "../utils/system777.c"
+#include "../common/system777.c"
 #include "../coins/coins777.c"
 //#include "pass1.c"
 //#include "ledger777.c"
+#define DB777_MATRIXROW 10000
 
 int32_t ramchain_init(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ramchain *ramchain,cJSON *argjson,char *coinstr,char *serverport,char *userpass,uint32_t startblocknum,uint32_t endblocknum,uint32_t minconfirms);
 int32_t ramchain_update(struct coin777 *coin,struct ramchain *ramchain);
@@ -410,6 +413,9 @@ int32_t ramchain_func(char *retbuf,int32_t maxlen,struct coin777 *coin,struct ra
     }
     return(-1);
 }
+#endif
 
 #endif
 #endif
+#include <stdint.h>
+extern int32_t Debuglevel;

@@ -13,7 +13,7 @@
 
 #include "../includes/cJSON.h"
 #define DEFINES_ONLY
-#include "../utils/system777.c"
+#include "../common/system777.c"
 #include "../utils/utils777.c"
 //#undef DEFINES_ONLY
 
@@ -172,7 +172,7 @@ try_again:
             free(s.ptr);
             return(0);
         }
-        else if ( numretries >= 10 )
+        else if ( numretries >= 2 )
         {
             fprintf(stderr,"Maximum number of retries exceeded!\n");
             free(s.ptr);

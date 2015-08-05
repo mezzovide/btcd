@@ -13,7 +13,7 @@
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
 
 #define DEFINES_ONLY
-#include "../plugin777.c"
+#include "../agents/plugin777.c"
 #include "../utils/NXT777.c"
 #undef DEFINES_ONLY
 
@@ -171,7 +171,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 {
     char *resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
-    if ( Debuglevel > 2 )
+   // if ( Debuglevel > 2 )
         fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
@@ -202,6 +202,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             plugin->registered = 1;
             strcpy(retbuf,"{\"result\":\"activated\"}");
         }
+#ifdef INSIDE_MGW
         else if ( strcmp(methodstr,"msigaddr") == 0 )
         {
             char *devMGW_command(char *jsonstr,cJSON *json);
@@ -213,27 +214,21 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 }
             } //else retstr = nn_loadbalanced((uint8_t *)jsonstr,(int32_t)strlen(jsonstr)+1);
         }
+#endif
         else if ( strcmp(methodstr,"LSUM") == 0 )
         {
             sprintf(retbuf,"{\"result\":\"%s\",\"amount\":%d}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);
             retstr = clonestr(retbuf);
         }
-        else if ( SUPERNET.iamrelay == 0 )
+        else if ( SUPERNET.iamrelay <= 1 )
         {
             retstr = InstantDEX_parser(forwarder,sender,valid,jsonstr,json);
 //printf("InstantDEX_parser return.(%s)\n",retstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
-        if ( retstr != 0 )
-        {
-            if ( strlen(retstr) >= maxlen-1 )
-                retstr[maxlen-1] = 0;
-            strcpy(retbuf,retstr);
-            free(retstr);
-        }
         //else sprintf(retbuf,"{\"error\":\"method %s not found\"}",methodstr);
         portable_mutex_unlock(&plugin->mutex);
     }
-    return((int32_t)strlen(retbuf) + retbuf[0]!=0);
+    return(plugin_copyretstr(retbuf,maxlen,retstr));
 }
 
 int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
@@ -243,4 +238,4 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     }
     return(retcode);
 }
-#include "../plugin777.c"
+#include "../agents/plugin777.c"

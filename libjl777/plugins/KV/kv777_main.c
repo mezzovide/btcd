@@ -12,15 +12,14 @@
 #define STRINGIFY(NAME) #NAME
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
 
-#include "sophia.h"
+#include "../mgw/old/sophia.h"
 #define DEFINES_ONLY
-#include "../plugin777.c"
-#include "db777.c"
+#include "../agents/plugin777.c"
+#include "../mgw/old/db777.c"
 #undef DEFINES_ONLY
 
 struct db777 *DB_msigs,*DB_NXTaccts,*DB_NXTtxids,*DB_MGW,*DB_redeems,*DB_NXTtrades;
 struct db777_info SOPHIA;
-STRUCTNAME KV777;
 
 char *PLUGNAME(_methods)[] = { "getPM", "getrawPM", "ping" };
 char *PLUGNAME(_pubmethods)[] = { "getPM", "getrawPM", "ping" };
@@ -30,7 +29,7 @@ char *PLUGNAME(_authmethods)[] = { "getPM", "getrawPM", "ping",
 #endif
 };
 
-int32_t db777_idle(struct plugin_info *plugin) { return(kv777_idle()); }
+//int32_t db777_idle(struct plugin_info *plugin) { return(kv777_idle("*")); }
 
 // env = sp_env(void);
 // ctl = sp_ctl(env): get an environment control object.
@@ -109,6 +108,7 @@ To delete a snapshot, sp_drop(3) or sp_destroy(3) should be called on snapshot o
 
 // sp_set(ctl, "db.database.lockdetect", a) == 1;
 
+#ifdef INSIDE_MGW
 void *sophia_ptr(char *str)
 {
     void *ptr = 0;
@@ -632,6 +632,7 @@ int32_t env777_close(struct env777 *DBs,int32_t reopenflag)
     }
     return(errs);
 }
+#endif
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
@@ -644,7 +645,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     {
         // configure settings
         ensure_directory(SOPHIA.PATH);
-        ensure_directory(KV777.PATH);
+        if ( KV777.PATH[0] == 0 )
+            strcpy(KV777.PATH,"DB"), ensure_directory(KV777.PATH);
+        set_KV777_globals(&SUPERNET.relays,SUPERNET.transport,SUPERNET.NXTADDR,(int32_t)strlen(SUPERNET.NXTADDR),SUPERNET.SERVICENXT,SUPERNET.relayendpoint);
         strcpy(retbuf,"{\"result\":\"initflag > 0\"}");
         KV777.readyflag = 1;
         plugin->allowremote = 1;
@@ -682,7 +685,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 sprintf(retbuf,"{\"result\":\"success\",\"numkeys\":%d}",SUPERNET.PM->numkeys);
                 if ( ind >= 0 )
                 {
-                    if ( (pmstr= kv777_read(SUPERNET.PM,(void *)&ind,sizeof(ind),0,&len)) != 0 )
+                    if ( (pmstr= kv777_read(SUPERNET.PM,(void *)&ind,sizeof(ind),0,&len,0)) != 0 )
                         sprintf(retbuf + strlen(retbuf) - 1,",\"ind\":%u,\"PM\":\"%s\",\"len\":%d}",ind,pmstr,len);
                 }
             } else sprintf(retbuf,"{\"error\":\"no PM database\"}");
@@ -696,7 +699,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 sprintf(retbuf,"{\"result\":\"success\",\"numkeys\":%d}",SUPERNET.rawPM->numkeys);
                 if ( ind >= 0 )
                 {
-                    if ( (pmstr= kv777_read(SUPERNET.rawPM,(void *)&ind,sizeof(ind),0,&len)) != 0 )
+                    if ( (pmstr= kv777_read(SUPERNET.rawPM,(void *)&ind,sizeof(ind),0,&len,0)) != 0 )
                         sprintf(retbuf + strlen(retbuf) - 1,",\"ind\":%u,\"rawPM\":\"%s\",\"len\":%d}",ind,pmstr,len);
                 }
             } else sprintf(retbuf,"{\"error\":\"no rawPM database\"}");
@@ -712,7 +715,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             sprintf(retbuf,"{\"error\":\"null return\",\"method\":\"%s\",\"tag\":\"%llu\"}",method,(long long)tag);
         else sprintf(retbuf + strlen(retbuf) - 1,",\"tag\":\"%llu\"}",(long long)tag);
     }
-    return((int32_t)strlen(retbuf) + retbuf[0] != 0);
+    return(plugin_copyretstr(retbuf,maxlen,0));
 }
 
 int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
@@ -720,7 +723,10 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     if ( retcode == 0 )  // this means parent process died, otherwise _process_json returned negative value
     {
     }
+#ifdef INSIDE_MGW
     env777_close(&SUPERNET.DBs,0);
+#endif
+    
     return(retcode);
 }
 
@@ -731,4 +737,4 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
-#include "../plugin777.c"
+#include "../agents/plugin777.c"
