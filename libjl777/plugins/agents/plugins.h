@@ -301,18 +301,26 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
         int32_t SuperNET_main(int32_t,char *args[]);
         int32_t coins_main(int32_t,char *args[]);
         //int32_t peers_main(int32_t,char *args[]);
-        //int32_t subscriptions_main(int32_t,char *args[]);
+        int32_t teleport_main(int32_t,char *args[]);
         int32_t relay_main(int32_t,char *args[]);
         int32_t InstantDEX_main(int32_t,char *args[]);
+        int32_t rps_main(int32_t,char *args[]);
+        int32_t prices_main(int32_t,char *args[]);
+        int32_t cashier_main(int32_t,char *args[]);
         if ( strcmp(dp->name,"coins") == 0 ) return(coins_main(n,args));
         else if ( strcmp(dp->name,"InstantDEX") == 0 ) return(InstantDEX_main(n,args));
+        else if ( strcmp(dp->name,"prices") == 0 ) return(prices_main(n,args));
         else if ( strcmp(dp->name,"kv777") == 0 ) return(kv777_main(n,args));
         else if ( strcmp(dp->name,"relay") == 0 ) return(relay_main(n,args));
         //else if ( strcmp(dp->name,"peers") == 0 ) return(peers_main(n,args));
-        //else if ( strcmp(dp->name,"subscriptions") == 0 ) return(subscriptions_main(n,args));
+        else if ( strcmp(dp->name,"SuperNET") == 0 ) return(SuperNET_main(n,args));
+        //else if ( strcmp(dp->name,"rps") == 0 ) return(rps_main(n,args));
+        //else if ( strcmp(dp->name,"cashier") == 0 ) return(cashier_main(n,args));
+        //else if ( strcmp(dp->name,"teleport") == 0 ) return(teleport_main(n,args));
+#ifdef INSIDE_MGW
         else if ( strcmp(dp->name,"ramchain") == 0 ) return(ramchain_main(n,args));
         else if ( strcmp(dp->name,"MGW") == 0 ) return(MGW_main(n,args));
-        else if ( strcmp(dp->name,"SuperNET") == 0 ) return(SuperNET_main(n,args));
+#endif
         else return(-1);
     }
     else return(OS_launch_process(args));
@@ -320,7 +328,12 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
 
 int32_t is_bundled_plugin(char *plugin)
 {
-    if ( strcmp(plugin,"InstantDEX") == 0 || strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"kv777") == 0 || strcmp(plugin,"coins") == 0  || strcmp(plugin,"ramchain") == 0  || strcmp(plugin,"MGW") == 0 || strcmp(plugin,"relay") == 0 )//|| strcmp(plugin,"peers") == 0 || strcmp(plugin,"subscriptions") == 0 )
+    if ( strcmp(plugin,"InstantDEX") == 0 || strcmp(plugin,"SuperNET") == 0 || strcmp(plugin,"kv777") == 0 || strcmp(plugin,"coins") == 0 || strcmp(plugin,"relay") == 0 ||strcmp(plugin,"prices") == 0 ||
+        strcmp(plugin,"cashier") == 0 || strcmp(plugin,"rps") == 0 || strcmp(plugin,"teleport") == 0
+#ifdef INSIDE_MGW
+        || strcmp(plugin,"ramchain") == 0 || strcmp(plugin,"MGW") == 0
+#endif
+        )
         return(1);
     else return(0);
 }
@@ -468,7 +481,7 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
 char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout,char *tokenstr)
 {
     struct daemon_info *dp; char retbuf[8192],*str,*methodsstr,*retstr; uint64_t tag; cJSON *json; int32_t ind,async;
-    if ( Debuglevel > 2 )
+    //if ( Debuglevel > 2 )
         printf("localaccess.%d origargstr.(%s).%d retstrp.%p token.(%s)\n",localaccess,origargstr,len,retstrp,tokenstr!=0?tokenstr:"");
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
@@ -487,7 +500,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
     }
     else
     {
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d retstrp.%p\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess,retstrp);
         if ( dp->readyflag == 0 )
         {
@@ -512,7 +525,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         }
         else
         {
-            if ( Debuglevel > 2 )
+            //if ( Debuglevel > 2 )
                 fprintf(stderr,"B send_to_daemon.(%s).%d\n",origargstr,len);
             if ( (tag= send_to_daemon(sock,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess,tokenstr)) == 0 )
             {
@@ -522,7 +535,7 @@ fprintf(stderr,"null tag from send_to_daemon\n");
             }
             else if ( async != 0 )
                 return(0);
-//fprintf(stderr,"wait_for_daemon\n");
+fprintf(stderr,"wait_for_daemon\n");
             if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
             {
                 if ( (json= cJSON_Parse(origargstr)) != 0 )

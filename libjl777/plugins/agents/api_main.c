@@ -23,7 +23,7 @@ char *os_compatible_path(char *str);
 
 void process_json(cJSON *json,int32_t publicaccess)
 {
-    int32_t sock,i,len,checklen,sendtimeout,recvtimeout; uint32_t apitag; uint64_t tag;
+    int32_t sock,len,checklen,sendtimeout,recvtimeout; uint32_t apitag; uint64_t tag;
     char endpoint[128],numstr[64],*resultstr,*jsonstr;
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     len = (int32_t)strlen(jsonstr)+1;
