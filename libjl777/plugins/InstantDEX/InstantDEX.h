@@ -47,7 +47,6 @@ struct rambook_info
 
 char *exchange_str(int32_t exchangeid);
 struct exchange_info *find_exchange(int32_t *exchangeidp,char *exchangestr);
-void prices777_poll(uint64_t baseid,uint64_t relid);
 
 void ramparse_stub(struct rambook_info *bids,struct rambook_info *asks,int32_t maxdepth,char *gui)
 {
@@ -264,9 +263,9 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
 char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     uint64_t baseamount,relamount,nxt64bits,baseid,relid,quoteid = 0; double price,volume,minbasevol,minrelvol; uint32_t timestamp,nonce;
-    uint8_t minperc; struct exchange_info *xchg; struct InstantDEX_quote iQ;
+    uint8_t minperc; struct exchange_info *xchg; struct InstantDEX_quote iQ; int32_t keysize;
     int32_t remoteflag,automatch,duration,exchangeid; struct rambook_info *rb;
-    char buf[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[16],rel[16],*str,*jsonstr,*retstr = 0;
+    char key[521],buf[MAX_JSON_FIELD],name[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],*str,*jsonstr,*retstr = 0;
     if ( (xchg= find_exchange(&exchangeid,INSTANTDEX_NAME)) == 0 || exchangeid != INSTANTDEX_EXCHANGEID )
         return(clonestr("{\"error\":\"unexpected InstantDEX exchangeid\"}"));
     remoteflag = (localaccess == 0);
@@ -295,7 +294,11 @@ char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int3
         duration = ORDERBOOK_EXPIRATION;
     copy_cJSON(exchangestr,objs[11]);
     copy_cJSON(offerNXT,objs[12]);
-printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exchangestr);
+    copy_cJSON(name,objs[13]);
+    copy_cJSON(base,objs[14]);
+    copy_cJSON(rel,objs[15]);
+    InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
+ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exchangestr);
     if ( exchangestr[0] == 0 )
         strcpy(exchangestr,INSTANTDEX_NAME);
     else
@@ -317,8 +320,7 @@ printf("placequote localaccess.%d dir.%d exchangestr.(%s)\n",localaccess,dir,exc
     }
     if ( Debuglevel > 1 )
         printf("NXT.%s t.%u placequote dir.%d sender.(%s) valid.%d price %.8f vol %.8f %llu/%llu\n",NXTaddr,timestamp,dir,sender,valid,price,volume,(long long)baseamount,(long long)relamount);
-    memset(base,0,sizeof(base)), memset(rel,0,sizeof(rel)), is_native_crypto(base,baseid), is_native_crypto(rel,relid);
-    prices777_poll(baseid,relid);
+    prices777_poll(exchangestr,name,base,baseid,rel,relid);
     minbasevol = get_minvolume(baseid), minrelvol = get_minvolume(relid);
     if ( volume < minbasevol || (volume * price) < minrelvol )
     {
@@ -674,7 +676,7 @@ char *makeoffer3_stub(int32_t localaccess,char *NXTaddr,char *NXTACCTSECRET,char
 
 void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int32_t maxdepth)
 {
-    char base[64],rel[64],NXTaddr[64],*jsonstr,*retstr,*gui = "test";
+    char base[64],rel[64],NXTaddr[64],name[64],*jsonstr,*retstr,*gui = "test";
     struct InstantDEX_quote iQ;
     struct rambook_info *rb;
     uint64_t baseid,relid,quoteid,mult;
@@ -690,7 +692,9 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
     }
     price = (baseprice / relprice);
     //update_rambooks(refbaseid,refrelid,maxdepth,gui,1,0);
-    prices777_poll(refbaseid,refrelid);
+    //prices777_poll(refbaseid,refrelid);
+    strcpy(name,base), strcat(name,rel);
+    prices777_poll("nxtae",name,base,refbaseid,rel,refrelid);
     baseid = refbaseid, relid = refrelid;
     volume = 1.;
     printf("price %f = (%f / %f) vol %f\n",price,baseprice,relprice,volume);
@@ -698,7 +702,9 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
     {
         set_assetname(&mult,base,baseid);
         set_assetname(&mult,rel,relid);
-        prices777_poll(baseid,relid);
+        //prices777_poll(baseid,relid);
+        strcpy(name,base), strcat(name,rel);
+        prices777_poll("nxtae",name,base,baseid,rel,relid);
         //update_rambooks(baseid,relid,maxdepth,gui,1,0);
         minbasevol = get_minvolume(baseid);
         minrelvol = get_minvolume(relid);

@@ -260,7 +260,9 @@ void process_userinput(char *_line)
     {
         char *process_nn_message(int32_t sock,char *jsonstr);
         free_json(json);
-        retstr = process_nn_message(-1,line);
+        char *SuperNET_JSON(char *jsonstr);
+        retstr = SuperNET_JSON(line);
+        //retstr = process_nn_message(-1,line);
         //retstr = nn_loadbalanced((uint8_t *)line,(int32_t)strlen(line)+1);
         printf("console.(%s) -> (%s)\n",line,retstr);
         return;

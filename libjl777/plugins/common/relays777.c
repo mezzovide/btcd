@@ -413,11 +413,9 @@ void serverloop(void *_args)
     if ( SUPERNET.gatewayid >= 0 )
         MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1*0);
 #endif
-    busdata_init(10,1,0);
     sleep(10);
     while ( OS_getppid() == SUPERNET.ppid )
     {
-        n = poll_daemons();
 #ifdef INSIDE_MGW
         if ( SUPERNET.gatewayid >= 0 && (len= nn_recv(MGW.all.socks.both.bus,&jsonstr,NN_MSG,0)) > 0 )
         {
@@ -430,7 +428,7 @@ void serverloop(void *_args)
             nn_freemsg(jsonstr);
         }
 #endif
-        n += busdata_poll();
+        n = busdata_poll();
         if ( n == 0 && SUPERNET.APISLEEP > 0 )
             msleep(SUPERNET.APISLEEP);
     }

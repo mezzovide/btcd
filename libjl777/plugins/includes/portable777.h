@@ -125,5 +125,55 @@ int32_t hcalc_varint(uint8_t *buf,uint64_t x);
 long hdecode_varint(uint64_t *valp,uint8_t *ptr,long offset,long mappedsize);
 
 double milliseconds();
+uint64_t peggy_basebits(char *name);
+uint64_t peggy_relbits(char *name);
+uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits);
+struct prices777 *prices777_poll(char *exchangestr,char *name,char *base,uint64_t refbaseid,char *rel,uint64_t refrelid);
+int32_t is_native_crypto(char *name,uint64_t bits);
+uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp);
+
+#define MAX_DEPTH 25
+#define MINUTES_FIFO (1024)
+#define HOURS_FIFO (64)
+#define DAYS_FIFO (512)
+
+struct InstantDEX_quote
+{
+    UT_hash_handle hh;
+    uint64_t quoteid,baseid,baseamount,relid,relamount,nxt64bits;
+    struct InstantDEX_quote *baseiQ,*reliQ;
+    uint32_t timestamp,duration;
+    uint8_t closed:1,sent:1,matched:1,isask:1,pad2:4,minperc:7;
+    char exchangeid,gui[9];
+};
+
+struct orderbook
+{
+    uint64_t baseid,relid,jumpasset;
+    char base[16],rel[16],jumper[16],exchangestr[16],name[16];
+    struct InstantDEX_quote *bids,*asks;
+    int32_t numbids,numasks;
+};
+
+struct prices777_nxtquote { uint64_t assetid,nxt64bits,quoteid,qty,priceNQT,baseamount,relamount; uint32_t timestamp; };
+struct prices777_nxtbooks { struct prices777_nxtquote stablebook[MAX_DEPTH][2],orderbook[MAX_DEPTH][2],prevorderbook[MAX_DEPTH][2],prev2orderbook[MAX_DEPTH][2]; };
+struct prices777
+{
+    char url[512],exchange[64],base[64],rel[64],lbase[64],lrel[64],key[512],oppokey[512],contract[64],oppocontract[64],origbase[64],origrel[64];
+    uint64_t contractnum,ap_mult,baseid,relid; int32_t keysize,oppokeysize; double lastupdate,decay,oppodecay;
+    uint32_t exchangeid,numquotes,updated,lasttimestamp,RTflag,fifoinds[6];
+    double stablebook[MAX_DEPTH][2][2],orderbook[MAX_DEPTH][2][2],prevorderbook[MAX_DEPTH][2][2],prev2orderbook[MAX_DEPTH][2][2],lastprice;
+    struct prices777_nxtbooks *nxtbooks; portable_mutex_t mutex; struct orderbook *op; char *orderbook_jsonstrs[2];
+    float days[DAYS_FIFO],hours[HOURS_FIFO],minutes[MINUTES_FIFO];
+};
+
+int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t isask,uint64_t quoteid,double price,double volume,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount,char *exchange,uint64_t nxt64bits,char *gui,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,int32_t duration);
+void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_t *numasksp,struct InstantDEX_quote *iQ,int32_t polarity,int32_t oldest,char *gui);
+void free_orderbook(struct orderbook *op);
+void sort_orderbook(struct orderbook *op);
+char *orderbook_jsonstr(uint64_t nxt64bits,struct orderbook *op,char *base,char *rel,int32_t maxdepth,int32_t allflag);
+
+struct prices777 *prices777_safecopy(int32_t writeflag,void *prices777,double buf[MAX_DEPTH][2][2],struct prices777_nxtquote nxtbook[MAX_DEPTH][2]);
+struct prices777 *prices777_stablebooks(int32_t *polarityp,char *exchangestr,char *name,void *key,int32_t keysize,uint64_t baseid,uint64_t relid,double buf[MAX_DEPTH][2][2],struct prices777_nxtquote nxtbook[MAX_DEPTH][2]);
 
 #endif

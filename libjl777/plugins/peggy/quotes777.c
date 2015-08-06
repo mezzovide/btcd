@@ -553,6 +553,34 @@ char *peggy_mapname(char *basebuf,char *relbuf,int32_t i) // sorry it is messy t
     return(basebuf);
 }
 
+uint64_t peggy_basebits(char *name)
+{
+    int32_t i; char basebuf[64],relbuf[64];
+    for (i=0; i<64; i++)
+    {
+        if ( strcmp(name,peggy_contracts[i]) == 0 )
+        {
+            peggy_mapname(basebuf,relbuf,i);
+            return(stringbits(basebuf));
+        }
+    }
+    return(0);
+}
+
+uint64_t peggy_relbits(char *name)
+{
+    int32_t i; char basebuf[64],relbuf[64];
+    for (i=0; i<64; i++)
+    {
+        if ( strcmp(name,peggy_contracts[i]) == 0 )
+        {
+            peggy_mapname(basebuf,relbuf,i);
+            return(stringbits(relbuf));
+        }
+    }
+    return(0);
+}
+
 struct peggy_info *peggy_genesis(int32_t lookbacks[OPRETURNS_CONTEXTS],struct peggy_info *PEGS,char *path,uint32_t firsttimestamp,char *opreturnstr)
 {
     //struct peggy_limits limits = { { PERCENTAGE(10), PERCENTAGE(25), PERCENTAGE(33), PERCENTAGE(50) }, SATOSHIDEN * 10000, SATOSHIDEN * 1000, { 0, 30, 90, 180 }, 4 };

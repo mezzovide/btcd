@@ -62,13 +62,6 @@ void *issue_cgicall(void *_ptr)
     if ( plugin[0] == 0 )
         copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"plugin"));
     copy_cJSON(method,cJSON_GetObjectItem(ptr->json,"method"));
-    if ( strcmp(plugin,"InstantDEX") == 0 )
-    {
-        char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origargstr,cJSON *origargjson);
-        if ( (str= InstantDEX_parser(SUPERNET.NXTADDR,SUPERNET.NXTADDR,1,ptr->jsonstr,ptr->json)) != 0 )
-            printf("InstantDEX returned.(%s)\n",str);
-        return(str);
-    }
     timeout = get_API_int(cJSON_GetObjectItem(ptr->json,"timeout"),SUPERNET.PLUGINTIMEOUT);
     broadcaststr = cJSON_str(cJSON_GetObjectItem(ptr->json,"broadcast"));
     fprintf(stderr,"sock.%d (%s) API RECV.(%s)\n",ptr->sock,broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
@@ -199,6 +192,30 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
 
 char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
 {
+    char *InstantDEX(char *jsonstr);
+    cJSON *json; char plugin[MAX_JSON_FIELD],*retstr = 0;
+    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+    {
+        copy_cJSON(plugin,jobj(json,"agent"));
+        if ( plugin[0] == 0 )
+            copy_cJSON(plugin,jobj(json,"plugin"));
+        if ( strcmp(plugin,"InstantDEX") == 0 )
+        {
+            if ( (retstr= InstantDEX(jsonstr)) == 0 )
+            {
+                extern queue_t InstantDEXQ;
+                queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
+                free_json(json);
+                return(clonestr("{\"success\":\"InstantDEX command queued\"}"));
+            }
+            else
+            {
+                free_json(json);
+                return(retstr);
+            }
+        }
+        free_json(json);
+    }
     return(process_jl777_msg(0,jsonstr,60));
 }
 
@@ -279,11 +296,6 @@ void SuperNET_loop(void *ipaddr)
             poll_daemons();
     }
 #endif
-#ifdef INSIDE_BTCD
-    strs[n++] = language_func((char *)"prices","",0,0,1,(char *)"prices",jsonargs,call_system);
-    while ( PRICES.readyflag == 0 || find_daemoninfo(&ind,"prices",0,0) == 0 )
-        poll_daemons();
-#endif
     /*strs[n++] = language_func((char *)"teleport","",0,0,1,(char *)"teleport",jsonargs,call_system);
     while ( TELEPORT.readyflag == 0 || find_daemoninfo(&ind,"teleport",0,0) == 0 )
         poll_daemons();
@@ -292,6 +304,11 @@ void SuperNET_loop(void *ipaddr)
         poll_daemons();
      strs[n++] = language_func((char *)"rps","",0,0,1,(char *)"rps",jsonargs,call_system);
 */
+#ifdef INSIDE_BTCD
+    strs[n++] = language_func((char *)"prices","",0,0,1,(char *)"prices",jsonargs,call_system);
+    while ( 1 || PRICES.readyflag == 0 || find_daemoninfo(&ind,"prices",0,0) == 0 )
+        poll_daemons();
+#endif
     for (i=0; i<n; i++)
     {
         printf("%s ",strs[i]);
@@ -301,6 +318,21 @@ void SuperNET_loop(void *ipaddr)
     sleep(3);
     void serverloop(void *_args);
     serverloop(0);
+}
+
+void SuperNET_agentloop(void *ipaddr)
+{
+    int32_t n = 0;
+    while ( 1 )
+    {
+        if ( poll_daemons() == 0 )
+        {
+            n++;
+            msleep(1000 * (n + 1));
+            if ( n > 100 )
+                n = 100;
+        } else n = 0;
+    }
 }
 
 void SuperNET_apiloop(void *ipaddr)
@@ -342,7 +374,7 @@ int SuperNET_start(char *fname,char *myip)
     int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout);
     int32_t parse_ipaddr(char *ipaddr,char *ip_port);
     char ipaddr[256],*jsonstr = 0;
-    uint64_t allocsize;
+    uint64_t i,allocsize;
     printf("myip.(%s)\n",myip);
     portable_OS_init();
     init_SUPERNET_pullsock(10,1);
@@ -356,6 +388,15 @@ int SuperNET_start(char *fname,char *myip)
     if ( jsonstr != 0 )
         free(jsonstr);
     portable_thread_create((void *)SuperNET_loop,myip);
+    busdata_init(10,1,0);
+    printf("busdata_init done\n");
+    for (i=0; i<100; i++)
+    {
+        if ( INSTANTDEX.readyflag != 0 )
+            break;
+        msleep(10000);
+    }
+    portable_thread_create((void *)SuperNET_agentloop,myip);
     portable_thread_create((void *)SuperNET_apiloop,myip);
     portable_thread_create((void *)crypto_update0,myip);
     portable_thread_create((void *)crypto_update1,myip);
@@ -435,7 +476,7 @@ int main(int argc,const char *argv[])
             if ( is_bundled_plugin((char *)argv[i]) != 0 )
                 language_func((char *)argv[i],"",0,0,1,(char *)argv[i],jsonstr,call_system);
     }
-    sleep(60);
+   // sleep(60);
 
     while ( 1 )
     {

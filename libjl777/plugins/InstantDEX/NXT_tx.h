@@ -489,7 +489,7 @@ int32_t NXT_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_t in
 extern struct ramkv777 *DB_revNXTtrades,*DB_NXTtrades;
 int32_t NXT_set_revassettrade(uint32_t ind,uint64_t key[2])
 {
-    //printf("NXT_set_revassettrade\n");
+printf("NXT_set_revassettrade.%u -> %llu\n",ind,(long long)key[0]);
     if ( DB_revNXTtrades != 0 )
     {
         if ( ramkv777_write(DB_revNXTtrades,&ind,key,sizeof(*key)*2) == 0 )
@@ -502,7 +502,7 @@ int32_t NXT_set_revassettrade(uint32_t ind,uint64_t key[2])
 int32_t NXT_revassettrade(uint64_t key[2],uint32_t ind)
 {
     void *value; int32_t len = 0;
-    //printf("NXT_revassettrade\n");
+printf("NXT_revassettrade\n");
     memset(key,0,sizeof(*key)*2);
     if ( DB_revNXTtrades != 0 )
     {
@@ -515,7 +515,7 @@ int32_t NXT_revassettrade(uint64_t key[2],uint32_t ind)
 int32_t NXT_add_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_t ind)
 {
     uint64_t key[2];
-    //printf("NXT_add_assettrade\n");
+printf("NXT_add_assettrade\n");
     if ( DB_NXTtrades != 0 )
     {
         key[0] = tp->bidorder, key[1] = tp->askorder;
@@ -529,7 +529,7 @@ int32_t NXT_add_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_
 int32_t NXT_assettrade(struct assettrade *dest,struct assettrade *tp,uint32_t ind)
 {
     void *value; int32_t len = 0; uint64_t key[2];
-    //printf("NXT_assettrade\n");
+printf("NXT_assettrade\n");
     if ( DB_NXTtrades != 0 )
     {
         key[0] = tp->bidorder, key[1] = tp->askorder;
@@ -635,7 +635,7 @@ int32_t NXT_assettrades(struct assettrade *trades,long max,int32_t firstindex,in
         } else printf("couldnt parse trades\n");
         free(jsonstr);
     }
-    if ( firstindex < 0 || lastindex <= firstindex )
+    //if ( firstindex < 0 || lastindex <= firstindex )
         printf(" -> %d entries\n",n);
     return(n);
 }

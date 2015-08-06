@@ -265,8 +265,9 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
     }
     if ( NXTblock != prevNXTblock )
     {
+        void prices777_update_NXT(uint32_t);
         struct rambook_info **obooks; int32_t numbooks = 0;
-        update_NXT_assettrades();
+        prices777_update_NXT(NXTblock);
         if ( (obooks= get_allrambooks(&numbooks)) != 0 )
         {
             for (i=0; i<numbooks; i++)

@@ -111,7 +111,7 @@ uint64_t is_cryptocoin(char *name)
 int32_t is_native_crypto(char *name,uint64_t bits)
 {
     int32_t i,n;
-    if ( (n= unstringbits(name,bits)) <= 5 )
+    if ( (n= (int32_t)strlen(name)) > 0 || (n= unstringbits(name,bits)) <= 5 )
     {
         for (i=0; i<n; i++)
         {

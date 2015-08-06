@@ -10,15 +10,8 @@
 
 struct normal_fields { uint64_t nxt64bits,quoteid; struct InstantDEX_quote *baseiQ,*reliQ; };
 union quotefields { struct normal_fields normal; };
-struct InstantDEX_quote
-{
-    UT_hash_handle hh;
-    uint64_t quoteid,baseid,baseamount,relid,relamount,nxt64bits;
-    struct InstantDEX_quote *baseiQ,*reliQ;
-    uint32_t timestamp,duration;
-    uint8_t closed:1,sent:1,matched:1,isask:1,pad2:4,minperc:7;
-    char exchangeid,gui[9];
-} *AllQuotes;
+
+struct InstantDEX_quote *AllQuotes;
 
 void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 0; }
 void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 1; }
@@ -125,7 +118,11 @@ int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,i
     struct exchange_info *xchg; int32_t exchangeid;
     memset(iQ,0,sizeof(*iQ));
     if ( baseamount == 0 && relamount == 0 )
+    {
+        if ( price < SMALLVAL )
+            return(-1);
         set_best_amounts(&baseamount,&relamount,price,volume);
+    }
     iQ->timestamp = timestamp;
     if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
         duration = ORDERBOOK_EXPIRATION;
@@ -138,7 +135,8 @@ int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,i
     iQ->relid = relid, iQ->relamount = relamount;
     if ( Debuglevel > 2 )
         printf("%s.(%s) %f %f\n",iQ->isask==0?"BID":"ASK",exchange,dstr(baseamount),dstr(relamount));
-    strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
+    if ( gui != 0 )
+        strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
     if ( baseiQ == 0 && reliQ == 0 )
     {
         if ( (xchg= find_exchange(&exchangeid,exchange)) != 0 )
