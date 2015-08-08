@@ -594,7 +594,7 @@ int32_t prices777_addquote(struct prices777 *prices,uint32_t timestamp,int32_t b
 struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJSON *asks,int32_t maxdepth,char *pricefield,char *volfield,uint32_t reftimestamp)
 {
     cJSON *item; int32_t i,j,n,m,dir,bidask,numbids,numasks,iter,numitems; uint32_t timestamp; double price,volume;
-    struct prices777_nxtquote nxtQ; struct orderbook *op; struct InstantDEX_quote iQ;
+    struct prices777_nxtquote nxtQ; struct orderbook *op; struct InstantDEX_quote iQ,*quote;
     if ( reftimestamp == 0 )
         reftimestamp = (uint32_t)time(NULL);
     n = cJSON_GetArraySize(bids);
@@ -650,8 +650,22 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
                     nxtQ.priceNQT = j64bitsi(item,6);
                     nxtQ.baseamount = j64bitsi(item,7);
                     nxtQ.relamount = j64bitsi(item,8);
-                    create_InstantDEX_quote(&iQ,nxtQ.timestamp,0,nxtQ.quoteid,price,volume,nxtQ.assetid,nxtQ.baseamount,NXT_ASSETID,nxtQ.relamount,"nxtae",nxtQ.nxt64bits,"",0,0,3600);
-                    add_to_orderbook(op,iter,&numbids,&numasks,&iQ,dir,0,"");
+                    create_InstantDEX_quote(&iQ,nxtQ.timestamp,dir<0,nxtQ.quoteid,price,volume,nxtQ.assetid,nxtQ.baseamount,NXT_ASSETID,nxtQ.relamount,"nxtae",nxtQ.nxt64bits,"",0,0,3600);
+                    if ( iter == 0 )
+                    {
+                        if ( dir > 0 )
+                            op->numbids++;
+                        else op->numasks++;
+                    }
+                    else
+                    {
+                        if ( dir > 0 )
+                            quote = &op->bids[numbids++], *quote = iQ, quote->isask = 0;
+                        else quote = &op->asks[numasks++], *quote = iQ, quote->isask = 1;
+                        //if ( polarity < 0 )
+                        //    quote->baseid = iQ->relid, quote->baseamount = iQ->relamount, quote->relid = iQ->baseid, quote->relamount = iQ->baseamount;
+                    }
+                    //add_to_orderbook(op,iter,&numbids,&numasks,&iQ,dir,0,"");
                 }
                 if ( timestamp == 0 )
                     timestamp = reftimestamp;
@@ -666,8 +680,8 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
         } else sort_orderbook(op);
     }
-    if ( Debuglevel > 2 )
-        printf("numbids.%d numasks.%d (%d %d)\n",op->numbids,op->numasks,numbids,numasks);
+    if ( Debuglevel > 1 )
+        printf("numbids.%d numasks.%d (%d %d) %p %p\n",op->numbids,op->numasks,numbids,numasks,op->bids,op->asks);
     if ( op != 0 && (op->numbids + op->numasks) == 0 )
         free_orderbook(op), op = 0;
     return(op);
@@ -691,7 +705,7 @@ cJSON *inner_json(double price,double vol,uint32_t timestamp,uint64_t quoteid,ui
 
 void prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t maxdepth,cJSON *json,char *resultfield,char *bidfield,char *askfield,char *pricefield,char *volfield)
 {
-    cJSON *obj = 0,*bidobj,*askobj; int32_t allflag;
+    cJSON *obj = 0,*bidobj,*askobj; int32_t allflag; struct orderbook *op; char *strs[2];
     if ( resultfield == 0 )
         obj = json;
     if ( maxdepth == 0 )
@@ -700,14 +714,21 @@ void prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t
     {
         if ( (bidobj= cJSON_GetObjectItem(obj,bidfield)) != 0 && is_cJSON_Array(bidobj) != 0 && (askobj= cJSON_GetObjectItem(obj,askfield)) != 0 && is_cJSON_Array(askobj) != 0 )
         {
-            if ( (prices->op= prices777_json_quotes(prices,bidobj,askobj,maxdepth,pricefield,volfield,0)) != 0 )
+            if ( (op= prices777_json_quotes(prices,bidobj,askobj,maxdepth,pricefield,volfield,0)) != 0 )
             {
+                for (allflag=0; allflag<2; allflag++)
+                    strs[allflag] = orderbook_jsonstr(SUPERNET.my64bits,op,prices->base,prices->rel,MAX_DEPTH,allflag);
+                portable_mutex_lock(&prices->mutex);
+                if ( prices->op != 0 )
+                    free_orderbook(prices->op);
+                prices->op = op;
                 for (allflag=0; allflag<2; allflag++)
                 {
                     if ( prices->orderbook_jsonstrs[allflag] != 0 )
                         free(prices->orderbook_jsonstrs[allflag]);
-                    prices->orderbook_jsonstrs[allflag] = orderbook_jsonstr(SUPERNET.my64bits,prices->op,prices->base,prices->rel,MAX_DEPTH,allflag);
+                    prices->orderbook_jsonstrs[allflag] = strs[allflag];
                 }
+                portable_mutex_unlock(&prices->mutex);
             }
         }
     }
@@ -1786,10 +1807,10 @@ void prices777_exchangeloop(void *ptr)
                 else continue;
                 if ( pollflag != 0 )
                 {
-                    if ( prices->op != 0 )
-                        free_orderbook(prices->op), prices->op = 0;
+                    //if ( prices->op != 0 )
+                    //    free_orderbook(prices->op), prices->op = 0;
                     (*exchange->updatefunc)(prices,MAX_DEPTH);
-                    prices777_safecopy(1,prices,prices->orderbook,prices->nxtbooks->orderbook);
+                    //prices777_safecopy(1,prices,prices->orderbook,prices->nxtbooks->orderbook);
                     if ( prices->orderbook[0][0][0] != 0. && prices->orderbook[0][1][0] != 0 )
                         prices->lastprice = _pairaved(prices->orderbook[0][0][0],prices->orderbook[0][1][0]);
                     exchange->lastupdate = milliseconds(), prices->lastupdate = milliseconds();

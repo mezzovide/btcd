@@ -83,7 +83,7 @@ typedef char *(*json_handler)(int32_t localaccess,int32_t valid,char *sender,cJS
 char *InstantDEX(char *jsonstr)
 {
     char *retstr = 0,key[512],exchangestr[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD];
-    cJSON *json; uint64_t baseid,relid,assetbits; int32_t keysize,allfields; struct prices777 *prices;
+    cJSON *json; uint64_t baseid,relid,assetbits; int32_t keysize,allfields; struct prices777 *prices; struct orderbook *op;
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
         baseid = j64bits(json,"baseid"), relid = j64bits(json,"relid");
@@ -95,10 +95,31 @@ char *InstantDEX(char *jsonstr)
         copy_cJSON(rel,jobj(json,"rel"));
         allfields = juint(json,"allfields");
         assetbits = InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
-        if ( (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 && (retstr= prices->orderbook_jsonstrs[allfields]) == 0 )
+        if ( (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 )
         {
-            if ( prices->op != 0 || (prices->op= create_orderbook(base,baseid,rel,relid,0,jstr(json,"gui"),exchangestr)) != 0 )
-                prices->orderbook_jsonstrs[allfields] = orderbook_jsonstr(SUPERNET.my64bits,prices->op,base,rel,MAX_DEPTH,allfields);
+            if ( (retstr= prices->orderbook_jsonstrs[allfields]) == 0 )
+            {
+                if ( prices->op == 0 )
+                {
+                    if ( (op= create_orderbook(base,baseid,rel,relid,0,jstr(json,"gui"),exchangestr)) != 0 )
+                    {
+                        portable_mutex_lock(&prices->mutex);
+                        if ( prices->op != 0 )
+                            free_orderbook(prices->op);
+                        prices->op = op;
+                        portable_mutex_unlock(&prices->mutex);
+                    }
+                }
+                if ( prices->op != 0 )
+                {
+                    retstr = orderbook_jsonstr(SUPERNET.my64bits,prices->op,base,rel,MAX_DEPTH,allfields);
+                    portable_mutex_lock(&prices->mutex);
+                    if ( prices->orderbook_jsonstrs[allfields] != 0 )
+                        free(prices->orderbook_jsonstrs[allfields]);
+                    prices->orderbook_jsonstrs[allfields] = retstr;
+                    portable_mutex_unlock(&prices->mutex);
+                }
+            }
         }
         if ( Debuglevel > 2 )
             printf("(%s) %p exchange.(%s) base.(%s) %llu rel.(%s) %llu | name.(%s) %llu\n",retstr!=0?retstr:"",prices,exchangestr,base,(long long)baseid,rel,(long long)relid,name,(long long)assetbits);

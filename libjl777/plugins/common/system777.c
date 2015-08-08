@@ -673,9 +673,9 @@ void portable_OS_init()
     if ( memcmp(GENESIS_PRIVKEY.bytes,privkey.bytes,sizeof(privkey)) != 0 )
     {
         init_hexbytes_noT(hexstr,privkey.bytes,sizeof(privkey));
-        printf("%s GENESIS_PRIVKEY mismatch %llu != %llu\n",hexstr,(long long)GENESIS_PRIVKEY.txid,(long long)privkey.txid);
+        //printf("%s GENESIS_PRIVKEY mismatch %llu != %llu\n",hexstr,(long long)GENESIS_PRIVKEY.txid,(long long)privkey.txid);
     }
-    printf("%s GENESIS_PRIVKEY %llx GENESIS_PUBKEY %llx\n",hexstr,(long long)GENESIS_PRIVKEY.txid,(long long)GENESIS_PUBKEY.txid);
+    //printf("%s GENESIS_PRIVKEY %llx GENESIS_PUBKEY %llx\n",hexstr,(long long)GENESIS_PRIVKEY.txid,(long long)GENESIS_PUBKEY.txid);
     OS_init();
     curl_global_init(CURL_GLOBAL_ALL); //init the curl session
     SaM_PrepareIndices();
