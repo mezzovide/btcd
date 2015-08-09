@@ -555,10 +555,11 @@ void prices777_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double pr
 
 int32_t prices777_addquote(struct prices777 *prices,uint32_t timestamp,int32_t bidask,int32_t ind,double price,double volume,struct prices777_nxtquote *nxtQ)
 {
-    uint32_t fifoind,i,k;
-    if ( price == 0. )
+    uint32_t fifoind,i;
+    if ( price <= SMALLVAL )
         return(-1);
-    fifoind = timestamp / 60;
+    fifoind = (timestamp / 60) % MINUTES_FIFO;
+;
     if ( prices->RTflag != 0 )
     {
         if ( (i= prices->lasttimestamp/60) != fifoind )
@@ -572,20 +573,17 @@ int32_t prices777_addquote(struct prices777 *prices,uint32_t timestamp,int32_t b
                 memcpy(prices->nxtbooks->prevorderbook,prices->nxtbooks->orderbook,sizeof(prices->nxtbooks->orderbook));
                 memset(prices->nxtbooks->orderbook,0,sizeof(prices->nxtbooks->orderbook));
             }
-            while ( ++i <= fifoind )
-            {
-                k = (i % MINUTES_FIFO);
-                prices->minutes[k] = 0;
-            }
+            while ( (++i % MINUTES_FIFO) != fifoind )
+                prices->minutes[(i % MINUTES_FIFO)] = 0;
         }
         prices->lasttimestamp = timestamp;
         prices->fifoinds[0] = fifoind;
     }
-   // printf("%p ind.%d set.%d price %f vol %f\n",&prices->orderbook[ind][bidask][0],ind,bidask,price,volume);
+    if ( Debuglevel > 3 )
+        printf("%p ind.%d set.%d price %f vol %f\n",&prices->orderbook[ind][bidask][0],ind,bidask,price,volume);
     prices->orderbook[ind][bidask][0] = price, prices->orderbook[ind][bidask][1] = volume;
-    if ( prices->nxtbooks != 0 )
+    if ( prices->nxtbooks != 0 && nxtQ != 0 )
         prices->nxtbooks->orderbook[ind][bidask] = *nxtQ;
-    fifoind %= MINUTES_FIFO;
     if ( ind == 0 )
         prices->minutes[fifoind] = PRICE_BLEND(prices->minutes[fifoind],price,prices->decay,prices->oppodecay);
     return(fifoind);
@@ -649,6 +647,8 @@ struct orderbook *prices777_json_quotes(double *hblap,struct prices777 *prices,c
                 }
                 if ( Debuglevel > 2 )//|| strcmp("bter",prices->exchange) == 0 )
                     printf("%d,%d: %-8s %s %5s/%-5s %13.8f vol %13.8f | invert %13.8f vol %13.8f | timestamp.%u\n",i,j,prices->exchange,dir>0?"bid":"ask",prices->base,prices->rel,price,volume,1./price,volume*price,timestamp);
+                if ( timestamp == 0 )
+                    timestamp = reftimestamp;
                 memset(&nxtQ,0,sizeof(nxtQ));
                 if ( strcmp(prices->exchange,"nxtae") == 0 )
                 {
@@ -676,12 +676,9 @@ struct orderbook *prices777_json_quotes(double *hblap,struct prices777 *prices,c
                         //if ( polarity < 0 )
                         //    quote->baseid = iQ->relid, quote->baseamount = iQ->relamount, quote->relid = iQ->baseid, quote->relamount = iQ->baseamount;
                     }
-                    //add_to_orderbook(op,iter,&numbids,&numasks,&iQ,dir,0,"");
                 }
-                if ( timestamp == 0 )
-                    timestamp = reftimestamp;
+                prices777_addquote(prices,timestamp,dir<0?1:0,i,price,volume,&nxtQ);
             }
-            //prices777_addquote(prices,timestamp,dir<0?1:0,i,price,volume,&nxtQ);
         }
         if ( iter == 0 )
         {

@@ -12,7 +12,8 @@ uint32_t OS_conv_datenum(int32_t datenum,int32_t hour,int32_t minute,int32_t sec
     memset(&t,0,sizeof(t));
     t.tm_year = (datenum / 10000) - 1900, t.tm_mon = ((datenum / 100) % 100) - 1, t.tm_mday = (datenum % 100);
     t.tm_hour = hour, t.tm_min = minute, t.tm_sec = second;
-    return((uint32_t)_mkgmtime(&t));
+    return(time(NULL));
+    //return((uint32_t)_mkgmtime(&t));
 }
 
 int32_t OS_conv_unixtime(int32_t *secondsp,time_t timestamp) // gmtime -> datenum + number of seconds
