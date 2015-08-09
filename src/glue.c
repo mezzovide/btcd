@@ -1,3 +1,7 @@
+// deprecated
+
+/*
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -58,18 +62,7 @@ int8_t portable_spawn(char *os, char *cmd, char *arg) //TODO: extend for other O
 #endif
     }
     return status;
-} 
-
-void *portable_thread_create(void *funcp,void *argp);
-/*{
-    pthread_t *ptr;
-    ptr = (pthread_t *)malloc(sizeof(*ptr));
-    if ( pthread_create(ptr,NULL,funcp,argp) != 0 )
-    {
-        free(ptr);
-        return(0);
-    } else return(ptr);
-}*/
+}
 
 int32_t set_SuperNET_url(char *url)
 {
@@ -174,11 +167,11 @@ char *SuperNET_JSON(char *JSONstr)
         memcpy(retstr,result,len);
         return(retstr);
     }
-    /*while ( Pending_RPC != 0 )
-     {
-     fprintf(stderr,".");
-     sleep(1);
-     }*/
+    //while ( Pending_RPC != 0 )
+    // {
+    // fprintf(stderr,".");
+    // sleep(1);
+    // }
     memset(params,0,sizeof(params));
     if ( (json= cJSON_Parse(JSONstr)) != 0 )
     {
@@ -382,4 +375,5 @@ void *poll_for_broadcasts(void *args)
     }
     return(0);
 }
+*/
 
