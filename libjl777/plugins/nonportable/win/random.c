@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <process.h>
 #include <tlhelp32.h>
-#include <sys/timeb.h>
+#include <time.h>
 
 uint32_t OS_conv_datenum(int32_t datenum,int32_t hour,int32_t minute,int32_t second) // datenum+H:M:S -> unix time
 {
@@ -12,16 +12,14 @@ uint32_t OS_conv_datenum(int32_t datenum,int32_t hour,int32_t minute,int32_t sec
     memset(&t,0,sizeof(t));
     t.tm_year = (datenum / 10000) - 1900, t.tm_mon = ((datenum / 100) % 100) - 1, t.tm_mday = (datenum % 100);
     t.tm_hour = hour, t.tm_min = minute, t.tm_sec = second;
-    return((uint32_t)mktime(&t));
+    return((uint32_t)timegm(&t));
 }
 
 int32_t OS_conv_unixtime(int32_t *secondsp,time_t timestamp) // gmtime -> datenum + number of seconds
 {
-    struct tm t; int32_t datenum; uint32_t checktime; char buf[64]; time_t ltime;
-    _gmtime64_s(&gmt,&ltime);
-    //t = *gmtime(&timestamp);
-    asctime_s(buf,26,&gmt);
-    //strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ",&t); //printf("%s\n",buf);
+    struct tm t; int32_t datenum; uint32_t checktime; char buf[64];
+    t = *gmtime(&timestamp);
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ",&t); //printf("%s\n",buf);
     datenum = conv_date(secondsp,buf);
     if ( (checktime= OS_conv_datenum(datenum,*secondsp/3600,(*secondsp%3600)/60,*secondsp%60)) != timestamp )
     {
