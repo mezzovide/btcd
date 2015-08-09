@@ -112,6 +112,18 @@ int main(int argc, char **argv)
         namebuf[offset] = 0;
     if ( strcmp(namebuf,"api") != 0 )
         cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
+    if ( strcmp(namebuf,"init") == 0 )
+    {
+        // "http://178.63.60.131/init/?requestType=status&coin=VRC"
+        //"http://78.47.115.250:7777/public?plugin=relay&method=busdata&servicename=MGW&serviceNXT=8119557380101451968&destplugin=MGW&submethod=status&coin=BTC"
+        cJSON_AddItemToObject(json,"plugin",cJSON_CreateString("relay"));
+        cJSON_AddItemToObject(json,"method",cJSON_CreateString("busdata"));
+        cJSON_AddItemToObject(json,"servicename",cJSON_CreateString("MGW"));
+        cJSON_AddItemToObject(json,"serviceNXT",cJSON_CreateString("8119557380101451968"));
+        cJSON_AddItemToObject(json,"destplugin",cJSON_CreateString("MGW"));
+        if ( jstr(json,"requestType") != 0 )
+            cJSON_AddItemToObject(json,"submethod",cJSON_CreateString(jstr(json,"requestType")));
+    }
     if ( strcmp("nxt",namebuf) == 0 )
     {
 fprintf(stderr,"namebuf.(%s)\n",namebuf);
