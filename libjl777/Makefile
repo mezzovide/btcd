@@ -44,19 +44,19 @@ P = plugins/peggy
 I = plugins/InstantDEX
 K = plugins/KV
 
-UTILS = $(U)/ramcoder.c $(U)/huffstream.c $(U)/inet.c $(U)/cJSON.c  $(U)/bits777.c $(U)/NXT777.c $(U)/files777.c $(U)/utils777.c
+UTILS = $(U)/ramcoder.c $(U)/huffstream.c $(U)/inet.c $(U)/cJSON.c  $(U)/bits777.c $(U)/files777.c $(U)/utils777.c
 #SOPHIA = $(S)/sophia.c $(S)/kv777_main.c $(S)/db777.c $(S)/kv777.c
 PEGGY = $(P)/peggy777.c $(P)/quotes777.c #$(P)/serdes777.c $(P)/accts777.c #$(P)/peggytx.c
 RAMCHAIN = $(R)/ramchain_main.c $(R)/ramchain.c # $(R)/gen1block.c
-KV = $(K)/kv777_main.c $(K)/kv777.c $(K)/ramkv777.c
+KV = $(K)/kv777.c $(K)/ramkv777.c
 NONPORTABLE = plugins/nonportable/$(OS)/files.c plugins/nonportable/$(OS)/random.c
-COINS = $(C)/cointx.c $(C)/coins777.c $(C)/coins777_main.c $(C)/gen1.c #$(C)/gen1auth.c $(C)/gen1pub.c 
+COINS = $(C)/cointx.c $(C)/gen1.c #$(C)/gen1auth.c $(C)/gen1pub.c
 CRYPTO = $(U)/sha256.c $(U)/crypt_argchk.c $(U)/hmac_sha512.c $(U)/rmd160.c $(U)/sha512.c $(U)/peer777.c $(U)/user777.c $(U)/node777.c $(U)/SaM.c $(U)/transport777.c $(U)/crypto777.c $(U)/packet777.c $(U)/tom_md5.c
-INSTANTDEX = $(I)/InstantDEX_main.c
-COMMON = plugins/common/busdata777.c plugins/common/relays777.c plugins/common/console777.c plugins/common/prices777.c plugins/common/cashier777.c plugins/common/txnet777.c plugins/common/teleport777.c plugins/common/opreturn777.c $(C)/bitcoind_RPC.c plugins/common/txind777.c plugins/common/system777.c
-MGW = plugins/mgw/MGW_main.c plugins/mgw/old/sophia.c plugins/mgw/old/db777.c plugins/coins/coins777.c plugins/coins/coins777_main.c plugins/InstantDEX/InstantDEX_main.c plugins/KV/kv777_main.c plugins/utils/NXT777.c plugins/ramchain/ramchain.c  plugins/ramchain/ramchain_main.c plugins/common/relays777.c 
+COMMON = plugins/common/busdata777.c plugins/common/console777.c plugins/common/prices777.c plugins/common/cashier777.c plugins/common/txnet777.c plugins/common/teleport777.c plugins/common/opreturn777.c $(C)/bitcoind_RPC.c plugins/common/txind777.c plugins/common/system777.c
+NOTMGW = plugins/coins/coins777.c plugins/coins/coins777_main.c plugins/InstantDEX/InstantDEX_main.c plugins/KV/kv777_main.c plugins/utils/NXT777.c plugins/common/relays777.c
+MGW = plugins/mgw/MGW_main.c plugins/mgw/old/sophia.c plugins/mgw/old/db777.c  plugins/ramchain/ramchain.c  plugins/ramchain/ramchain_main.c
 
-SRCS = $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(RAMCHAIN) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
+SRCS = $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
 
 OBJS	:= $(SRCS:%.c=%.o)
 
@@ -70,7 +70,7 @@ test:	all
 	(cd tests; make test)
 
 SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE SuperNET.c libjl777.c $(OBJS) $(LIBS)
+    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE SuperNET.c libjl777.c  $(NOTMGW) $(OBJS) $(LIBS)
 
 MGW: $(SRCS) $(TARGET); \
     pkill MGW; rm MGW; clang -o MGW $(CFLAGS) -D INSIDE_MGW -D STANDALONE $(MGW) SuperNET.c libjl777.c $(OBJS) $(LIBS)
