@@ -16,7 +16,7 @@ ifeq (OS,Darwin)
     LANL := ../libjl777/plugins/nonportable/Darwin/libanl.a
 else
     LANL := -lanl
-#endif
+endif
 
 PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lm $(LANL)
 
