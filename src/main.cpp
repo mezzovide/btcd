@@ -4115,8 +4115,10 @@ extern "C" int32_t SuperNET_start(char *,char *);
 //int32_t launch_SuperNET(char *myip);
 void init_jl777(char *myip)
 {
-    fprintf(stderr,"starting SuperNET %p.(%s)\n",myip,myip);
-    SuperNET_start((char *)"SuperNET.conf",myip);
+    static char ipaddr[64];
+    strcpy(ipaddr,myip);
+    fprintf(stderr,"starting SuperNET %p.(%s)\n",ipaddr,ipaddr);
+    SuperNET_start((char *)"SuperNET.conf",ipaddr);
     //launch_SuperNET(myip);
     SuperNET_retval = 1;
     std::cout << "back from start" << std::endl;
