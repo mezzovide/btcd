@@ -983,19 +983,42 @@ int32_t price777_updatebasket(struct prices777 *prices,struct prices777 *feature
 
 double prices777_basket(struct prices777 *prices,int32_t maxdepth)
 {
-    int32_t i,j; double gap,wt,bidwtsum,askwtsum,bid,ask,hbla; struct prices777 *feature;
-    for (bid=ask=hbla=bidwtsum=askwtsum=i=0; i<prices->basketsize; i++)
+    int32_t i,j; double gap,wt,bidsum,asksum,bidwtsum,askwtsum,bid,ask,hbla = 0.; struct prices777 *feature;
+    for (i=0; i<prices->basketsize; i++)
     {
-        wt = prices->basketwts[i];
         if ( (feature= prices->basket[i]) != 0 )
         {
             if ( (gap= (prices->lastupdate - feature->lastupdate)) < 0 )
-                printf("unexpected time traveling feature %f vs %f or laggy feature\n",prices->lastupdate,feature->lastupdate);
-            for (j=0; j<maxdepth; j++)
             {
-                
+                printf("unexpected time traveling feature %f vs %f or laggy feature\n",prices->lastupdate,feature->lastupdate);
+                return(0.);
             }
         }
+        else
+        {
+            printf("unexpected null basket item %s[%d]\n",prices->contract,i);
+            return(0.);
+        }
+    }
+    for (bidsum=asksum=bidwtsum=askwtsum=j=0; j<maxdepth; j++)
+    {
+        for (i=0; i<prices->basketsize; i++)
+        {
+            if ( (feature= prices->basket[i]) != 0 )
+            {
+                wt = prices->basketwts[i];
+                bid = feature->orderbook[j][0][0];
+                ask = feature->orderbook[j][1][0];
+                if ( wt > SMALLVAL && ask > SMALLVAL )
+                    bidsum += (wt * ask), bidwtsum += wt;
+                else if ( wt < -SMALLVAL && bid > SMALLVAL )
+                    asksum += (wt * bid), askwtsum += wt;
+            }
+        }
+        if ( bidwtsum > SMALLVAL )
+            bidsum /= bidwtsum;
+        if ( askwtsum > SMALLVAL )
+            asksum /= askwtsum;
     }
     if ( prices->basketprices[0] )
         prices->lastbid = prices->basketprices[0];
