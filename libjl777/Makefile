@@ -279,7 +279,7 @@ dependencies: doesntexist; \
     sudo apt-get install make clang-3.4 autoconf  libtool libcurl4-gnutls-dev unzip autogen g++ libssl-dev libdb++-dev  libminiupnpc-dev libboost-all-dev;
 
 onetime: doesntexist; \
-    cd nanomsg; ./autogen.sh; ./configure; make; cd ..; \
+    cd nanomsg; ./autogen.sh; ./configure; make -lanl; cd ..; \
     cd miniupnpc; make; cp libminiupnpc.a ../libs; cd ..; \
     git clone https://github.com/joewalnes/websocketd; cd websocketd; make; cp websocketd ../libs; cd ..; \
     #git clone https://go.googlesource.com/go; cd go; git checkout go1.4.1; cd src; ./all.bash; cd ..; mkdir gocode; mkdir gocode/src; cd ..; \
