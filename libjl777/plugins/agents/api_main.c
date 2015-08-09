@@ -100,7 +100,7 @@ int main(int argc, char **argv)
     portable_OS_init();
     setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
     json = cJSON_CreateObject();
-    if ( remoteaddr= getenv("REMOTE_ADDR")) == 0 || strncmp("127.0.0.1",remoteaddr,strlen("127.0.0.1")) == 0 )
+    if ( (remoteaddr= getenv("REMOTE_ADDR")) == 0 || strncmp("127.0.0.1",remoteaddr,strlen("127.0.0.1")) == 0 )
         remoteaddr = 0,localaccess = 1;
     else cJSON_AddItemToObject(json,"remoteaddr",cJSON_CreateString(remoteaddr));
     for (i=j=0; argv[0][i]!=0; i++)
