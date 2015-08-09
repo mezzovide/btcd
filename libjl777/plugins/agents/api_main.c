@@ -124,8 +124,8 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
         url = "https://127.0.0.1", portflag = 1;
     if ( url != 0 )
          postbuf[0] = 0, delim = "";
-    //if ( (value= CGI_lookup_all(CGI_get_all(0),"HTTP_ORIGIN")) != 0 )
-    //    printf("HTTP_ORIGIN: %s\n",value);
+    if ( (value= CGI_lookup_all(CGI_get_all(0),"HTTP_ORIGIN")) != 0 )
+        printf("HTTP_ORIGIN: %s\n",value);
     for (iter=0; iter<3; iter++)
     {
         if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : ((iter==1) ? CGI_get_query(0) : CGI_get_cookie(0)))) != 0 )

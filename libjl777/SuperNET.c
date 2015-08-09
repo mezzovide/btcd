@@ -331,7 +331,7 @@ void SuperNET_agentloop(void *ipaddr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    char buf[65536],plugin[MAX_JSON_FIELD],access[MAX_JSON_FIELD],*jsonstr,*retstr; int32_t sock,len,retlen,checklen; cJSON *json;
+    char buf[65536],plugin[MAX_JSON_FIELD],*jsonstr,*retstr; int32_t sock,len,retlen,checklen; cJSON *json;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
