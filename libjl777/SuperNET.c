@@ -333,7 +333,7 @@ void SuperNET_agentloop(void *ipaddr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    char plugin[MAX_JSON_FIELD],*jsonstr,*retstr; int32_t sock,len,retlen,checklen; cJSON *json;
+    char plugin[MAX_JSON_FIELD],*jsonstr,*retstr,*msg; int32_t sock,len,retlen,checklen; cJSON *json;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
@@ -345,8 +345,10 @@ void SuperNET_apiloop(void *ipaddr)
             fprintf(stderr,"BIND.(%s) sock.%d\n",SUPERNET_APIENDPOINT,sock);
             while ( 1 )
             {
-                if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
+                if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
                 {
+                    jsonstr = clonestr(msg);
+                    nn_freemsg(msg);
                     retstr = 0;
                     fprintf(stderr,"apirecv.(%s)\n",jsonstr);
                     if ( INSTANTDEX.readyflag != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
@@ -372,7 +374,6 @@ void SuperNET_apiloop(void *ipaddr)
                     }
                     if ( retstr == 0 && (retstr= process_nn_message(sock,jsonstr)) != 0 )
                         free(retstr);
-                    nn_freemsg(jsonstr);
                     /*if ( strlen(jsonstr) < sizeof(buf)-1 )
                     {
                         strcpy(buf,jsonstr);

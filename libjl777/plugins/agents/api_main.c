@@ -40,7 +40,7 @@ void process_json(cJSON *json,char *remoteaddr,int32_t localaccess)
     if ( remoteaddr != 0 )
         cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString("remoteaccess"));
     if ( localaccess != 0 )
-        cJSON_AddItemToObject(json,"localaccess",cJSON_CreateString("localaccess"));
+        cJSON_AddItemToObject(json,"localaccess",cJSON_CreateNumber(1));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
     fprintf(stderr,"localacess.%d remote.(%s) jsonstr.(%s)\r\n",localaccess,remoteaddr!=0?remoteaddr:"",jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
@@ -136,7 +136,7 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
                 value = CGI_lookup_all(varlist,0);
                 for (i=0; value[i]!=0; i++)
                 {
-                    fprintf(stderr,"iter.%d %s [%d] = %s\r\n",iter,name,i,value[i]);
+                    //fprintf(stderr,"iter.%d %s [%d] = %s\r\n",iter,name,i,value[i]);
                     if ( i == 0 )
                     {
                         if ( url == 0 )
