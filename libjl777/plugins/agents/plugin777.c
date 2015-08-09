@@ -139,7 +139,7 @@ static struct dKV777 *agent_initprotocol(struct plugin_info *plugin,cJSON *json,
     if ( prot->port == 0 )
         prot->port = SUPERNET_PORT + ((((uint16_t)protocol[0] << 8) | agent[0]) % 777);
 #ifndef BUNDLED
-    strcpy(KV777.PATH,path), os_compatible_path(KV777.PATH), ensure_directory(KV777.PATH);
+    strcpy(SUPERNET.DBPATH,path), os_compatible_path(SUPERNET.DBPATH), ensure_directory(SUPERNET.DBPATH);
 #endif
     buf[0] = 0, prot->subsock = nn_createsocket(buf,0,"NN_SUB",NN_SUB,0,10,1);
     n = protocols_init(prot->subsock,prot->connections,protocol);

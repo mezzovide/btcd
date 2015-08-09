@@ -86,7 +86,7 @@ void set_KV777_globals(struct dKV777 **relaysptr,char *transport,void *NXTACCTSE
 
 struct kv777_info
 {
-    char PATH[512],NXTADDR[64],SERVICENXT[64],relayendpoint[128],transport[16],protocol[16];
+    char NXTADDR[64],SERVICENXT[64],relayendpoint[128],transport[16],protocol[16];
     uint8_t mysecret[32],mypubkey[32],servicesecret[32],servicepubkey[32],NXTACCTSECRET[2048],SERVICESECRET[2048];
     struct kv777 **KVS; struct dKV777 **dKVs,**relays_handle;
     uint64_t nxt64bits,service64bits;
@@ -1095,8 +1095,8 @@ struct dKV777 *dKV777_init(char *name,char *protocol,struct kv777 **kvs,int32_t 
         free(dKV);
         return(0);
     }
-    sprintf(buf,"%s.nodes",name), dKV->nodes = kv777_init(KV777.PATH,buf,0);
-    sprintf(buf,"%s.approvals",name), dKV->approvals = kv777_init(KV777.PATH,buf,0);
+    sprintf(buf,"%s.nodes",name), dKV->nodes = kv777_init(SUPERNET.DBPATH,buf,0);
+    sprintf(buf,"%s.approvals",name), dKV->approvals = kv777_init(SUPERNET.DBPATH,buf,0);
     for (i=0; i<dKV->nodes->numkeys; i++) // connect all nodes in DB that are not already connected
     {
         printf("dKV.%d check\n",i);

@@ -547,12 +547,12 @@ void SuperNET_initconf(cJSON *json)
 #endif
     if ( SUPERNET.iamrelay != 0 )
     {
-        SUPERNET.PM = kv777_init(KV777.PATH,"PM",0);
-        SUPERNET.alias = kv777_init(KV777.PATH,"alias",0);
-        SUPERNET.protocols = kv777_init(KV777.PATH,"protocols",0);
-        SUPERNET.rawPM = kv777_init(KV777.PATH,"rawPM",0);
-        SUPERNET.services = kv777_init(KV777.PATH,"services",0);
-        SUPERNET.invoices = kv777_init(KV777.PATH,"invoices",0);
+        SUPERNET.PM = kv777_init(SUPERNET.DBPATH,"PM",0);
+        SUPERNET.alias = kv777_init(SUPERNET.DBPATH,"alias",0);
+        SUPERNET.protocols = kv777_init(SUPERNET.DBPATH,"protocols",0);
+        SUPERNET.rawPM = kv777_init(SUPERNET.DBPATH,"rawPM",0);
+        SUPERNET.services = kv777_init(SUPERNET.DBPATH,"services",0);
+        SUPERNET.invoices = kv777_init(SUPERNET.DBPATH,"invoices",0);
     }
 }
 
