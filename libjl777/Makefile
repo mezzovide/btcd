@@ -58,7 +58,7 @@ MGW = plugins/mgw/MGW_main.c plugins/mgw/old/sophia.c plugins/mgw/old/db777.c
 
 SRCS = SuperNET.c libjl777.c $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(RAMCHAIN) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
 
-MGWSRCS = SuperNET.c plugins/mgw/MGW_main.c $(S)/sophia.c $(S)/db777.c libjl777.c $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(RAMCHAIN) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
+MGWSRCS = $(SRCS) $(MGW)
 
 OBJS	:= $(SRCS:%.c=%.o)
 
