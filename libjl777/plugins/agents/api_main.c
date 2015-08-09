@@ -98,6 +98,11 @@ int main(int argc, char **argv)
     CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,localaccess,remoteaccess = 0,portflag = 0; cJSON *json; long offset;
     char urlbuf[512],namebuf[512],postbuf[65536],*retstr,*delim,*url = 0;
     portable_OS_init();
+    fprintf(stderr,"%s\n",getenv("QUERY_STRING"));
+    fprintf(stderr,"%s\n",getenv("CONTENT_TYPE"));
+    fprintf(stderr,"%s\n",getenv("PATH"));
+    fprintf(stderr,"%s\n",getenv("USER"));
+    fprintf(stderr,"%s\n",getenv("HOME"));
     setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
     json = cJSON_CreateObject();
     for (i=j=0; argv[0][i]!=0; i++)
