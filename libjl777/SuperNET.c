@@ -203,11 +203,7 @@ char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
         {
             if ( (retstr= InstantDEX(jsonstr)) == 0 )
             {
-                extern queue_t InstantDEXQ;
-                queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
-                free_json(json);
-                return(clonestr("{\"success\":\"InstantDEX command queued\"}"));
-            }
+           }
             else
             {
                 free_json(json);

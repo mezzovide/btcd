@@ -780,7 +780,7 @@ void jaddi64bits(cJSON *json,uint64_t nxt64bits) { char numstr[64]; sprintf(nums
 char *jstr(cJSON *json,char *field) { if ( field == 0 ) return(cJSON_str(json)); return(cJSON_str(cJSON_GetObjectItem(json,field))); }
 
 char *jstri(cJSON *json,int32_t i) { return(cJSON_str(cJSON_GetArrayItem(json,i))); }
-char *jprint(cJSON *json,int32_t freeflag) { char *str; str = cJSON_Print(json), _stripwhite(str,' '); if ( freeflag != 0 ) free_json(json); return(str); }
+char *jprint(cJSON *json,int32_t freeflag) { char *str; if ( json == 0 ) return(clonestr("{}")); str = cJSON_Print(json), _stripwhite(str,' '); if ( freeflag != 0 ) free_json(json); return(str); }
 
 char *get_cJSON_fieldname(cJSON *obj)
 {

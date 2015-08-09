@@ -1966,8 +1966,17 @@ struct prices777 *prices777_initpair(int32_t needfunc,void (*updatefunc)(struct 
 uint32_t prices777_NXTBLOCK;
 void prices777_update_NXT(uint32_t newblocknum)
 {
+    cJSON *InstantDEX_lottostats();
+    extern cJSON *Lottostats_json;
+    static cJSON *oldjson;
     if ( newblocknum > prices777_NXTBLOCK )
+    {
+        if ( oldjson != 0 )
+            free_json(oldjson);
+        oldjson = Lottostats_json;
+        Lottostats_json = InstantDEX_lottostats();
         prices777_NXTBLOCK = newblocknum;
+    }
 }
 
 struct prices777 *prices777_safecopy(int32_t writeflag,void *prices777,double buf[MAX_DEPTH][2][2],struct prices777_nxtquote nxtbook[MAX_DEPTH][2])

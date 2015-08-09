@@ -137,6 +137,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
 #define HOURS_FIFO (64)
 #define DAYS_FIFO (512)
 #define INSTANTDEX_MINVOL 75
+#define INSTANTDEX_ACCT "4383817337783094122"
 
 struct InstantDEX_quote
 {

@@ -79,12 +79,18 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
 }
 
 #include "InstantDEX.h"
+
 typedef char *(*json_handler)(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr);
+cJSON *Lottostats_json;
 
 char *InstantDEX(char *jsonstr)
 {
-    char *retstr = 0,key[512],exchangestr[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD];
-    cJSON *json; uint64_t baseid,relid,assetbits; int32_t invert,keysize,allfields; struct prices777 *prices;
+    char *InstantDEX_allorderbooks();
+    char *InstantDEX_openorders();
+    char *InstantDEX_tradehistory();
+    char *InstantDEX_cancelorder(uint64_t orderid);
+    char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD];
+    cJSON *json; uint64_t orderid,baseid,relid,assetbits; int32_t invert,keysize,allfields; struct prices777 *prices;
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
         baseid = j64bits(json,"baseid"), relid = j64bits(json,"relid");
@@ -94,38 +100,55 @@ char *InstantDEX(char *jsonstr)
         copy_cJSON(name,jobj(json,"name"));
         copy_cJSON(base,jobj(json,"base"));
         copy_cJSON(rel,jobj(json,"rel"));
+        copy_cJSON(method,jobj(json,"method"));
+        orderid = j64bits(json,"orderid");
         allfields = juint(json,"allfields");
         assetbits = InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
-        if ( (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 )
+        // "makeoffer3", "jumptrades""
+        if ( strcmp(method,"allorderbooks") == 0 )
+            retstr = InstantDEX_allorderbooks();
+        else if ( strcmp(method,"openorders") == 0 )
+            retstr = InstantDEX_openorders();
+        else if ( strcmp(method,"cancelorder") == 0 )
+            retstr = InstantDEX_cancelorder(orderid);
+        else if ( strcmp(method,"tradehistory") == 0 )
+            retstr = InstantDEX_tradehistory();
+        else if ( strcmp(method,"lottostats") == 0 )
+            retstr = jprint(Lottostats_json,0);
+        else if ( strcmp(method,"LSUM") == 0 )
+        {
+            sprintf(retbuf,"{\"result\":\"%s\",\"amount\":%d}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);
+            retstr = clonestr(retbuf);
+        }
+        if ( retstr == 0 && (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 )
         {
             if ( prices->baseid == baseid && prices->relid == relid ) //(strcmp(prices->base,base) == 0 && strcmp(prices->rel,rel) == 0) || (
                 invert = 0;
             else if ( prices->baseid == relid && prices->relid == baseid ) //(strcmp(prices->base,rel) == 0 && strcmp(prices->rel,base) == 0)  || (
                 invert = 1;
             else invert = 0, printf("baserel not matching (%s %s) vs (%s %s)\n",prices->base,prices->rel,base,rel);
-            printf("return invert.%d allfields.%d (%s %s) vs (%s %s)  [%llu %llu] vs [%llu %llu]\n",invert,allfields,base,rel,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,(long long)baseid,(long long)relid);
-            if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 )
+            //printf("return invert.%d allfields.%d (%s %s) vs (%s %s)  [%llu %llu] vs [%llu %llu]\n",invert,allfields,base,rel,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,(long long)baseid,(long long)relid);
+            if ( strcmp(method,"orderbook") == 0 )
             {
-                /*if ( prices->op == 0 )
+                if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 )
                 {
-                    if ( (op= create_orderbook(base,baseid,rel,relid,0,jstr(json,"gui"),exchangestr)) != 0 )
+                    if ( prices->op != 0 )
                     {
+                        retstr = prices777_orderbook_jsonstr(invert,SUPERNET.my64bits,prices->op,MAX_DEPTH,allfields);
                         portable_mutex_lock(&prices->mutex);
-                        if ( prices->op != 0 )
-                            free_orderbook(prices->op);
-                        prices->op = op;
+                        if ( prices->orderbook_jsonstrs[invert][allfields] != 0 )
+                            free(prices->orderbook_jsonstrs[invert][allfields]);
+                        prices->orderbook_jsonstrs[invert][allfields] = retstr;
                         portable_mutex_unlock(&prices->mutex);
                     }
-                }*/
-                if ( prices->op != 0 )
-                {
-                    retstr = prices777_orderbook_jsonstr(invert,SUPERNET.my64bits,prices->op,MAX_DEPTH,allfields);
-                    portable_mutex_lock(&prices->mutex);
-                    if ( prices->orderbook_jsonstrs[invert][allfields] != 0 )
-                        free(prices->orderbook_jsonstrs[invert][allfields]);
-                    prices->orderbook_jsonstrs[invert][allfields] = retstr;
-                    portable_mutex_unlock(&prices->mutex);
                 }
+            }
+            else if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
+            {
+                extern queue_t InstantDEXQ;
+                queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
+                free_json(json);
+                return(clonestr("{\"success\":\"InstantDEX placebid/ask queued\"}"));
             }
         }
         if ( Debuglevel > 2 )
@@ -149,8 +172,8 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
     return(0);
 }
 
-char *PLUGNAME(_methods)[] = { "makeoffer3", "allorderbooks", "orderbook", "lottostats", "cancelquote", "openorders", "placebid", "placeask", "respondtx", "jumptrades", "tradehistory", "msigaddr", "setmsigaddr", "LSUM" }; // list of supported methods approved for local access
-char *PLUGNAME(_pubmethods)[] = { "bid", "ask", "makeoffer3", "msigaddr", "setmsigaddr", "LSUM", "orderbook" }; // list of supported methods approved for public (Internet) access
+char *PLUGNAME(_methods)[] = { "makeoffer3", "allorderbooks", "orderbook", "lottostats", "cancelquote", "openorders", "placebid", "placeask", "respondtx", "jumptrades", "tradehistory", "LSUM" }; // list of supported methods approved for local access
+char *PLUGNAME(_pubmethods)[] = { "bid", "ask", "makeoffer3", "LSUM", "orderbook" }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
 
 char *makeoffer3_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
