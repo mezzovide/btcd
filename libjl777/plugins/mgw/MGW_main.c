@@ -2108,7 +2108,7 @@ struct cointx_info *mgw_cointx_withdraw(struct coin777 *coin,char *destaddr,uint
 uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 *coin)
 {
     struct multisig_addr **msigs; int32_t i,n = 0,m=0; uint32_t firstblocknum; uint64_t circulation,smallest,val,unspent = 0; int64_t balance;
-    cJSON *json,*retjson,*item,*waiting,*pending; char numstr[64],*jsonstr,*retbuf; struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
+    cJSON *json,*retjson,*item,*waiting,*pending; char buf[1024],numstr[64],*jsonstr,*retbuf; struct extra_info *extra; struct mgw777 *mgw = &coin->mgw;
     ramchain_prepare(coin,&coin->ramchain);
     if ( mgw->unspents != 0 )
         free(mgw->unspents);
@@ -2164,6 +2164,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     cJSON_AddItemToObject(retjson,"numwithdraws",cJSON_CreateNumber(mgw->numwithdraws));
     cJSON_AddItemToObject(retjson,"withdrawsum",cJSON_CreateNumber(dstr(mgw->withdrawsum)));
     cJSON_AddItemToObject(retjson,"balance",cJSON_CreateNumber(dstr(balance)));
+    sprintf(buf,"G%d:[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d<BR>",mgw->gatewayid,dstr(balance),coin->name,dstr(mgw->S.sentNXT),balance<=0?0:dstr(mgw->S.sentNXT)/dstr(balance),dstr(unspent),dstr(circulation),dstr(coin->supply),dstr(mgw->withdrawsum),dstr(0),coin->RTNXT_height,coin->name,coin->ramchain.RTblocknum);
     if ( balance >= -SATOSHIDEN && mgw->numwithdraws > 0 && mgw_isrealtime(coin) != 0 )
     {
         struct cointx_info *cointx;
@@ -2212,6 +2213,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
         coin->mgw.lastupdate = (milliseconds() + 60000);
     cJSON_AddItemToObject(retjson,"waiting",waiting);
     cJSON_AddItemToObject(retjson,"pending",pending);
+    cJSON_AddItemToObject(retjson,"summary",cJSON_CreateString(buf));
     if ( mgw->retjson != 0 )
         free_json(mgw->retjson);
     mgw->retjson = retjson;
