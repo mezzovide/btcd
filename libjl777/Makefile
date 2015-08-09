@@ -74,8 +74,8 @@ $(TARGET): $(OBJS)
 test:	all
 	(cd tests; make test)
 
-MGW: $(MGWOBJS);
-  	$(CC) -D INSIDE_MGW -D STANDALONE $(CFLAGS) -o MGW $(OBJS) $(LIBS)
+MGW: $(MGWSRCS) $(MGWTARGET); \
+    clang -o MGW -D INSIDE_MGW -D STANDALONE $(CFLAGS) $(MGWOBJS) $(LIBS)
 
 SuperNET: $(SRCS) $(TARGET); \
     pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(OBJS) $(LIBS)
