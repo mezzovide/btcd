@@ -94,7 +94,7 @@ struct exchange_info
     int32_t (*supports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid);
     uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
     char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD];
-    uint32_t num,exchangeid,pollgap,refcount,pollnxtblock,polling; uint64_t nxt64bits; double lastupdate;
+    uint32_t num,exchangeid,pollgap,refcount,polling; uint64_t nxt64bits; double lastupdate;
 } Exchanges[MAX_EXCHANGES];
 
 struct prices777_data
@@ -967,14 +967,19 @@ double prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32
     return(hbla);
 }
 
-int32_t price777_updatebasket(struct prices777 *prices,struct prices777 *feature,double wt)
+struct prices777 *prices777_createbasket(char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,struct prices777 **features,double *wts,int32_t n)
 {
-    feature->dependents = realloc(feature->dependents,sizeof(*feature->dependents) * (feature->numdependents + 1));
-    feature->dependents[feature->numdependents++] = &prices->changed;
-    prices->basket = realloc(prices->basket,sizeof(*prices->basket) * (prices->basketsize + 1));
-    prices->basketwts = realloc(prices->basketwts,sizeof(*prices->basketwts) * (prices->basketsize + 1));
-    prices->basketprices = realloc(prices->basketprices,sizeof(*prices->basketprices) * 2 * (prices->basketsize + 1));
-    prices->basket[prices->basketsize] = feature, prices->basketwts[prices->basketsize] = wt, prices->basketsize++;
+    int32_t i; struct prices777 *feature,*prices = calloc(1,sizeof(*prices));
+    for (i=0; i<n; i++)
+    {
+        feature = features[i];
+        feature->dependents = realloc(feature->dependents,sizeof(*feature->dependents) * (feature->numdependents + 1));
+        feature->dependents[feature->numdependents++] = &prices->changed;
+        prices->basket = realloc(prices->basket,sizeof(*prices->basket) * (prices->basketsize + 1));
+        prices->basketwts = realloc(prices->basketwts,sizeof(*prices->basketwts) * (prices->basketsize + 1));
+        prices->basketprices = realloc(prices->basketprices,sizeof(*prices->basketprices) * 2 * (prices->basketsize + 1));
+        prices->basket[prices->basketsize] = feature, prices->basketwts[prices->basketsize] = wts[i], prices->basketsize++;
+    }
     return(0);
 }
 
@@ -2110,7 +2115,7 @@ void prices777_exchangeloop(void *ptr)
             {
                 if ( isnxtae == 0 )
                     pollflag = milliseconds() > exchange->lastupdate + exchange->pollgap && milliseconds() > prices->lastupdate + 60000;
-                else if ( strcmp(exchange->name,"unconf") == 0 || exchange->pollnxtblock < prices777_NXTBLOCK )
+                else if ( strcmp(exchange->name,"unconf") == 0 || prices->pollnxtblock < prices777_NXTBLOCK )
                     pollflag = 1;
                 else continue;
                 if ( pollflag != 0 )
@@ -2118,10 +2123,11 @@ void prices777_exchangeloop(void *ptr)
                     prices->lastprice = (*exchange->updatefunc)(prices,MAX_DEPTH);
                     updated = exchange->lastupdate = milliseconds(), prices->lastupdate = milliseconds();
                     if ( strcmp(exchange->name,"unconf") != 0 )
-                        printf("%-13s %12s (%10s %10s) %022llu %022llu isnxtae.%d poll %u -> %u %.8f hbla %.8f %.8f\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,exchange->pollnxtblock,prices777_NXTBLOCK,prices->lastprice,prices->lastbid,prices->lastask);
+                        printf("%-13s %12s (%10s %10s) %022llu %022llu isnxtae.%d poll %u -> %u %.8f hbla %.8f %.8f\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,prices->pollnxtblock,prices777_NXTBLOCK,prices->lastprice,prices->lastbid,prices->lastask);
                     for (i=0; i<prices->numdependents; i++)
                         if ( (*prices->dependents[i]) < 0xff )
                             (*prices->dependents[i])++;
+                    prices->pollnxtblock = prices777_NXTBLOCK;
                     n++;
                 }
             }
@@ -2130,7 +2136,6 @@ void prices777_exchangeloop(void *ptr)
             sleep(6);
         else
         {
-            exchange->pollnxtblock = prices777_NXTBLOCK;
             for (i=n=0; i<BUNDLE.num; i++)
             {
                 if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->basketsize != 0 && prices->changed != 0 )
@@ -2203,7 +2208,13 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                         firstprices = prices;
                     else
                     {
-                        
+                        if ( strcmp(exchangestr,"nxtae") == 0 && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
+                        {
+                            double wts[2]; struct prices777 *features[2];
+                            features[0] = firstprices, features[1] = prices;
+                            wts[0] = 1., wts[1] = -1.;
+                            return(prices777_createbasket(_name,_base,_rel,refbaseid,refrelid,features,wts,2));
+                        }
                     }
                     break;
                 }

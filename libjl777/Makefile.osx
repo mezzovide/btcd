@@ -16,22 +16,18 @@ else
     PLANL := -lanl
 endif
 
-PLIBS := ../libs/libjl777-win32.a ../libs/libminiupnpc-win32.a ../libs/libnanomsg-win32.a  -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 ../libs/libmman.a -lz -lssp -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB
+PLIBS := ../libs/libjl777-osx.a ../libs/libminiupnpc-osx.a ../libs/libnanomsg-osx.a -lpthread -lcurl -lm $(PLANL)
 
-LIBS= libs/libjl777-win32.a libs/libnanomsg-win32.a libs/libminiupnpc-win32.a -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 libs/libmman.a -lz -lssp
+LIBS= libs/libjl777-osx.a libs/libnanomsg-osx.a libs/libminiupnpc-osx.a -lpthread -lcurl -lm $(LANL)
 
-CC=i686-w64-mingw32.static-gcc
-OS=win
+CC=clang
+CFLAGS=-Wall -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  #-Iplugins/utils -Iplugins/nonportable -Iincludes  -Iplugins/mgw -Iplugins/InstantDEX -Iplugins/sophia -Iplugins/ramchain -Iplugins/coins  -I../includes -I../../includes -I/usr/include -Iplugins#-DADDRINFO_SIZE=256
 
-CFLAGS= -w -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINIUPNP_STATICLIB
+TARGET	= libjl777.a
 
-
-
-TARGET  = libjl777.a
-
-PICOC   = picoc.c table.c lex.c parse.c expression.c heap.c type.c variable.c clibrary.c platform.c include.c \
-        platform/platform_unix.c platform/library_unix.c  cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
-        cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c cstdlib/unistd.c
+PICOC	= picoc.c table.c lex.c parse.c expression.c heap.c type.c variable.c clibrary.c platform.c include.c \
+	platform/platform_unix.c platform/library_unix.c  cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
+	cstdlib/time.c cstdlib/errno.c cstdlib/ctype.c cstdlib/stdbool.c cstdlib/unistd.c
 
 GZIP = gzip/adler32.c gzip/crc32.c gzip/gzclose.c gzip/gzread.c gzip/infback.c gzip/inflate.c gzip/trees.c \
     gzip/zutil.c gzip/compress.c  gzip/deflate.c gzip/gzlib.c gzip/gzwrite.c gzip/inffast.c gzip/inftrees.c gzip/uncompr.c
@@ -55,12 +51,11 @@ PEGGY = $(P)/peggy777.c $(P)/quotes777.c #$(P)/serdes777.c $(P)/accts777.c #$(P)
 RAMCHAIN = $(R)/ramchain_main.c $(R)/ramchain.c # $(R)/gen1block.c
 KV = $(K)/kv777_main.c $(K)/kv777.c $(K)/ramkv777.c
 NONPORTABLE = plugins/nonportable/$(OS)/files.c plugins/nonportable/$(OS)/random.c
-COINS = $(C)/cointx.c $(C)/coins777.c $(C)/coins777_main.c $(C)/gen1.c #$(C)/gen1auth.c $(C)/gen1pub.c
+COINS = $(C)/cointx.c $(C)/coins777.c $(C)/coins777_main.c $(C)/gen1.c #$(C)/gen1auth.c $(C)/gen1pub.c 
 CRYPTO = $(U)/sha256.c $(U)/crypt_argchk.c $(U)/hmac_sha512.c $(U)/rmd160.c $(U)/sha512.c $(U)/peer777.c $(U)/user777.c $(U)/node777.c $(U)/SaM.c $(U)/transport777.c $(U)/crypto777.c $(U)/packet777.c $(U)/tom_md5.c
 INSTANTDEX = $(I)/InstantDEX_main.c
 COMMON = plugins/common/busdata777.c plugins/common/relays777.c plugins/common/console777.c plugins/common/prices777.c plugins/common/cashier777.c plugins/common/txnet777.c plugins/common/teleport777.c plugins/common/opreturn777.c $(C)/bitcoind_RPC.c plugins/common/txind777.c plugins/common/system777.c
 MGW = plugins/mgw/MGW_main.c $(S)/sophia.c $(S)/db777.c
-
 
 SRCS = SuperNET.c libjl777.c $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(RAMCHAIN) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
  
@@ -70,20 +65,21 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
   	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	ar rcu  libs/win/libjl777-win32.a  $(OBJS)
+	ar rcu  libs/libjl777.a  $(OBJS)
 
 test:	all
 	(cd tests; make test)
 
 clean: doesntexist
-	rm libs/libjl777-win32.a SuperNET; rm -f libjl777-win32.a  $(OBJS) *~
+	rm libs/libjl777-osx.a SuperNET; rm -f libjl777-osx.a  $(OBJS) *~
 
-PINCLUDES := -Iincludes -Inonportable/$(OS)  -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp #-I. -Iutils -Iramchain -Icoins -Imgw -I -Isophia -I../includes -I../.. -I../coins -I../ramchain -I../sophia -I../$
-
+PINCLUDES := -Iincludes -Inonportable/$(OS)  -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp #-I. -Iutils -Iramchain -Icoins -Imgw -I -Isophia -I../includes -I../.. -I../coins -I../ramchain -I../sophia -I../utils -I../mgw
 
 _echodemo := rm agents/echodemo; gcc -o agents/echodemo -O2 $(PINCLUDES) echodemo.c $(PLIBS)
 
-_api := rm cgi/*; $(CC) -o cgi/api.exe -O2 $(PINCLUDES) api_main.c ccgi.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api.exe cgi/nxt.exe; ln cgi/api.exe cgi/nxts.exe; ln cgi/api.exe cgi/port.exe; ln cgi/api.exe cgi/ports.exe; ln cgi/api.exe cgi/InstantDEX.exe; ln cgi/api.exe cgi/echodemo.exe 
+_rps := rm agents/rps; gcc -o agents/rps -O2 $(PINCLUDES) rps777.c $(PLIBS)
+
+_api := rm cgi/*; gcc -o cgi/api -O2 $(PINCLUDES) agents/api_main.c ccgi/ccgi.c ccgi/prefork.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api cgi/nxt; ln cgi/api cgi/nxts; ln cgi/api cgi/port; ln cgi/api cgi/ports; ln cgi/api cgi/InstantDEX; ln cgi/api cgi/init;  ln cgi/api cgi/public
 
 _msc := rm agents/msc; gcc -o agents/msc -O2 $(PINCLUDES) two/msc.c $(PLIBS)
 
@@ -95,12 +91,15 @@ _two := rm agents/two; gcc -o agents/two -O2 $(PINCLUDES) two/two.c $(PLIBS)
 
 _stockfish := cd stockfish; rm stockfish; make build ARCH=x86-64-modern; cp stockfish ../agents; cd ..
 
-agents: plugins/agents/echodemo plugins/agents/stockfish plugins/cgi/api plugins/agents/nxt plugins/agents/two plugins/agents/eth plugins/agents/msc; \
+agents: plugins/agents/rps plugins/agents/echodemo plugins/agents/stockfish plugins/cgi/api plugins/agents/nxt plugins/agents/two plugins/agents/eth plugins/agents/msc; \
 	cd plugins; \
     $(_echodemo); \
-    $(_stockfish); \
+    $(_rps); \
     $(_api); \
     cd ..
+
+rps: plugins/agents/rps; \
+ 	cd plugins; $(_rps); cd ..
 
 echodemo: plugins/agents/echodemo; \
  	cd plugins; $(_echodemo); cd ..
@@ -135,11 +134,11 @@ stockfish: lib/stockfish; \
 sophia: lib/sophia; \
  	cd plugins; $(_sophia); cd ..
 
-MGW: lib/MGW; \
-	cd plugins; $(_MGW); cd ..
+MGW: $(SRCS) $(TARGET); \
+    clang -o MGW -DINSIDE_MGW $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
 
 SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET; $(CC) -o SuperNET.exe $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
+    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
 
 #-lz -ldl -lutil -lpcre -lexpat
 
@@ -179,7 +178,7 @@ chessjs:  doesntexist; \
     git clone https://github.com/exoticorn/stockfish-js
 
 nanomsg:  doesntexist; \
-    git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; make -lanl; make check; cp .libs/libnanomsg.a ../libs/libnanomsg-win32.a; cp src/*.h ../includes; cd ..
+    git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh; ./configure; make -lanl; make check; cp .libs/libnanomsg.a ../libs/libnanomsg-osx.a; cp src/*.h ../includes; cd ..
 
 python: doesntexist; \
     tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; make all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;
@@ -275,28 +274,16 @@ patch2: doesntexist; \
     #cd ..; \
 
 dependencies: doesntexist; \
-    sudo apt-get install autopoint bison bzip2 cmake flex gcc g++ gperf intltool libtool ruby scons wine zlib1g-dev libffi-dev;
+    sudo apt-get install make clang-3.4 autoconf  libtool libcurl4-gnutls-dev unzip autogen g++ libssl-dev libdb++-dev  libminiupnpc-dev libboost-all-dev;
 
-onetime: doesntexist: \
-    cd nanomsg; ./autogen.sh; ./configure; make -lanl; cp .libs/libnanomsg.a ../libs/libnanomsg-win32.a cd ..; \
-    cd miniupnpc; make; cp libminiupnpc.a ../libs/libminiupnpc.a-win32.a; cd ..; \
-    git clone https://github.com/joewalnes/websocketd; cd websocketd; make; cp websocketd ../libs/websocketd-win32; cd ..; \
-
-
-winpatch: doesntexist; \
-   sh make_windows.sh;
-
-winexe: doesntexist; \
-    sh quick_win.sh;
-
-winpatch64: doesntexist; \
-   sh make_windows64.sh;
-
-winexe64: doesntexist; \
-    sh quick_win64.sh;
-
-winbtcd64: doesntexist; \
-	sh make_btcd_win64.sh
+onetime: doesntexist; \
+    cd nanomsg; ./autogen.sh; ./configure; make -lanl; cp .libs/libnanomsg.a ../libs/libnanomsg-osx.a cd ..; \
+    cd miniupnpc; make; cp libminiupnpc.a ../libs/libminiupnpc.a-osx.a; cd ..; \
+    git clone https://github.com/joewalnes/websocketd; cd websocketd; make; cp websocketd ../libs/websocketd-osx; cd ..; \
+    #git clone https://go.googlesource.com/go; cd go; git checkout go1.4.1; cd src; ./all.bash; cd ..; mkdir gocode; mkdir gocode/src; cd ..; \
+    #mkdir go/gocode; mkdir go/gocode/src; export GOPATH=`pwd`/go/gocode;  export GOROOT=`pwd`/go; echo $$GOPATH; echo $$GOROOT; \
+    #go get golang.org/x/tools/cmd; go get golang.org/x/crypto; go get golang.org/x/image; go get golang.org/x/sys; go get golang.org/x/net; go get golang.org/x/text; go get golang.org/x/tools;\
+    #cd go/gocode/src; mkdir github.com; cd github.com; mkdir joewalnes; cd joewalnes; git clone https://github.com/joewalnes/websocketd; cd websocketd; go build; cp websocketd ../../../../../../libs; cd ../../../../../..;
 
 count:
 	@echo "Core:"
@@ -341,13 +328,13 @@ plugins/agents/sophia: plugins/sophia/sophia.c plugins/sophia/sophia_main.c
 plugins/agents/echodemo: plugins/echodemo.c
 #plugins/nonportable/$(OS)/files.o: plugins/nonportable/$(OS)/files.c
 #plugins/nonportable/$(OS)/random.o: plugins/nonportable/$(OS)/random.c
+plugins/agents/rps: plugins/rps777.c
 plugins/agents/eth: plugins/two/eth.c
 plugins/agents/msc: plugins/two/msc.c
 plugins/agents/nxt: plugins/two/nxt.c
 plugins/agents/two: plugins/two/two.c
-plugins/InstantDEX/InstantDEX_main.o: plugins/InstantDEX/InstantDEX_main.c plugins/InstantDEX/assetids.h plugins/InstantDEX/atomic.h plugins/InstantDEX/bars.h plugins/InstantDEX/exchangepairs.h plugins/InstantDEX/exchanges.h plugins/InstantDEX/feeds.h plugins/InstantDEX/NXT_tx.h plugins/InstantDEX/orderbooks.h plugins/InstantDEX/quotes.h plugins/InstantDEX/rambooks.h plugins/InstantDEX/signals.h plugins/InstantDEX/tradebot.h plugins/InstantDEX/trades.h plugins/InstantDEX/InstantDEX.h
+plugins/InstantDEX/InstantDEX_main.o: plugins/InstantDEX/InstantDEX_main.c plugins/InstantDEX/assetids.h plugins/InstantDEX/atomic.h plugins/InstantDEX/bars.h plugins/InstantDEX/exchangepairs.h plugins/InstantDEX/feeds.h plugins/InstantDEX/NXT_tx.h plugins/InstantDEX/orderbooks.h plugins/InstantDEX/quotes.h plugins/InstantDEX/rambooks.h plugins/InstantDEX/signals.h plugins/InstantDEX/tradebot.h plugins/InstantDEX/trades.h plugins/InstantDEX/InstantDEX.h
 
-plugins/cgi/api: plugins/api_main.c plugins/ccgi.c plugins/prefork.c
+plugins/cgi/api: plugins/agents/api_main.c plugins/ccgi/ccgi.c plugins/ccgi/prefork.c
 
 lib/MGW: plugins/mgw/mgw.c plugins/mgw/state.c plugins/mgw/huff.c plugins/ramchain/touch plugins/ramchain/blocks.c plugins/ramchain/kv777.c plugins/ramchain/search.c plugins/ramchain/tokens.c plugins/ramchain/init.c plugins/ramchain/ramchain.c plugins/utils/ramcoder.c plugins/utils/huffstream.c plugins/utils/bitcoind.c
-
