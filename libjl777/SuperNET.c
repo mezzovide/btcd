@@ -70,7 +70,7 @@ void *issue_cgicall(void *_ptr)
     else
     {
         destNXT = cJSON_str(cJSON_GetObjectItem(ptr->json,"destNXT"));
-        if ( strcmp(plugin,"relay") == 0 || (broadcaststr != 0 && strcmp(broadcaststr,"publicaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
+        if ( strcmp(plugin,"relay") == 0 || (broadcaststr != 0 && strcmp(broadcaststr,"remoteaccess") == 0) || cJSON_str(cJSON_GetObjectItem(ptr->json,"servicename")) != 0 )
         {
             if ( Debuglevel > 1 )
                 printf("call busdata_sync.(%s)\n",ptr->jsonstr);
@@ -354,7 +354,7 @@ void SuperNET_apiloop(void *ipaddr)
                             copy_cJSON(plugin,jobj(json,"agent"));
                             if ( plugin[0] == 0 )
                                 copy_cJSON(plugin,jobj(json,"plugin"));
-                            //printf("plugin.(%s) %s\n",plugin,jsonstr);
+                            fprintf(stderr,">>>>>>>>> plugin.(%s) %s\n",plugin,jsonstr);
                             if ( strcmp(plugin,"InstantDEX") == 0 )
                             {
                                 if ( (retstr= InstantDEX(jsonstr)) != 0 )

@@ -940,7 +940,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         printf("create_busdata.(%s).%s -> %s\n",_jsonstr,broadcastmode!=0?broadcastmode:"",destNXTaddr!=0?destNXTaddr:"");
     if ( (json= cJSON_Parse(_jsonstr)) != 0 )
     {
-        if ( broadcastmode != 0 && strcmp(broadcastmode,"publicaccess") != 0 )
+        if ( broadcastmode != 0 && strcmp(broadcastmode,"remoteaccess") != 0 )
         {
             if ( cJSON_GetObjectItem(json,"tag") != 0 )
             {
@@ -1085,14 +1085,14 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
         {
             if ( json != 0 )
             {
-                if ( strcmp(broadcastmode,"publicaccess") == 0 )
+                if ( strcmp(broadcastmode,"remoteaccess") == 0 )
                 {
                     retstr = nn_busdata_processor((uint8_t *)data,datalen);
                     if ( data != jsonstr )
                         free(data);
                     free_json(json);
                     if ( Debuglevel > 2 )
-                        printf("relay returns publicaccess.(%s)\n",retstr);
+                        printf("relay returns remoteaccess.(%s)\n",retstr);
                     return(retstr);
                 } else free_json(json), json = 0;
                 if ( sentflag == 0 && RELAYS.pubglobal >= 0 && (strcmp(broadcastmode,"allnodes") == 0 || strcmp(broadcastmode,"8") == 0) )
