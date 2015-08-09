@@ -192,7 +192,6 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
     return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
 }
 
-char *InstantDEX(char *jsonstr);
 char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
 {
     cJSON *json; char plugin[MAX_JSON_FIELD],*retstr = 0;
@@ -204,7 +203,7 @@ char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
         //printf("plugin.(%s) %s\n",plugin,jsonstr);
         if ( strcmp(plugin,"InstantDEX") == 0 )
         {
-            if ( (retstr= InstantDEX(jsonstr)) != 0 )
+            if ( (retstr= InstantDEX(jsonstr,0,1)) != 0 )
             {
                 free_json(json);
                 return(retstr);
@@ -353,22 +352,18 @@ void SuperNET_apiloop(void *ipaddr)
                     fprintf(stderr,"apirecv.(%s)\n",jsonstr);
                     if ( INSTANTDEX.readyflag != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
                     {
-                        if ( juint(json,"localaccess") > 0 )
+                        copy_cJSON(plugin,jobj(json,"agent"));
+                        if ( plugin[0] == 0 )
+                            copy_cJSON(plugin,jobj(json,"plugin"));
+                        if ( strcmp(plugin,"InstantDEX") == 0 )
                         {
-                            copy_cJSON(plugin,jobj(json,"agent"));
-                            if ( plugin[0] == 0 )
-                                copy_cJSON(plugin,jobj(json,"plugin"));
-                            fprintf(stderr,">>>>>>>>> plugin.(%s) %s\n",plugin,jsonstr);
-                            if ( strcmp(plugin,"InstantDEX") == 0 )
+                            if ( (retstr= InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
                             {
-                                if ( (retstr= InstantDEX(jsonstr)) != 0 )
-                                {
-                                    retlen = (int32_t)strlen(retstr) + 1;
-                                    if ( (checklen= nn_send(sock,retstr,retlen,0)) != retlen )
-                                        fprintf(stderr,"checklen.%d != len.%d for nn_send of (%s)\n",checklen,retlen,retstr);
-                                }
+                                retlen = (int32_t)strlen(retstr) + 1;
+                                if ( (checklen= nn_send(sock,retstr,retlen,0)) != retlen )
+                                    fprintf(stderr,"checklen.%d != len.%d for nn_send of (%s)\n",checklen,retlen,retstr);
                             }
-                        }
+                        } else fprintf(stderr,">>>>>>>>> request is not InstantDEX (%s) %s\n",plugin,jsonstr);
                         free_json(json);
                     }
                     if ( retstr == 0 && (retstr= process_nn_message(sock,jsonstr)) != 0 )

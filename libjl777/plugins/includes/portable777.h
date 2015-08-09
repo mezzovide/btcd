@@ -169,6 +169,8 @@ struct prices777
     float days[DAYS_FIFO],hours[HOURS_FIFO],minutes[MINUTES_FIFO];
 };
 
+char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess);
+
 int32_t iQ_exchangestr(char *exchange,struct InstantDEX_quote *iQ);
 int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t isask,uint64_t quoteid,double price,double volume,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount,char *exchange,uint64_t nxt64bits,char *gui,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,int32_t duration);
 void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_t *numasksp,struct InstantDEX_quote *iQ,int32_t polarity,int32_t oldest,char *gui);

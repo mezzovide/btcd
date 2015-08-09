@@ -54,7 +54,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
             }
             free(jsonstr);
         }
-        printf("name.(%s)\n",name);
+        //printf("name.(%s)\n",name);
     }
     else if ( base[0] != 0 && rel[0] != 0 && baseid == 0 && relid == 0 )
     {
@@ -94,7 +94,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
 typedef char *(*json_handler)(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr);
 cJSON *Lottostats_json;
 
-char *InstantDEX(char *jsonstr)
+char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
 {
     char *prices777_allorderbooks();
     char *InstantDEX_openorders();
@@ -174,12 +174,16 @@ char *InstantDEX(char *jsonstr)
 
 int32_t InstantDEX_idle(struct plugin_info *plugin)
 {
-    char *jsonstr,*retstr;
+    char *jsonstr,*retstr; cJSON *json;
     if ( (jsonstr= queue_dequeue(&InstantDEXQ,1)) != 0 )
     {
-        printf("Got InstantDEX.(%s)\n",jsonstr);
-        if ( (retstr = InstantDEX(jsonstr)) != 0 )
-            printf("InstantDEX.(%s)\n",retstr), free(retstr);
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            printf("Got InstantDEX.(%s)\n",jsonstr);
+            if ( (retstr = InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
+                printf("InstantDEX.(%s)\n",retstr), free(retstr);
+            free_json(json);
+        } else printf("error parsing (%s) from InstantDEXQ\n",jsonstr);
         free_queueitem(jsonstr);
     }
     //printf("InstantDEX_idle\n");

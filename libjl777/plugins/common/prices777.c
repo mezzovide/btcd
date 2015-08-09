@@ -94,7 +94,7 @@ struct exchange_info
     int32_t (*supports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid);
     uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
     char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD];
-    uint32_t num,exchangeid,pollgap,refcount,pollnxtblock; uint64_t nxt64bits; double lastupdate;
+    uint32_t num,exchangeid,pollgap,refcount,pollnxtblock,polling; uint64_t nxt64bits; double lastupdate;
 } Exchanges[MAX_EXCHANGES];
 
 struct prices777_data
@@ -1956,7 +1956,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,void (*updatefunc)(struct 
             strcpy(prices->contract,base);
         }
     }
-    printf("%s init_pair.(%s) (%s)(%s).%lld -> (%s) keysize.%d crc.%u (baseid.%llu relid.%llu)\n",_mbstr(allocated),exchange,base,rel!=0?rel:"",(long long)prices->contractnum,prices->contract,prices->keysize,_crc32(0,(void *)prices->key,prices->keysize),(long long)prices->baseid,(long long)prices->relid);
+    printf("%s init_pair.(%s) (%s)(%s).%llu -> (%s) keysize.%d crc.%u (baseid.%llu relid.%llu)\n",_mbstr(allocated),exchange,base,rel!=0?rel:"",(long long)prices->contractnum,prices->contract,prices->keysize,_crc32(0,(void *)prices->key,prices->keysize),(long long)prices->baseid,(long long)prices->relid);
     prices->decay = decay, prices->oppodecay = (1. - decay);
     prices->RTflag = 1;
     if ( (exchangeptr= find_exchange(0,exchange)) != 0 )
@@ -2110,9 +2110,10 @@ struct prices777 *prices777_poll(char *exchangestr,char *name,char *base,uint64_
                 if ( j == BUNDLE.num )
                 {
                     BUNDLE.ptrs[BUNDLE.num++] = prices;
-                    if ( Exchanges[exchangeid].refcount == flag+1 )
+                    if ( Exchanges[exchangeid].polling == 0 )
                     {
                         printf("First pair for (%s), start polling]\n",exchange_str(exchangeid));
+                        Exchanges[exchangeid].polling = 1;
                         portable_thread_create((void *)prices777_exchangeloop,&Exchanges[exchangeid]);
                     }
                 }
