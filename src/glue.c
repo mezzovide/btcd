@@ -12,54 +12,54 @@ char SuperNET_url[512];
 int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *args);
 
-int8_t portable_spawn(char *os, char *cmd, char *argv) //TODO: extend for other OSes
+int8_t portable_spawn(char *os, char *cmd, char *arg) //TODO: extend for other OSes
 {
     int8_t status = 0;
     if(strcmp("_WIN32",os)==0)
     {
-        #ifdef _WIN32
-        if(_spawnl(_P_NOWAIT, cmd, cmd, argv, NULL) !=0 )
+#ifdef _WIN32
+        if ( _spawnl(_P_NOWAIT, cmd, cmd, arg, NULL) != 0 )
             status = 1;
-        else
-            status = 0;
-	    #endif  
+        else status = 0;
+#endif
     } 
     else if(strcmp("__linux__",os)==0)
     {
-        #ifndef _WIN32
-        pid_t pid = 0;
+#ifndef _WIN32
+        pid_t pid = 0; void *argv[2];
         pid = fork();
-        if(pid==0)//child process
+        if ( pid == 0 ) //child process
         {
+            argv[0] = arg, argv[1] = 0;
             if ( execl(cmd, argv, NULL) )
 		        status = 1;
 	        else
 		        status = 0;
         }
-        #endif
+#endif
     }
     else
     {
-	    #ifndef _WIN32
-        char *cmdArgs = (char*)malloc(strlen(cmd)+strlen(argv)+16);
+#ifndef _WIN32
+        char *cmdArgs = (char*)malloc(strlen(cmd)+strlen(arg)+16);
         strcpy(cmdArgs, cmd);
         strcat(cmdArgs, " ");
-        strcat(cmdArgs, argv);
+        strcat(cmdArgs, arg);
 	    pid_t pid = 0;
 	    pid = fork();
 	    if (pid==0)//child process
 	    {
             if ( system(cmd) != 0 )
-	        status = 1;
-	    else
-	        status = 0;
+                status = 1;
+            else
+                status = 0;
 	    }
         free(cmdArgs);
-		#else
+#else
 		status = 1;
-		#endif
+#endif
     }
-return status;
+    return status;
 } 
 
 void *portable_thread_create(void *funcp,void *argp);
@@ -150,10 +150,9 @@ int32_t launch_SuperNET(char *myip)
         strcpy(ipaddr,myip);
         myip = ipaddr;
     }
-    if ( myip == 0 )
-        myip = ipaddr;
     void *processptr;
-    processptr = portable_thread_create(_launch_SuperNET,myip);
+    printf("call launch_SuperNET with ip.(%s)\n",ipaddr);
+    processptr = portable_thread_create(_launch_SuperNET,ipaddr);
     return(0);
 }
 
