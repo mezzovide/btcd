@@ -136,6 +136,7 @@ struct json_AM { struct NXT_AMhdr H; uint32_t funcid,gatewayid,timestamp,jsonfla
 struct assethash { UT_hash_handle hh; uint64_t assetid,minvol,mult; int32_t type,decimals; char name[16]; } *Allassets;
 struct assethash *find_asset(uint64_t assetid);
 
+uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits);
 uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
 bits256 calc_sharedsecret(uint64_t *nxt64bitsp,int32_t *haspubpeyp,uint8_t *NXTACCTSECRET,int32_t secretlen,uint64_t other64bits);
 int32_t curve25519_donna(uint8_t *mypublic,const uint8_t *secret,const uint8_t *basepoint);
@@ -146,7 +147,6 @@ char *_issue_getCurrency(char *assetidstr);
 uint64_t _get_NXT_ECblock(uint32_t *ecblockp);
 char *_issue_getTransaction(char *txidstr);
 bits256 issue_getpubkey(int32_t *haspubkeyp,char *acct);
-uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits);
 uint64_t issue_transferAsset(char **retstrp,void *deprecated,char *secret,char *recipient,char *asset,int64_t quantity,int64_t feeNQT,int32_t deadline,char *comment,char *destpubkey);
 uint64_t get_sender(uint64_t *amountp,char *txidstr);
 uint64_t conv_acctstr(char *acctstr);

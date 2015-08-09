@@ -133,6 +133,11 @@ int32_t is_native_crypto(char *name,uint64_t bits);
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp);
 
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
+int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *randfilename);
+char *dumpprivkey(char *coinstr,char *serverport,char *userpass,char *coinaddr);
+uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
+uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits);
+uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
 
 #define MAX_DEPTH 25
 #define MINUTES_FIFO (1024)
