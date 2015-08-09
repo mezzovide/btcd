@@ -21,7 +21,7 @@ char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *
 #define issue_POST(url,cmdstr) bitcoind_RPC(0,"curl",url,0,0,cmdstr)
 char *os_compatible_path(char *str);
 
-void process_json(cJSON *json,int32_t remoteaccess,int32_t localaccess)
+void process_json(cJSON *json,char *remoteaddr,int32_t localaccess)
 {
     int32_t sock,len,checklen,sendtimeout,recvtimeout; uint32_t apitag; uint64_t tag;
     char endpoint[128],numstr[64],*resultstr,*jsonstr;
@@ -37,7 +37,7 @@ void process_json(cJSON *json,int32_t remoteaccess,int32_t localaccess)
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
     if ( cJSON_GetObjectItem(json,"apitag") == 0 )
         cJSON_AddItemToObject(json,"apitag",cJSON_CreateString(endpoint));
-    if ( remoteaccess != 0 )
+    if ( remoteaddr != 0 )
         cJSON_AddItemToObject(json,"broadcast",cJSON_CreateString("remoteaccess"));
     if ( localaccess != 0 )
         cJSON_AddItemToObject(json,"localaccess",cJSON_CreateString("localaccess"));
@@ -95,16 +95,14 @@ fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf);
 int main(int argc, char **argv)
 {
     void portable_OS_init();
-    CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,localaccess,remoteaccess = 0,portflag = 0; cJSON *json; long offset;
-    char urlbuf[512],namebuf[512],postbuf[65536],*retstr,*delim,*url = 0;
+    CGI_varlist *varlist; const char *name; char urlbuf[512],namebuf[512],postbuf[65536],*remoteaddr,*retstr,*delim,*url = 0;
+    int i,j,iter,localaccess=0,portflag = 0; cJSON *json; long offset; CGI_value  *value;
     portable_OS_init();
-    fprintf(stderr,"%s\n",getenv("REMOTE_ADDR"));
-    fprintf(stderr,"%s\n",getenv("REMOTE_HOST"));
-    fprintf(stderr,"HTTP_REFERER.(%s)\n",getenv("HTTP_REFERER"));
-    fprintf(stderr,"%s\n",getenv("USER"));
-    fprintf(stderr,"%s\n",getenv("HOME"));
     setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
     json = cJSON_CreateObject();
+    if ( remoteaddr= getenv("REMOTE_ADDR")) == 0 || strncmp("127.0.0.1",remoteaddr,strlen("127.0.0.1")) == 0 )
+        remoteaddr = 0,localaccess = 1;
+    else cJSON_AddItemToObject(json,"remoteaddr",cJSON_CreateString(remoteaddr));
     for (i=j=0; argv[0][i]!=0; i++)
         if ( argv[0][i] == '/' || argv[0][i] == '\\' )
             j = i+1;
@@ -112,8 +110,6 @@ int main(int argc, char **argv)
     offset = strlen(namebuf) - 4;
     if ( offset > 0 && strcmp(".exe",namebuf + offset) == 0 )
         namebuf[offset] = 0;
-    if ( strcmp(namebuf,"public") == 0 )
-        remoteaccess = 1, strcpy(namebuf,"api");
     if ( strcmp(namebuf,"api") != 0 )
         cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
     if ( strcmp("nxt",namebuf) == 0 )
@@ -176,7 +172,7 @@ fprintf(stderr,"url.(%s) (%s)\n",url,postbuf);
     }
     else
     {
-        process_json(json,remoteaccess,localaccess);
+        process_json(json,remoteaddr,localaccess);
     }
     free_json(json);
     return 0;
