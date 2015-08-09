@@ -42,7 +42,7 @@ void process_json(cJSON *json,char *remoteaddr,int32_t localaccess)
     if ( localaccess != 0 )
         cJSON_AddItemToObject(json,"localaccess",cJSON_CreateString("localaccess"));
     jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
-    //fprintf(stderr,"remoteaccess.%d jsonstr.(%s)\r\n",remoteaccess,jsonstr);
+    fprintf(stderr,"localacess.%d remote.(%s) jsonstr.(%s)\r\n",localaccess,remoteaddr!=0?remoteaddr:"",jsonstr);
     len = (int32_t)strlen(jsonstr)+1;
     if ( json != 0 )
     {
