@@ -135,7 +135,7 @@ sophia: lib/sophia; \
  	cd plugins; $(_sophia); cd ..
 
 SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D INSIDE_MGW SuperNET.c -D STANDALONE $(SRCS) $(LIBS); mv SuperNET MGW
+    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D INSIDE_MGW -D STANDALONE $(SRCS) $(LIBS); mv SuperNET MGW
 
 #-lz -ldl -lutil -lpcre -lexpat
 
