@@ -24,7 +24,8 @@ LIBS= libs/libjl777.a libs/libnanomsg-i686-win.a libs/libminiupnpc-win.a -lpthre
 CC=i686-w64-mingw32.static-gcc
 OS=win
 
-CFLAGS= -w -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINIUPNP_STATICLIB
+CFLAGS= -w -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  -D_WIN32 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINIUPNP_STATICLIB -DSTATICLIB
+
 
 
 TARGET  = libjl777.a
