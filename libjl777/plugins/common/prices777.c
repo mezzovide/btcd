@@ -891,6 +891,7 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct order
     expand_nxt64bits(NXTaddr,nxt64bits);
     expand_nxt64bits(assetA,invert==0 ? op->baseid : op->relid);
     expand_nxt64bits(assetB,invert!=0 ? op->baseid : op->relid);
+    cJSON_AddItemToObject(json,"inverted",cJSON_CreateNumber(invert));
     cJSON_AddItemToObject(json,"pair",cJSON_CreateString(baserel));
     //cJSON_AddItemToObject(json,"obookid",cJSON_CreateString(obook));
     cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(assetA));
@@ -936,7 +937,10 @@ void prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t
             if ( (op= prices777_json_quotes(prices,bidobj,askobj,maxdepth,pricefield,volfield,0)) != 0 )
             {
                 for (allflag=0; allflag<4; allflag++)
-                    strs[allflag] = prices777_orderbook_jsonstr(allflag/2,SUPERNET.my64bits,op,MAX_DEPTH,allflag);
+                {
+                    strs[allflag] = prices777_orderbook_jsonstr(allflag/2,SUPERNET.my64bits,op,MAX_DEPTH,allflag%2);
+                    //printf("strs[%d].(%s)\n",allflag,strs[allflag]);
+                }
                 portable_mutex_lock(&prices->mutex);
                 if ( prices->op != 0 )
                     free_orderbook(prices->op);
