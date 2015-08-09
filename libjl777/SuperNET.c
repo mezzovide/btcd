@@ -55,13 +55,15 @@ int32_t got_newpeer(const char *ip_port) { if ( Debuglevel > 2 ) printf("got_new
 
 void *issue_cgicall(void *_ptr)
 {
-    char apitag[1024],plugin[1024],method[1024],*str = 0,*broadcaststr,*destNXT; uint32_t nonce; int32_t checklen,retlen,timeout; struct pending_cgi *ptr =_ptr;
+    char apitag[1024],plugin[1024],method[1024],*str = 0,*broadcaststr,*destNXT; struct pending_cgi *ptr =_ptr;
+    uint32_t nonce; int32_t localaccess,checklen,retlen,timeout;
     copy_cJSON(apitag,cJSON_GetObjectItem(ptr->json,"apitag"));
     safecopy(ptr->apitag,apitag,sizeof(ptr->apitag));
     copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"agent"));
     if ( plugin[0] == 0 )
         copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"plugin"));
     copy_cJSON(method,cJSON_GetObjectItem(ptr->json,"method"));
+    localaccess = juint(ptr->json,"localaccess");
     timeout = get_API_int(cJSON_GetObjectItem(ptr->json,"timeout"),SUPERNET.PLUGINTIMEOUT);
     broadcaststr = cJSON_str(cJSON_GetObjectItem(ptr->json,"broadcast"));
     fprintf(stderr,"sock.%d (%s) API RECV.(%s)\n",ptr->sock,broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
@@ -82,7 +84,7 @@ void *issue_cgicall(void *_ptr)
         {
             //if ( Debuglevel > 2 )
                 fprintf(stderr,"call plugin_method.(%s)\n",ptr->jsonstr);
-            str = plugin_method(ptr->sock,0,1,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout,0);
+            str = plugin_method(ptr->sock,0,localaccess,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout,0);
         }
         if ( str != 0 )
         {
