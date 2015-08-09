@@ -206,7 +206,6 @@ extern bits256 GENESIS_PUBKEY,GENESIS_PRIVKEY;
 #undef DEFINES_ONLY
 #endif
 #include "tweetnacl.c"
-//__i686__ || __i386__
 #if __amd64__
 #include "curve25519-donna-c64.c"
 #else

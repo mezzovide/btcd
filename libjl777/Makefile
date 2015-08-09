@@ -70,7 +70,7 @@ test:	all
 	(cd tests; make test)
 
 SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE SuperNET.c libjl777.c  $(SHAREDMGW) $(OBJS) $(LIBS)
+    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE SuperNET.c libjl777.c  $(SHAREDMGW) $(SRCS) $(LIBS)
 
 MGW: $(SRCS) $(TARGET); \
     pkill MGW; rm MGW; clang -o MGW $(CFLAGS) -D INSIDE_MGW -D STANDALONE SuperNET.c libjl777.c $(MGW) $(SHAREDMGW) $(OBJS) $(LIBS)
