@@ -26,15 +26,13 @@ int8_t portable_spawn(char *os, char *cmd, char *arg) //TODO: extend for other O
     else if(strcmp("__linux__",os)==0)
     {
 #ifndef _WIN32
-        pid_t pid = 0; void *argv[2];
+        pid_t pid = 0;
         pid = fork();
         if ( pid == 0 ) //child process
         {
-            argv[0] = arg, argv[1] = 0;
-            if ( execl(cmd, argv, NULL) )
+            if ( execl(cmd, arg, NULL) )
 		        status = 1;
-	        else
-		        status = 0;
+	        else status = 0;
         }
 #endif
     }
