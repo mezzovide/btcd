@@ -644,7 +644,7 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
                 if ( strcmp(prices->exchange,"nxtae") == 0 )
                 {
                     nxtQ.timestamp = timestamp = juinti(item,2);
-                    nxtQ.assetid = prices->contractnum;
+                    nxtQ.assetid = prices->baseid;
                     nxtQ.quoteid = j64bitsi(item,3);
                     nxtQ.nxt64bits = j64bitsi(item,4);
                     nxtQ.qty = j64bitsi(item,5);
