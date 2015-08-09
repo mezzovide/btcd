@@ -1024,7 +1024,7 @@ char *dKV777_ping(struct dKV777 *dKV)
     json = cJSON_CreateObject();
     cJSON_AddItemToObject(json,"agent",cJSON_CreateString(dKV->name));
     cJSON_AddItemToObject(json,"dKVname",cJSON_CreateString(dKV->name));
-    if ( dKV->protocol != 0 && dKV->protocol[0] != 0 )
+    if ( dKV->protocol[0] != 0 )
         cJSON_AddItemToObject(json,"protocol",cJSON_CreateString(dKV->protocol));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString("ping"));
     cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(dKV->NXTADDR));

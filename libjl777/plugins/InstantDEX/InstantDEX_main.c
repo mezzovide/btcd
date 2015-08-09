@@ -53,7 +53,7 @@ int32_t get_assetname(char *name,uint64_t assetid)
 
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp)
 {
-    uint64_t baseid,relid,assetbits = 0; char *s,assetidstr[64],*jsonstr; cJSON *json;
+    uint64_t baseid,relid,assetbits = 0; char *s;
     baseid = *baseidp, relid = *relidp;
     if ( strcmp(base,"5527630") == 0 || baseid == 5527630 )
         strcpy(base,"NXT");

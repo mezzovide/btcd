@@ -1161,7 +1161,7 @@ uint64_t calc_txid(unsigned char *buf,int32_t len)
     calc_sha256(0,(unsigned char *)&hash[0],buf,len);
     if ( sizeof(hash) >= sizeof(txid) )
         memcpy(&txid,hash,sizeof(txid));
-    else memcpy(&txid,hash,sizeof(hash));
+    else memcpy(&txid,hash,sizeof(txid));
     //printf("calc_txid.(%llu)\n",(long long)txid);
     //return(hash[0] ^ hash[1] ^ hash[2] ^ hash[3]);
     return(txid);
