@@ -100,7 +100,7 @@ int main(int argc, char **argv)
     portable_OS_init();
     fprintf(stderr,"%s\n",getenv("QUERY_STRING"));
     fprintf(stderr,"%s\n",getenv("CONTENT_TYPE"));
-    fprintf(stderr,"%s\n",getenv("PATH"));
+    fprintf(stderr,"HTTP_REFERER.(%s)\n",getenv("HTTP_REFERER"));
     fprintf(stderr,"%s\n",getenv("USER"));
     fprintf(stderr,"%s\n",getenv("HOME"));
     setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
