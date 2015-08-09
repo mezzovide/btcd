@@ -4112,6 +4112,7 @@ extern "C" int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t l
 }
 
 extern "C" int32_t SuperNET_start(char *,char *);
+int32_t launch_SuperNET(char *myip);
 void init_jl777(char *myip)
 {
      std::cout << "starting SuperNET " << myip << std::endl;
