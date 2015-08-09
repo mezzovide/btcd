@@ -190,9 +190,9 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
     return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
 }
 
+char *InstantDEX(char *jsonstr);
 char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
 {
-    char *InstantDEX(char *jsonstr);
     cJSON *json; char plugin[MAX_JSON_FIELD],*retstr = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
@@ -331,7 +331,7 @@ void SuperNET_agentloop(void *ipaddr)
 
 void SuperNET_apiloop(void *ipaddr)
 {
-    char buf[65536],*jsonstr,*str; int32_t sock,len;
+    char buf[65536],plugin[MAX_JSON_FIELD],access[MAX_JSON_FIELD],*jsonstr,*retstr; int32_t sock,len,retlen,checklen; cJSON *json;
     if ( (sock= nn_socket(AF_SP,NN_PAIR)) >= 0 )
     {
         if ( nn_bind(sock,SUPERNET_APIENDPOINT) < 0 )
@@ -345,14 +345,39 @@ void SuperNET_apiloop(void *ipaddr)
             {
                 if ( (len= nn_recv(sock,&jsonstr,NN_MSG,0)) > 0 )
                 {
+                    retstr = 0;
                     fprintf(stderr,"apirecv.(%s)\n",jsonstr);
-                    if ( strlen(jsonstr) < sizeof(buf) )
+                    if ( INSTANTDEX.readyflag != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
+                    {
+                        if ( juint(json,"localaccess") > 0 )
+                        {
+                            copy_cJSON(plugin,jobj(json,"agent"));
+                            if ( plugin[0] == 0 )
+                                copy_cJSON(plugin,jobj(json,"plugin"));
+                            //printf("plugin.(%s) %s\n",plugin,jsonstr);
+                            if ( strcmp(plugin,"InstantDEX") == 0 )
+                            {
+                                if ( (retstr= InstantDEX(jsonstr)) != 0 )
+                                {
+                                    free_json(json);
+                                    retlen = (int32_t)strlen(retstr) + 1;
+                                    if ( (checklen= nn_send(sock,retstr,retlen,0)) != retlen )
+                                        fprintf(stderr,"checklen.%d != len.%d for nn_send of (%s)\n",checklen,retlen,retstr);
+                                }
+                            }
+                        }
+                        free_json(json);
+                    }
+                    if ( retstr == 0 && (retstr= process_nn_message(sock,jsonstr)) != 0 )
+                        free(retstr);
+                    nn_freemsg(jsonstr);
+                    /*if ( strlen(jsonstr) < sizeof(buf)-1 )
                     {
                         strcpy(buf,jsonstr);
                         nn_freemsg(jsonstr);
                         if ( (str= process_nn_message(sock,buf)) != 0 )
                             free(str);
-                    }
+                    } else fprintf(stderr,"api recv string too long %ld\n",strlen(jsonstr));*/
                 }
             }
         }
