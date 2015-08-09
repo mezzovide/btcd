@@ -73,7 +73,7 @@ $(TARGET): $(OBJS)
 test:	all
 	(cd tests; make test)
 
-MGW: $(MGWOBJS)
+MGW: $(MGWOBJS);
     clang -c $(CFLAGS) $(OBJS); clang -o MGW -D INSIDE_MGW -D STANDALONE $(CFLAGS) $(MGWSRCS) $(LIBS)
 
 SuperNET: $(SRCS) $(TARGET); \
