@@ -2068,24 +2068,23 @@ void prices777_exchangeloop(void *ptr)
                 else continue;
                 if ( pollflag != 0 )
                 {
-                    //if ( prices->op != 0 )
-                    //    free_orderbook(prices->op), prices->op = 0;
                     (*exchange->updatefunc)(prices,MAX_DEPTH);
-                    //prices777_safecopy(1,prices,prices->orderbook,prices->nxtbooks->orderbook);
                     if ( prices->orderbook[0][0][0] != 0. && prices->orderbook[0][1][0] != 0 )
                         prices->lastprice = _pairaved(prices->orderbook[0][0][0],prices->orderbook[0][1][0]);
                     exchange->lastupdate = milliseconds(), prices->lastupdate = milliseconds();
-                    //kv777_write(BUNDLE.kv,prices->key,prices->keysize,prices,sizeof(*prices));
-                    printf("isnxtae.%d poll %u -> %u %.8f\n",isnxtae,exchange->pollnxtblock,prices777_NXTBLOCK,prices->lastprice);
-                    if ( isnxtae != 0 )
-                        exchange->pollnxtblock = prices777_NXTBLOCK;
+                    printf("%s isnxtae.%d poll %u -> %u %.8f\n",prices->contract,isnxtae,exchange->pollnxtblock,prices777_NXTBLOCK,prices->lastprice);
                     n++;
                 }
             }
         }
         if ( n == 0 )
             sleep(6);
-        else sleep(1);
+        else
+        {
+            if ( isnxtae != 0 )
+                exchange->pollnxtblock = prices777_NXTBLOCK;
+            sleep(1);
+        }
     }
 }
 
@@ -2110,6 +2109,7 @@ struct prices777 *prices777_poll(char *exchangestr,char *name,char *base,uint64_
                 if ( j == BUNDLE.num )
                 {
                     BUNDLE.ptrs[BUNDLE.num++] = prices;
+                    printf("total polling.%d added.(%s)\n",BUNDLE.num,prices->contract);
                     if ( Exchanges[exchangeid].polling == 0 )
                     {
                         printf("First pair for (%s), start polling]\n",exchange_str(exchangeid));
