@@ -513,7 +513,7 @@ void SuperNET_initconf(cJSON *json)
     sprintf(buf,"%s/sent",MGW.PATH), ensure_directory(buf);
     sprintf(buf,"%s/deposit",MGW.PATH), ensure_directory(buf);
     printf("MGWport.%u >>>>>>>>>>>>>>>>>>> INIT ********************** (%s) (%s) (%s) SUPERNET.port %d UPNP.%d NXT.%s ip.(%s) iamrelay.%d pullnode.(%s)\n",MGW.port,SOPHIA.PATH,MGW.PATH,SUPERNET.NXTSERVER,SUPERNET.port,SUPERNET.UPNP,SUPERNET.NXTADDR,SUPERNET.myipaddr,SUPERNET.iamrelay,RAMCHAINS.pullnode);
-    if ( SUPERNET.gatewayid >= 0 )
+    //if ( SUPERNET.gatewayid >= 0 )
     {
         if ( DB_NXTaccts == 0 )
             DB_NXTaccts = db777_create(0,0,"NXTaccts",0,0);
@@ -534,7 +534,6 @@ void SuperNET_initconf(cJSON *json)
         //if ( DB_services == 0 )
         //    DB_services = db777_create(0,0,"services",0,0);
     }
-    else
 #else
     {
         //struct kv777 *kv777_init(char *path,char *name,struct kv777_flags *flags); // kv777_init IS NOT THREADSAFE!
