@@ -73,7 +73,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         if ( base[0] == 0 )
             get_assetname(base,baseid);
         if ( rel[0] == 0 )
-            get_assetname(rel,baseid);
+            get_assetname(rel,relid);
         sprintf(name,"%s%s/%s",s,base,rel);
     }
     else

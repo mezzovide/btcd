@@ -90,7 +90,7 @@
 
 struct exchange_info
 {
-    void (*updatefunc)(struct prices777 *prices,int32_t maxdepth);
+    double (*updatefunc)(struct prices777 *prices,int32_t maxdepth);
     int32_t (*supports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid);
     uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
     char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD];
@@ -218,7 +218,7 @@ short Currency_contractdirs[NUM_CURRENCIES+1][NUM_CURRENCIES] =
 	{  1,  1,  1,  1,  1,  1,  1,  1 },
 };
 
-struct prices777 *prices777_initpair(int32_t needfunc,void (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid);
+struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid);
 uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t assetid,uint64_t qty,uint64_t NXTprice,char *triggerhash,char *comment,uint64_t otherNXT,uint32_t triggerheight);
 int32_t prices777_basenum(char *base);
 
@@ -924,9 +924,9 @@ cJSON *inner_json(double price,double vol,uint32_t timestamp,uint64_t quoteid,ui
     return(inner);
 }
 
-void prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t maxdepth,cJSON *json,char *resultfield,char *bidfield,char *askfield,char *pricefield,char *volfield)
+double prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t maxdepth,cJSON *json,char *resultfield,char *bidfield,char *askfield,char *pricefield,char *volfield)
 {
-    cJSON *obj = 0,*bidobj,*askobj; int32_t allflag; struct orderbook *op; char *strs[4];
+    cJSON *obj = 0,*bidobj,*askobj; int32_t allflag; struct orderbook *op; char *strs[4]; double vol,hbla = 0.;
     if ( resultfield == 0 )
         obj = json;
     if ( maxdepth == 0 )
@@ -937,6 +937,8 @@ void prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t
         {
             if ( (op= prices777_json_quotes(prices,bidobj,askobj,maxdepth,pricefield,volfield,0)) != 0 )
             {
+                if ( op->numbids > 0 && op->numasks > 0 )
+                    hbla = 0.5 * (_prices777_price_volume(&vol,op->bids[0].baseamount,op->bids[0].relamount) + _prices777_price_volume(&vol,op->asks[0].baseamount,op->asks[0].relamount));
                 for (allflag=0; allflag<4; allflag++)
                 {
                     strs[allflag] = prices777_orderbook_jsonstr(allflag/2,SUPERNET.my64bits,op,MAX_DEPTH,allflag%2);
@@ -956,12 +958,13 @@ void prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t
             }
         }
     }
+    return(hbla);
 }
 
-void prices777_NXT(struct prices777 *prices,int32_t maxdepth)
+double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
 {
     uint32_t timestamp; int32_t flip,i,n; uint64_t baseamount,relamount,qty,pqt; char url[1024],*str,*cmd,*field;
-    cJSON *json,*bids,*asks,*srcobj,*item,*array; double price,vol;
+    cJSON *json,*bids,*asks,*srcobj,*item,*array; double price,vol,hbla = 0.;
     if ( NXT_ASSETID != stringbits("NXT") || (strcmp(prices->rel,"NXT") != 0 && strcmp(prices->rel,"5527630") != 0) )
         printf("NXT_ASSETID.%llu != %llu stringbits rel.%s\n",(long long)NXT_ASSETID,(long long)stringbits("NXT"),prices->rel);
     bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
@@ -996,6 +999,8 @@ void prices777_NXT(struct prices777 *prices,int32_t maxdepth)
                         qty = j64bits(item,"quantityQNT"), pqt = j64bits(item,"priceNQT");
                         baseamount = (qty * prices->ap_mult), relamount = (qty * pqt);
                         price = _prices777_price_volume(&vol,baseamount,relamount);
+                        if ( i == 0  )
+                            hbla = (hbla == 0.) ? price : 0.5 * (price + hbla);
                         //printf("baseamount.%lld relamount.%lld\n",(long long)baseamount,(long long)relamount);
                         timestamp = get_blockutime(juint(item,"height"));
                         item = inner_json(price,vol,timestamp,j64bits(item,"order"),j64bits(item,"account"),qty,pqt,baseamount,relamount);
@@ -1013,12 +1018,12 @@ if ( Debuglevel > 2 )
     printf("NXTAE.(%s)\n",jprint(json,0));
     prices777_json_orderbook("nxtae",prices,maxdepth,json,0,"bids","asks",0,0);
     free_json(json);
+    return(hbla);
 }
 
-void prices777_bittrex(struct prices777 *prices,int32_t maxdepth) // "BTC-BTCD"
+double prices777_bittrex(struct prices777 *prices,int32_t maxdepth) // "BTC-BTCD"
 {
-    cJSON *json,*obj;
-    char *jsonstr,market[128];
+    cJSON *json,*obj; char *jsonstr,market[128]; double hbla = 0.;
     if ( prices->url[0] == 0 )
     {
         sprintf(market,"%s-%s",prices->rel,prices->base);
@@ -1030,17 +1035,17 @@ void prices777_bittrex(struct prices777 *prices,int32_t maxdepth) // "BTC-BTCD"
         if ( (json = cJSON_Parse(jsonstr)) != 0 )
         {
             if ( (obj= cJSON_GetObjectItem(json,"success")) != 0 && is_cJSON_True(obj) != 0 )
-                prices777_json_orderbook("bittrex",prices,maxdepth,json,"result","buy","sell","Rate","Quantity");
+                hbla = prices777_json_orderbook("bittrex",prices,maxdepth,json,"result","buy","sell","Rate","Quantity");
             free_json(json);
         }
         free(jsonstr);
     }
+    return(hbla);
 }
 
-void prices777_bter(struct prices777 *prices,int32_t maxdepth)
+double prices777_bter(struct prices777 *prices,int32_t maxdepth)
 {
-    cJSON *json,*obj;
-    char resultstr[MAX_JSON_FIELD],*jsonstr;
+    cJSON *json,*obj; char resultstr[MAX_JSON_FIELD],*jsonstr; double hbla = 0.;
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"http://data.bter.com/api/1/depth/%s_%s",prices->base,prices->rel);
     jsonstr = issue_curl(prices->url);
@@ -1057,30 +1062,32 @@ void prices777_bter(struct prices777 *prices,int32_t maxdepth)
                 if ( strcmp(resultstr,"true") == 0 )
                 {
                     maxdepth = 1000; // since bter ask is wrong order, need to scan entire list
-                    prices777_json_orderbook("bter",prices,maxdepth,json,0,"bids","asks",0,0);
+                    hbla = prices777_json_orderbook("bter",prices,maxdepth,json,0,"bids","asks",0,0);
                 }
             }
             free_json(json);
         }
         free(jsonstr);
     }
+    return(hbla);
 }
 
-void prices777_standard(char *exchangestr,char *url,struct prices777 *prices,char *price,char *volume,int32_t maxdepth)
+double prices777_standard(char *exchangestr,char *url,struct prices777 *prices,char *price,char *volume,int32_t maxdepth)
 {
-    char *jsonstr; cJSON *json;
+    char *jsonstr; cJSON *json; double hbla = 0.;
     if ( (jsonstr= issue_curl(url)) != 0 )
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            prices777_json_orderbook(exchangestr,prices,maxdepth,json,0,"bids","asks",price,volume);
+            hbla = prices777_json_orderbook(exchangestr,prices,maxdepth,json,0,"bids","asks",price,volume);
             free_json(json);
         }
         free(jsonstr);
     }
+    return(hbla);
 }
 
-void prices777_poloniex(struct prices777 *prices,int32_t maxdepth)
+double prices777_poloniex(struct prices777 *prices,int32_t maxdepth)
 {
     char market[128];
     if ( prices->url[0] == 0 )
@@ -1088,59 +1095,59 @@ void prices777_poloniex(struct prices777 *prices,int32_t maxdepth)
         sprintf(market,"%s_%s",prices->rel,prices->base);
         sprintf(prices->url,"https://poloniex.com/public?command=returnOrderBook&currencyPair=%s&depth=%d",market,maxdepth);
     }
-    prices777_standard("poloniex",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("poloniex",prices->url,prices,0,0,maxdepth));
 }
 
-void prices777_bitfinex(struct prices777 *prices,int32_t maxdepth)
+double prices777_bitfinex(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://api.bitfinex.com/v1/book/%s%s",prices->base,prices->rel);
-    prices777_standard("bitfinex",prices->url,prices,"price","amount",maxdepth);
+    return(prices777_standard("bitfinex",prices->url,prices,"price","amount",maxdepth));
 }
 
-void prices777_btce(struct prices777 *prices,int32_t maxdepth)
+double prices777_btce(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://btc-e.com/api/2/%s%s/depth",prices->lbase,prices->lrel);
-    prices777_standard("btce",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("btce",prices->url,prices,0,0,maxdepth));
 }
 
-void prices777_bitstamp(struct prices777 *prices,int32_t maxdepth)
+double prices777_bitstamp(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://www.bitstamp.net/api/order_book/");
-    prices777_standard("bitstamp",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("bitstamp",prices->url,prices,0,0,maxdepth));
 }
 
-void prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
+double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://www.okcoin.com/api/depth.do?symbol=%s%s",prices->lbase,prices->lrel);
-    prices777_standard("okcoin",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("okcoin",prices->url,prices,0,0,maxdepth));
 }
 
-void prices777_huobi(struct prices777 *prices,int32_t maxdepth)
+double prices777_huobi(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"http://api.huobi.com/staticmarket/depth_%s_json.js ",prices->lbase);
-    prices777_standard("huobi",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("huobi",prices->url,prices,0,0,maxdepth));
 }
 
-void prices777_bityes(struct prices777 *prices,int32_t maxdepth)
+double prices777_bityes(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://market.bityes.com/%s_%s/trade_history.js?time=%ld",prices->lrel,prices->lbase,time(NULL));
-    prices777_standard("bityes",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("bityes",prices->url,prices,0,0,maxdepth));
 }
 
-void prices777_coinbase(struct prices777 *prices,int32_t maxdepth)
+double prices777_coinbase(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://api.exchange.coinbase.com/products/%s-%s/book?level=2",prices->base,prices->rel);
-    prices777_standard("coinbase",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("coinbase",prices->url,prices,0,0,maxdepth));
 }
 
-void prices777_lakebtc(struct prices777 *prices,int32_t maxdepth)
+double prices777_lakebtc(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
     {
@@ -1150,22 +1157,22 @@ void prices777_lakebtc(struct prices777 *prices,int32_t maxdepth)
             sprintf(prices->url,"https://www.LakeBTC.com/api_v1/bcorderbook_cny");
         else printf("illegal lakebtc pair.(%s/%s)\n",prices->base,prices->rel);
     }
-    prices777_standard("lakebtc",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("lakebtc",prices->url,prices,0,0,maxdepth));
 }
 
-void prices777_exmo(struct prices777 *prices,int32_t maxdepth)
+double prices777_exmo(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://api.exmo.com/api_v2/orders_book?pair=%s_%s",prices->base,prices->rel);
-    prices777_standard("exmo",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("exmo",prices->url,prices,0,0,maxdepth));
 }
 
-void prices777_btc38(struct prices777 *prices,int32_t maxdepth)
+double prices777_btc38(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"http://api.btc38.com/v1/depth.php?c=%s&mk_type=%s",prices->lbase,prices->lrel);
     printf("btc38.(%s)\n",prices->url);
-    prices777_standard("btc38",prices->url,prices,0,0,maxdepth);
+    return(prices777_standard("btc38",prices->url,prices,0,0,maxdepth));
 }
 
 /*void prices777_kraken(struct prices777 *prices,int32_t maxdepth)
@@ -1860,10 +1867,10 @@ char *prices777_allorderbooks()
     return(jprint(json,1));
 }
 
-struct prices777 *prices777_initpair(int32_t needfunc,void (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid)
+struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid)
 {
     static long allocated;
-    struct exchange_pair { char *exchange; void (*updatefunc)(struct prices777 *prices,int32_t maxdepth); int32_t (*supports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid); uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume); } pairs[] =
+    struct exchange_pair { char *exchange; double (*updatefunc)(struct prices777 *prices,int32_t maxdepth); int32_t (*supports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid); uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume); } pairs[] =
     {
         {"nxtae", prices777_NXT, NXT_supports, NXT_tradestub },
         {"poloniex", prices777_poloniex, poloniex_supports, poloniex_trade }, {"bitfinex", prices777_bitfinex, bitfinex_supports },
@@ -2070,9 +2077,7 @@ void prices777_exchangeloop(void *ptr)
                 else continue;
                 if ( pollflag != 0 )
                 {
-                    (*exchange->updatefunc)(prices,MAX_DEPTH);
-                    if ( prices->orderbook[0][0][0] != 0. && prices->orderbook[0][1][0] != 0 )
-                        prices->lastprice = _pairaved(prices->orderbook[0][0][0],prices->orderbook[0][1][0]);
+                    prices->lastprice = (*exchange->updatefunc)(prices,MAX_DEPTH);
                     exchange->lastupdate = milliseconds(), prices->lastupdate = milliseconds();
                     printf("%s (%s/%s) %llu %llu isnxtae.%d poll %u -> %u %.8f\n",prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,exchange->pollnxtblock,prices777_NXTBLOCK,prices->lastprice);
                     n++;
