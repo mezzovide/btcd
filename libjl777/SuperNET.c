@@ -199,12 +199,10 @@ char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
         copy_cJSON(plugin,jobj(json,"agent"));
         if ( plugin[0] == 0 )
             copy_cJSON(plugin,jobj(json,"plugin"));
+        //printf("plugin.(%s) %s\n",plugin,jsonstr);
         if ( strcmp(plugin,"InstantDEX") == 0 )
         {
-            if ( (retstr= InstantDEX(jsonstr)) == 0 )
-            {
-           }
-            else
+            if ( (retstr= InstantDEX(jsonstr)) != 0 )
             {
                 free_json(json);
                 return(retstr);

@@ -36,7 +36,7 @@ int32_t prices777_key(char *key,char *exchange,char *name,char *base,uint64_t ba
 
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp)
 {
-    uint64_t baseid,relid,mult,assetbits = 0;
+    uint64_t baseid,relid,mult,assetbits = 0; char assetidstr[64],*jsonstr; cJSON *json;
     baseid = *baseidp, relid = *relidp;
     if ( strcmp("nxtae",exchange) == 0 )
     {
@@ -44,6 +44,17 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
             assetbits = baseid = calc_nxt64bits(base), relid = stringbits("NXT");//, is_native_crypto(base,baseid);
         else if ( strcmp(base,"NXT") == 0 && is_decimalstr(rel) != 0 )
             assetbits = relid = calc_nxt64bits(rel), baseid = stringbits("NXT");//, is_native_crypto(rel,relid);
+        expand_nxt64bits(assetidstr,assetbits);
+        if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
+        {
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                extract_cJSON_str(name,16,json,"name");
+                free_json(json);
+            }
+            free(jsonstr);
+        }
+        printf("name.(%s)\n",name);
     }
     else if ( base[0] != 0 && rel[0] != 0 && baseid == 0 && relid == 0 )
     {
@@ -85,7 +96,7 @@ cJSON *Lottostats_json;
 
 char *InstantDEX(char *jsonstr)
 {
-    char *InstantDEX_allorderbooks();
+    char *prices777_allorderbooks();
     char *InstantDEX_openorders();
     char *InstantDEX_tradehistory();
     char *InstantDEX_cancelorder(uint64_t orderid);
@@ -106,7 +117,7 @@ char *InstantDEX(char *jsonstr)
         assetbits = InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
         // "makeoffer3", "jumptrades""
         if ( strcmp(method,"allorderbooks") == 0 )
-            retstr = InstantDEX_allorderbooks();
+            retstr = prices777_allorderbooks();
         else if ( strcmp(method,"openorders") == 0 )
             retstr = InstantDEX_openorders();
         else if ( strcmp(method,"cancelorder") == 0 )
@@ -140,7 +151,7 @@ char *InstantDEX(char *jsonstr)
                             free(prices->orderbook_jsonstrs[invert][allfields]);
                         prices->orderbook_jsonstrs[invert][allfields] = retstr;
                         portable_mutex_unlock(&prices->mutex);
-                    }
+                    } else retstr = clonestr("{\"status\":\"orderbook creation pending, try again\"}");
                 }
             }
             else if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )

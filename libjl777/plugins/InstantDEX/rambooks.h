@@ -506,11 +506,6 @@ int32_t update_iQ_flags(struct NXT_tx *txptrs[],int32_t maxtx,uint64_t refasseti
     return(m);
 }
 
-char *InstantDEX_allorderbooks()
-{
-    return(clonestr("{\"error\":\"API is not yet\"}"));
-}
-
 char *InstantDEX_openorders()
 {
     return(clonestr("{\"error\":\"API is not yet\"}"));

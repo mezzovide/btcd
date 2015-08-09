@@ -1838,6 +1838,26 @@ char *prices777_trade(char *exchangestr,char *base,char *rel,int32_t dir,double 
     } else return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
 }
 
+char *prices777_allorderbooks()
+{
+    int32_t i; struct prices777 *prices; char numstr[64]; cJSON *item,*json,*array = cJSON_CreateArray();
+    for (i=0; i<BUNDLE.num; i++)
+    {
+        prices = BUNDLE.ptrs[i];
+        item = cJSON_CreateObject();
+        jaddstr(item,"name",prices->contract);
+        jaddstr(item,"base",prices->base);
+        sprintf(numstr,"%llu",(long long)prices->baseid), jaddstr(item,"baseid",numstr);
+        jaddstr(item,"rel",prices->rel);
+        sprintf(numstr,"%llu",(long long)prices->relid), jaddstr(item,"relid",numstr);
+        jaddstr(item,"exchange",prices->exchange);
+        jaddi(array,item);
+    }
+    json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"orderbooks",array);
+    return(jprint(json,1));
+}
+
 struct prices777 *prices777_initpair(int32_t needfunc,void (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid)
 {
     static long allocated;
