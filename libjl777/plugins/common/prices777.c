@@ -638,7 +638,7 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
                     printf("unexpected case in parseram_json_quotes\n");
                     continue;
                 }
-                if ( Debuglevel > 2 || i < 1 )//|| strcmp("bter",prices->exchange) == 0 )
+                if ( Debuglevel > 2 )//|| strcmp("bter",prices->exchange) == 0 )
                     printf("%d,%d: %-8s %s %5s/%-5s %13.8f vol %13.8f | invert %13.8f vol %13.8f | timestamp.%u\n",i,j,prices->exchange,dir>0?"bid":"ask",prices->base,prices->rel,price,volume,1./price,volume*price,timestamp);
                 memset(&nxtQ,0,sizeof(nxtQ));
                 if ( strcmp(prices->exchange,"nxtae") == 0 )
@@ -682,7 +682,7 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
         } else sort_orderbook(op);
     }
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("(%s/%s) %s %llu %llu numbids.%d numasks.%d (%d %d) %p %p\n",op->base,op->rel,op->name,(long long)op->baseid,(long long)op->relid,op->numbids,op->numasks,numbids,numasks,op->bids,op->asks);
     if ( op != 0 && (op->numbids + op->numasks) == 0 )
         free_orderbook(op), op = 0;
@@ -1509,7 +1509,8 @@ int32_t prices777_ecbparse(char *date,double *prices,char *url,int32_t basenum)
     char *jsonstr,*relstr,*basestr; int32_t count=0,i,relnum; cJSON *json,*ratesobj,*item;
     if ( (jsonstr= issue_curl(url)) != 0 )
     {
-        printf("(%s)\n",jsonstr);
+        if ( Debuglevel > 2 )
+            printf("(%s)\n",jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             copy_cJSON(date,jobj(json,"date"));
@@ -1526,7 +1527,8 @@ int32_t prices777_ecbparse(char *date,double *prices,char *url,int32_t basenum)
                        // else if ( relnum == JPYNUM )
                        //     prices[i] /= 100.;
                         count++;
-                        printf("(%02d:%02d %f) ",basenum,relnum,prices[i]);
+                        if ( Debuglevel > 2 )
+                            printf("(%02d:%02d %f) ",basenum,relnum,prices[i]);
                     } else printf("cant find.(%s)\n",relstr), getchar();
                     item = item->next;
                 }
@@ -1594,7 +1596,7 @@ char *exchange_str(int32_t exchangeid) { return(Exchanges[exchangeid].name); }
 int32_t exchange_supports(uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid)
 {
     int32_t exchangeid; struct exchange_info *exchange;
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("genpairs.(%llu %llu) starts with n.%d\n",(long long)baseid,(long long)relid,n);
     for (exchangeid=0; exchangeid<MAX_EXCHANGES; exchangeid++)
     {
@@ -1628,7 +1630,7 @@ int32_t gen_assetpair_list(uint64_t *assetids,long max,uint64_t baseid,uint64_t 
     n = add_halfbooks(assetids,n,BTC_ASSETID,baseid,relid,INSTANTDEX_EXCHANGEID);
     n = add_halfbooks(assetids,n,BTCD_ASSETID,baseid,relid,INSTANTDEX_EXCHANGEID);
     n = exchange_supports(assetids,n,baseid,relid);
-    if ( Debuglevel > 1 )
+    if ( Debuglevel > 2 )
         printf("genpairs.(%llu %llu) starts with n.%d\n",(long long)baseid,(long long)relid,n);
     if ( (n % 3) != 0 || n > max )
         printf("gen_assetpair_list: baseid.%llu relid.%llu -> n.%d??? mod.%d\n",(long long)baseid,(long long)relid,n,n%3);
@@ -2079,7 +2081,7 @@ void prices777_exchangeloop(void *ptr)
                 {
                     prices->lastprice = (*exchange->updatefunc)(prices,MAX_DEPTH);
                     exchange->lastupdate = milliseconds(), prices->lastupdate = milliseconds();
-                    printf("%s (%s/%s) %llu %llu isnxtae.%d poll %u -> %u %.8f\n",prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,exchange->pollnxtblock,prices777_NXTBLOCK,prices->lastprice);
+                    printf("%-13s %12s (%10s %10s) %022llu %022llu isnxtae.%d poll %u -> %u %.8f\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,exchange->pollnxtblock,prices777_NXTBLOCK,prices->lastprice);
                     n++;
                 }
             }
@@ -2759,7 +2761,8 @@ void prices777_RTupdate(double cryptovols[2][8][2],double RTmetals[4],double *RT
             }
              if ( (price= _pairaved(bid,ask)) > SMALLVAL )
             {
-                printf("%.6f ",price);
+                if ( Debuglevel > 2 )
+                    printf("%.6f ",price);
                 dxblend(&RTprices[c],price,.995);
                 if ( 0 && (baserel= prices777_ispair(base,rel,CONTRACTS[c])) >= 0 )
                 {
@@ -2837,7 +2840,8 @@ int32_t prices777_getmatrix(double *basevals,double *btcusdp,double *btcdbtcp,do
         else if ( i < 32 )
         {
             basevals[i] = Hmatrix[i][i];
-            printf("(%s %f).%d ",CURRENCIES[i],basevals[i],i);
+            if ( Debuglevel > 2 )
+                printf("(%s %f).%d ",CURRENCIES[i],basevals[i],i);
         }
         else if ( (c= prices777_contractnum(contracts[i],0)) >= 0 )
         {
