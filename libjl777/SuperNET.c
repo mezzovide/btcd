@@ -19,6 +19,7 @@
 
 
 #ifdef INSIDE_MGW
+#include "plugins/KV/kv777.h"
 struct kv777 *DB_revNXTtrades,DB_NXTtrades;
 #else
 struct ramkv777 *DB_revNXTtrades,DB_NXTtrades;
