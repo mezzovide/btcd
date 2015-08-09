@@ -152,7 +152,7 @@ struct InstantDEX_quote
 struct orderbook
 {
     uint64_t baseid,relid,jumpasset;
-    char base[16],rel[16],jumper[16],exchangestr[16],name[16];
+    char base[64],rel[64],jumper[64],exchangestr[64],name[64];
     struct InstantDEX_quote *bids,*asks;
     int32_t numbids,numasks;
 };

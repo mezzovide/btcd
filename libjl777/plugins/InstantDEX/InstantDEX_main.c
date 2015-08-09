@@ -34,9 +34,26 @@ int32_t prices777_key(char *key,char *exchange,char *name,char *base,uint64_t ba
     return(keysize);
 }
 
+int32_t get_assetname(char *name,uint64_t assetid)
+{
+    char assetidstr[64],*jsonstr; cJSON *json;
+    expand_nxt64bits(assetidstr,assetid);
+    name[0] = 0;
+    if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
+    {
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            extract_cJSON_str(name,15,json,"name");
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return((int32_t)strlen(assetidstr));
+}
+
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp)
 {
-    uint64_t baseid,relid,assetbits = 0; char s,assetidstr[64],*jsonstr; cJSON *json;
+    uint64_t baseid,relid,assetbits = 0; char *s,assetidstr[64],*jsonstr; cJSON *json;
     baseid = *baseidp, relid = *relidp;
     if ( strcmp(base,"5527630") == 0 || baseid == 5527630 )
         strcpy(base,"NXT");
@@ -45,32 +62,19 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
     if ( strcmp("nxtae",exchange) == 0 )
     {
         if ( strcmp(rel,"NXT") == 0 )
-            s = '+', relid = stringbits("NXT"), strcpy(rel,"NXT");
+            s = "+", relid = stringbits("NXT"), strcpy(rel,"NXT");
         else if ( strcmp(base,"NXT") == 0 )
-            s = '-', baseid = stringbits("NXT"), strcpy(base,"NXT");
-        else s = ' ';
-        if ( relid == 0 )
+            s = "-", baseid = stringbits("NXT"), strcpy(base,"NXT");
+        else s = "";
+        if ( relid == 0 && rel[0] != 0 )
             relid = calc_nxt64bits(rel);
-        if ( baseid == 0 )
+        if ( baseid == 0 && base[0] != 0 )
             baseid = calc_nxt64bits(base);
-        if ( s == '+' )
-            assetbits = baseid;
-        else assetbits = relid;
-        expand_nxt64bits(assetidstr,assetbits);
-        if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
-        {
-            if ( (json= cJSON_Parse(jsonstr)) != 0 )
-            {
-                extract_cJSON_str(name+1,15,json,"name");
-                name[0] = s;
-                if ( s == '+' )
-                    strcpy(base,name+1);
-                else strcpy(rel,name+1);
-                //printf("name.(%s) <- (%s/%s) (%llu %llu) (%s) (%llu)\n",name,base,rel,(long long)baseid,(long long)relid,jsonstr,(long long)assetbits);
-                free_json(json);
-            }
-            free(jsonstr);
-        }
+        if ( base[0] == 0 )
+            get_assetname(base,baseid);
+        if ( rel[0] == 0 )
+            get_assetname(rel,baseid);
+        sprintf(name,"%s%s/%s",s,base,rel);
     }
     else
     {

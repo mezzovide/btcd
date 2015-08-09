@@ -606,6 +606,7 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
     op = (struct orderbook *)calloc(1,sizeof(*op));
     strcpy(op->base,prices->base), strcpy(op->rel,prices->rel), strcpy(op->name,prices->contract);
     op->baseid = prices->baseid, op->relid = prices->relid;
+    printf("opbids.%p opasks.%p\n",op->bids,op->asks);
     for (iter=numbids=numasks=0; iter<2; iter++)
     {
         for (i=0; i<n||i<m; i++)
