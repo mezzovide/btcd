@@ -74,7 +74,7 @@ $(TARGET): $(OBJS)
 test:	all
 	(cd tests; make test)
 
-MGW: $(MGWOBJS)
+MGW: $(MGWOBJS);
   	$(CC) -D INSIDE_MGW -D STANDALONE $(CFLAGS) -o MGW $(OBJS) $(LIBS)
 
 SuperNET: $(SRCS) $(TARGET); \
