@@ -24,6 +24,7 @@
 #define INSTANTDEX_NAME "InstantDEX"
 #define INSTANTDEX_NXTAENAME "nxtae"
 #define INSTANTDEX_NXTAEUNCONF "unconf"
+#define INSTANTDEX_BASKETNAME "basket"
 #define INSTANTDEX_EXCHANGEID 0
 #define INSTANTDEX_UNCONFID 1
 #define INSTANTDEX_NXTAEID 2
@@ -785,6 +786,7 @@ void init_exchanges()
     find_exchange(0,INSTANTDEX_NAME);
     find_exchange(0,INSTANTDEX_NXTAEUNCONF);
     find_exchange(0,INSTANTDEX_NXTAENAME);
+    find_exchange(0,INSTANTDEX_BASKETNAME);
     //POLLGAP = get_API_int(cJSON_GetObjectItem(MGWconf,"POLLGAP"),10);
     //DEFAULT_MAXDEPTH = get_API_int(cJSON_GetObjectItem(MGWconf,"DEFAULT_MAXDEPTH"),DEFAULT_MAXDEPTH);
     /*if ( (exchanges= cJSON_GetObjectItem(SUPERNET.argjson,"exchanges")) != 0 && (n= cJSON_GetArraySize(exchanges)) > 0 )

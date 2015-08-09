@@ -99,12 +99,22 @@ int32_t get_equivalent_assetids(uint64_t *equivids,uint64_t bits)
     return(n);
 }
 
-uint64_t is_cryptocoin(char *name)
+uint64_t is_MGWcoin(char *name)
 {
     int32_t i;
     for (i=0; i<(int32_t)(sizeof(MGWassets)/sizeof(*MGWassets)); i++)
         if ( strcmp(MGWassets[i][1],name) == 0 )
             return(calc_nxt64bits(MGWassets[i][0]));
+    return(0);
+}
+
+char *is_MGWasset(uint64_t assetid)
+{
+    int32_t i; char assetidstr[64];
+    expand_nxt64bits(assetidstr,assetid);
+    for (i=0; i<(int32_t)(sizeof(MGWassets)/sizeof(*MGWassets)); i++)
+        if ( strcmp(MGWassets[i][0],assetidstr) == 0 )
+            return(MGWassets[i][1]);
     return(0);
 }
 

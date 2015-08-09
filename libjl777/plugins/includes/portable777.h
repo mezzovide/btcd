@@ -131,6 +131,9 @@ uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits);
 struct prices777 *prices777_poll(char *exchangestr,char *name,char *base,uint64_t refbaseid,char *rel,uint64_t refrelid);
 int32_t is_native_crypto(char *name,uint64_t bits);
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp);
+uint64_t is_MGWcoin(char *name);
+char *is_MGWasset(uint64_t);
+int32_t unstringbits(char *buf,uint64_t bits);
 
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *randfilename);
@@ -165,14 +168,15 @@ struct orderbook
 };
 
 struct prices777_nxtquote { uint64_t assetid,nxt64bits,quoteid,qty,priceNQT,baseamount,relamount; uint32_t timestamp; };
-struct prices777_nxtbooks { struct prices777_nxtquote stablebook[MAX_DEPTH][2],orderbook[MAX_DEPTH][2],prevorderbook[MAX_DEPTH][2],prev2orderbook[MAX_DEPTH][2]; };
+struct prices777_nxtbooks { struct prices777_nxtquote orderbook[MAX_DEPTH][2],prevorderbook[MAX_DEPTH][2],prev2orderbook[MAX_DEPTH][2]; };
 struct prices777
 {
     char url[512],exchange[64],base[64],rel[64],lbase[64],lrel[64],key[512],oppokey[512],contract[64],oppocontract[64],origbase[64],origrel[64];
     uint64_t contractnum,ap_mult,baseid,relid; int32_t keysize,oppokeysize; double lastupdate,decay,oppodecay;
     uint32_t exchangeid,numquotes,updated,lasttimestamp,RTflag,fifoinds[6];
-    double stablebook[MAX_DEPTH][2][2],orderbook[MAX_DEPTH][2][2],prevorderbook[MAX_DEPTH][2][2],prev2orderbook[MAX_DEPTH][2][2],lastprice;
+    double orderbook[MAX_DEPTH][2][2],prevorderbook[MAX_DEPTH][2][2],prev2orderbook[MAX_DEPTH][2][2],lastprice,lastbid,lastask;
     struct prices777_nxtbooks *nxtbooks; portable_mutex_t mutex; struct orderbook *op; char *orderbook_jsonstrs[2][2];
+    uint8_t **dependents,changed; int32_t numdependents,basketsize; struct prices777 **basket; double *basketwts,*basketprices;
     float days[DAYS_FIFO],hours[HOURS_FIFO],minutes[MINUTES_FIFO];
 };
 
