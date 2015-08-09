@@ -363,7 +363,6 @@ void SuperNET_apiloop(void *ipaddr)
                             {
                                 if ( (retstr= InstantDEX(jsonstr)) != 0 )
                                 {
-                                    free_json(json);
                                     retlen = (int32_t)strlen(retstr) + 1;
                                     if ( (checklen= nn_send(sock,retstr,retlen,0)) != retlen )
                                         fprintf(stderr,"checklen.%d != len.%d for nn_send of (%s)\n",checklen,retlen,retstr);
