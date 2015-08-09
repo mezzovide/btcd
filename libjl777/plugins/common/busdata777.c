@@ -1276,7 +1276,9 @@ void busdata_init(int32_t sendtimeout,int32_t recvtimeout,int32_t firstiter)
         struct kv777 *kvs[16];
         i = 0;
         kvs[i++] = SUPERNET.protocols;
-        kvs[i++] = SUPERNET.rawPM, SUPERNET.rawPM->dontrelay = 1;
+        kvs[i++] = SUPERNET.rawPM;
+        if ( SUPERNET.rawPM != 0 )
+            SUPERNET.rawPM->dontrelay = 1;
         kvs[i++] = SUPERNET.services;
         kvs[i++] = SUPERNET.invoices;
         SUPERNET.relays = dKV777_init("relays","*",kvs,i,0,RELAYS.pubrelays,RELAYS.subclient,RELAYS.active.connections,RELAYS.active.num,1 << CONNECTION_NUMBITS,SUPERNET.port + PUBRELAYS_OFFSET,0.);

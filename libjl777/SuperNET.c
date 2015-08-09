@@ -545,12 +545,15 @@ void SuperNET_initconf(cJSON *json)
         SUPERNET.NXTtxids = kv777_init(SUPERNET.DBPATH,"NXT_txids",0);
     }
 #endif
-    /*SUPERNET.PM = kv777_init(KV777.PATH,"PM",0);
-    SUPERNET.alias = kv777_init(KV777.PATH,"alias",0);
-    SUPERNET.protocols = kv777_init(KV777.PATH,"protocols",0);
-    SUPERNET.rawPM = kv777_init(KV777.PATH,"rawPM",0);
-    SUPERNET.services = kv777_init(KV777.PATH,"services",0);
-    SUPERNET.invoices = kv777_init(KV777.PATH,"invoices",0);*/
+    if ( SUPERNET.iamrelay != 0 )
+    {
+        SUPERNET.PM = kv777_init(KV777.PATH,"PM",0);
+        SUPERNET.alias = kv777_init(KV777.PATH,"alias",0);
+        SUPERNET.protocols = kv777_init(KV777.PATH,"protocols",0);
+        SUPERNET.rawPM = kv777_init(KV777.PATH,"rawPM",0);
+        SUPERNET.services = kv777_init(KV777.PATH,"services",0);
+        SUPERNET.invoices = kv777_init(KV777.PATH,"invoices",0);
+    }
 }
 
 int SuperNET_start(char *fname,char *myip)
