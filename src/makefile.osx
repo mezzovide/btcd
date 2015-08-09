@@ -113,7 +113,9 @@ endif
 
 all: BitcoinDarkd
 
-LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a glue.o -lcurl
+#LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a glue.o -lcurl
+LIBS += $(CURDIR)/leveldb/libleveldb.a $(CURDIR)/leveldb/libmemenv.a  glue.o ../libjl777/libs/libjl777.a   ../libjl777/nanomsg/.libs/libnanomsg.a -lcurl -lm -lanl
+
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/include)
 DEFS += $(addprefix -I,$(CURDIR)/leveldb/helpers)
 OBJS += obj/txdb-leveldb.o
