@@ -24,7 +24,7 @@
 #include "../common/system777.c"
 #include "../utils/NXT777.c"
 #include "../ramchain/ramchain.c"
-#include "db777.c"
+#include "old/db777.c"
 #undef DEFINES_ONLY
 
 int32_t MGW_idle(struct plugin_info *plugin)
