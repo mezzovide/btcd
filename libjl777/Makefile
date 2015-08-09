@@ -1,24 +1,22 @@
 ifneq (,$(findstring /cygdrive/,$(PATH)))
     OS := win
-    #PLIBS := utils/bits777.c utils/system777.c utils/cJSON.c utils/NXT777.c utils/files777.c utils/bitcoind_RPC.c utils/bitcoind.c utils/utils777.c nonportable/$(OS)/files.c nonportable/$(OS)/random.c ../libs/libnanomsg.a -lpthread -lanl -lm
 else
 ifneq (,$(findstring WINDOWS,$(PATH)))
     OS := win
-    #PLIBS := utils/bits777.c utils/system777.c utils/cJSON.c utils/NXT777.c utils/files777.c utils/bitcoind_RPC.c utils/bitcoind.c utils/utils777.c nonportable/$(OS)/files.c nonportable/$(OS)/random.c ../libs/libnanomsg.a -lpthread -lanl -lm
 else
     OS := $(shell uname -s)
-    #PLIBS := ../libs/libjl777.a ../libs/libnanomsg.a -lpthread -lanl -lm
-    #PLIBS := utils/bits777.c utils/system777.c utils/cJSON.c utils/files777.c utils/utils777.c nonportable/$(OS)/files.c nonportable/$(OS)/random.c ../libs/libnanomsg.a -lpthread -lanl -lm
 endif
 endif
 
 ifeq (OS,Darwin)
     LANL := plugins/nonportable/Darwin/libanl.a
+    PLANL := nonportable/Darwin/libanl.a
 else
     LANL := -lanl
+    PLANL := -lanl
 endif
 
-PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lm ../$(LANL)
+PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lm $(PLANL)
 
 LIBS= libs/libjl777.a nanomsg/.libs/libnanomsg.a libs/libminiupnpc.a -lpthread -lcurl -lm $(LANL)
 
