@@ -45,6 +45,46 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME   *data,cJSON
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
+int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t ind)
+{
+    void *obj,*result,*value; uint64_t revkey[2]; int32_t len = 0;
+    memset(extra,0,sizeof(*extra));
+    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+    {
+        revkey[0] = assetidbits, revkey[1] = ind;
+        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
+        {
+            value = sp_get(result,"value",&len);
+            if ( len == sizeof(*extra) )
+                memcpy(extra,value,len);
+            else printf("NXT_revassettxid mismatched len.%d vs %ld\n",len,sizeof(*extra));
+            sp_destroy(result);
+        } //else sp_destroy(obj);
+    }
+    return(len);
+}
+
+int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int32_t valuelen,uint32_t ind,struct extra_info *extra)
+{
+    void *obj;
+    if ( value != 0 )
+    {
+        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
+        {
+            extra->assetidbits = assetidbits, extra->txidbits = txidbits, extra->ind = ind;
+            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",value,valuelen) == 0 )
+                sp_set(DB_NXTtxids->db,obj);
+            else
+            {
+                sp_destroy(obj);
+                printf("error NXT_add_assettxid %llu ind.%d\n",(long long)txidbits,ind);
+            }
+        }
+        NXT_set_revassettxid(assetidbits,ind,extra);
+    }
+    return(0);
+}
+
 char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
 {
     void *obj,*value,*result = 0; int32_t slen,len,flag; uint64_t txidbits,savedbits; struct extra_info extra; char *txidjsonstr = 0; cJSON *json,*txobj;
@@ -86,6 +126,7 @@ char *NXT_txidstr(struct mgw777 *mgw,char *txid,int32_t writeflag,uint32_t ind)
             memset(&extra,0,sizeof(extra));
             if ( (txobj= cJSON_Parse(txidjsonstr)) != 0 )
             {
+                int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *receiverbitsp,uint64_t *amountp,int32_t *flagp,char *coindata,int32_t confirmed,struct mgw777 *mgw,cJSON *txobj);
                 extra.vout = process_assettransfer(&extra.height,&extra.senderbits,&extra.receiverbits,&extra.amount,&extra.flags,extra.coindata,0,mgw,txobj);
                 free_json(txobj);
                 if ( extra.vout >= 0 )
@@ -237,46 +278,6 @@ int32_t NXT_set_revassettxid(uint64_t assetidbits,uint32_t ind,struct extra_info
         }
     }
     return(-1);
-}
-
-int32_t NXT_revassettxid(struct extra_info *extra,uint64_t assetidbits,uint32_t ind)
-{
-    void *obj,*result,*value; uint64_t revkey[2]; int32_t len = 0;
-    memset(extra,0,sizeof(*extra));
-    if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-    {
-        revkey[0] = assetidbits, revkey[1] = ind;
-        if ( sp_set(obj,"key",revkey,sizeof(revkey)) == 0 && (result= sp_get(DB_NXTtxids->db,obj)) != 0 )
-        {
-            value = sp_get(result,"value",&len);
-            if ( len == sizeof(*extra) )
-                memcpy(extra,value,len);
-            else printf("NXT_revassettxid mismatched len.%d vs %ld\n",len,sizeof(*extra));
-            sp_destroy(result);
-        } //else sp_destroy(obj);
-    }
-    return(len);
-}
-
-int32_t NXT_add_assettxid(uint64_t assetidbits,uint64_t txidbits,void *value,int32_t valuelen,uint32_t ind,struct extra_info *extra)
-{
-    void *obj;
-    if ( value != 0 )
-    {
-        if ( (obj= sp_object(DB_NXTtxids->db)) != 0 )
-        {
-            extra->assetidbits = assetidbits, extra->txidbits = txidbits, extra->ind = ind;
-            if ( sp_set(obj,"key",&txidbits,sizeof(txidbits)) == 0 && sp_set(obj,"value",value,valuelen) == 0 )
-                sp_set(DB_NXTtxids->db,obj);
-            else
-            {
-                sp_destroy(obj);
-                printf("error NXT_add_assettxid %llu ind.%d\n",(long long)txidbits,ind);
-            }
-        }
-        NXT_set_revassettxid(assetidbits,ind,extra);
-    }
-    return(0);
 }
 
 char *NXT_assettxid(uint64_t assettxid)
@@ -2164,7 +2165,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     cJSON_AddItemToObject(retjson,"numwithdraws",cJSON_CreateNumber(mgw->numwithdraws));
     cJSON_AddItemToObject(retjson,"withdrawsum",cJSON_CreateNumber(dstr(mgw->withdrawsum)));
     cJSON_AddItemToObject(retjson,"balance",cJSON_CreateNumber(dstr(balance)));
-    sprintf(buf,"G%d:[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d<BR>",mgw->gatewayid,dstr(balance),coin->name,dstr(mgw->S.sentNXT),balance<=0?0:dstr(mgw->S.sentNXT)/dstr(balance),dstr(unspent),dstr(circulation),dstr(coin->supply),dstr(mgw->withdrawsum),dstr(0),coin->RTNXT_height,coin->name,coin->ramchain.RTblocknum);
+    sprintf(buf,"G%d:[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d<BR>",SUPERNET.gatewayid,dstr(balance),coin->name,dstr(mgw->S.sentNXT),balance<=0?0:dstr(mgw->S.sentNXT)/dstr(balance),dstr(unspent),dstr(circulation),dstr(coin->supply),dstr(mgw->withdrawsum),dstr(0),coin->RTNXT_height,coin->name,coin->ramchain.RTblocknum);
     if ( balance >= -SATOSHIDEN && mgw->numwithdraws > 0 && mgw_isrealtime(coin) != 0 )
     {
         struct cointx_info *cointx;
