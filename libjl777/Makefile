@@ -62,6 +62,7 @@ SRCS = SuperNET.c libjl777.c $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(RAMCHA
 MGWSRCS = SuperNET.c plugins/mgw/MGW_main.c $(S)/sophia.c $(S)/db777.c libjl777.c $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(RAMCHAIN) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
 
 OBJS	:= $(SRCS:%.c=%.o)
+
 MGWOBJS	:= $(MGWSRCS:%.c=%.o)
 
 all: $(TARGET)
@@ -72,12 +73,6 @@ $(TARGET): $(OBJS)
 
 test:	all
 	(cd tests; make test)
-
-MGWTARGET = MGW
-
-$(MGWTARGET): $(MGWOBJS)
-    #$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-    clang $(CFLAGS) -o $(MGWTARGET) -D INSIDE_MGW -D STANDALONE $(MGWOBJS) $(LIBS)
 
 MGW: $(MGWSRCS) $(MGWTARGET); \
     clang -o MGW -D INSIDE_MGW -D STANDALONE $(CFLAGS) $(MGWOBJS) $(LIBS)
