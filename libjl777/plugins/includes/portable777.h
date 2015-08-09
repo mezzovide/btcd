@@ -136,6 +136,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
 #define MINUTES_FIFO (1024)
 #define HOURS_FIFO (64)
 #define DAYS_FIFO (512)
+#define INSTANTDEX_MINVOL 75
 
 struct InstantDEX_quote
 {
@@ -163,17 +164,19 @@ struct prices777
     uint64_t contractnum,ap_mult,baseid,relid; int32_t keysize,oppokeysize; double lastupdate,decay,oppodecay;
     uint32_t exchangeid,numquotes,updated,lasttimestamp,RTflag,fifoinds[6];
     double stablebook[MAX_DEPTH][2][2],orderbook[MAX_DEPTH][2][2],prevorderbook[MAX_DEPTH][2][2],prev2orderbook[MAX_DEPTH][2][2],lastprice;
-    struct prices777_nxtbooks *nxtbooks; portable_mutex_t mutex; struct orderbook *op; char *orderbook_jsonstrs[2];
+    struct prices777_nxtbooks *nxtbooks; portable_mutex_t mutex; struct orderbook *op; char *orderbook_jsonstrs[2][2];
     float days[DAYS_FIFO],hours[HOURS_FIFO],minutes[MINUTES_FIFO];
 };
 
+int32_t iQ_exchangestr(char *exchange,struct InstantDEX_quote *iQ);
 int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t isask,uint64_t quoteid,double price,double volume,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount,char *exchange,uint64_t nxt64bits,char *gui,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,int32_t duration);
 void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_t *numasksp,struct InstantDEX_quote *iQ,int32_t polarity,int32_t oldest,char *gui);
 void free_orderbook(struct orderbook *op);
 void sort_orderbook(struct orderbook *op);
-char *orderbook_jsonstr(uint64_t nxt64bits,struct orderbook *op,char *base,char *rel,int32_t maxdepth,int32_t allflag);
-
-struct prices777 *prices777_safecopy(int32_t writeflag,void *prices777,double buf[MAX_DEPTH][2][2],struct prices777_nxtquote nxtbook[MAX_DEPTH][2]);
-struct prices777 *prices777_stablebooks(int32_t *polarityp,char *exchangestr,char *name,void *key,int32_t keysize,uint64_t baseid,uint64_t relid,double buf[MAX_DEPTH][2][2],struct prices777_nxtquote nxtbook[MAX_DEPTH][2]);
+cJSON *prices777_InstantDEX_json(int32_t depth,int32_t invert,int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset);
+char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct orderbook *op,int32_t maxdepth,int32_t allflag);
+uint64_t calc_quoteid(struct InstantDEX_quote *iQ);
+double check_ratios(uint64_t baseamount,uint64_t relamount,uint64_t baseamount2,uint64_t relamount2);
+double make_jumpquote(uint64_t baseid,uint64_t relid,uint64_t *baseamountp,uint64_t *relamountp,uint64_t *frombasep,uint64_t *fromrelp,uint64_t *tobasep,uint64_t *torelp);
 
 #endif

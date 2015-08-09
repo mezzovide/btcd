@@ -15,6 +15,7 @@
 #define DEFINES_ONLY
 #include "../agents/plugin777.c"
 #include "../utils/NXT777.c"
+#include "../includes/portable777.h"
 #undef DEFINES_ONLY
 
 queue_t InstantDEXQ;
@@ -83,7 +84,7 @@ typedef char *(*json_handler)(int32_t localaccess,int32_t valid,char *sender,cJS
 char *InstantDEX(char *jsonstr)
 {
     char *retstr = 0,key[512],exchangestr[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD];
-    cJSON *json; uint64_t baseid,relid,assetbits; int32_t keysize,allfields; struct prices777 *prices; struct orderbook *op;
+    cJSON *json; uint64_t baseid,relid,assetbits; int32_t invert,keysize,allfields; struct prices777 *prices; struct orderbook *op;
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
         baseid = j64bits(json,"baseid"), relid = j64bits(json,"relid");
@@ -97,9 +98,14 @@ char *InstantDEX(char *jsonstr)
         assetbits = InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
         if ( (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 )
         {
-            if ( (retstr= prices->orderbook_jsonstrs[allfields]) == 0 )
+            if ( strcmp(prices->base,base) == 0 && strcmp(prices->rel,rel) == 0 )
+                invert = 0;
+            else if ( strcmp(prices->base,rel) == 0 && strcmp(prices->rel,base) == 0 )
+                invert = 1;
+            else invert = 0, printf("baserel not matching (%s %s) vs (%s %s)\n",prices->base,prices->rel,base,rel);
+            if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 )
             {
-                if ( prices->op == 0 )
+                /*if ( prices->op == 0 )
                 {
                     if ( (op= create_orderbook(base,baseid,rel,relid,0,jstr(json,"gui"),exchangestr)) != 0 )
                     {
@@ -109,14 +115,14 @@ char *InstantDEX(char *jsonstr)
                         prices->op = op;
                         portable_mutex_unlock(&prices->mutex);
                     }
-                }
+                }*/
                 if ( prices->op != 0 )
                 {
-                    retstr = orderbook_jsonstr(SUPERNET.my64bits,prices->op,base,rel,MAX_DEPTH,allfields);
+                    retstr = prices777_orderbook_jsonstr(invert,SUPERNET.my64bits,prices->op,MAX_DEPTH,allfields);
                     portable_mutex_lock(&prices->mutex);
-                    if ( prices->orderbook_jsonstrs[allfields] != 0 )
-                        free(prices->orderbook_jsonstrs[allfields]);
-                    prices->orderbook_jsonstrs[allfields] = retstr;
+                    if ( prices->orderbook_jsonstrs[invert][allfields] != 0 )
+                        free(prices->orderbook_jsonstrs[invert][allfields]);
+                    prices->orderbook_jsonstrs[invert][allfields] = retstr;
                     portable_mutex_unlock(&prices->mutex);
                 }
             }

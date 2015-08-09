@@ -651,6 +651,7 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
                     nxtQ.baseamount = j64bitsi(item,7);
                     nxtQ.relamount = j64bitsi(item,8);
                     create_InstantDEX_quote(&iQ,nxtQ.timestamp,dir<0,nxtQ.quoteid,price,volume,nxtQ.assetid,nxtQ.baseamount,NXT_ASSETID,nxtQ.relamount,"nxtae",nxtQ.nxt64bits,"",0,0,3600);
+                    iQ.minperc = 1;
                     if ( iter == 0 )
                     {
                         if ( dir > 0 )
@@ -687,6 +688,224 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
     return(op);
 }
 
+cJSON *prices777_InstantDEX_json(int32_t depth,int32_t invert,int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset)
+{
+    cJSON *relobj=0,*baseobj=0,*json = 0;
+    char numstr[64],base[64],rel[64],exchange[64];
+    struct InstantDEX_quote *baseiQ,*reliQ;
+    uint64_t baseamount,relamount,frombase,fromrel,tobase,torel,mult;
+    double price,volume,ratio;
+    int32_t minperc;
+    minperc = (iQ->minperc != 0) ? iQ->minperc : INSTANTDEX_MINVOL;
+    if ( invert == 0 )
+    {
+        baseamount = iQ->baseamount, relamount = iQ->relamount;
+        baseiQ = iQ->baseiQ, reliQ = iQ->reliQ;
+    }
+    else
+    {
+        baseamount = iQ->relamount, relamount = iQ->baseamount;
+        baseiQ = iQ->reliQ, reliQ = iQ->baseiQ;
+        refbaseid = iQ->relid, refrelid = iQ->baseid;
+    }
+    if ( depth == 0 )
+        *baseamountp = baseamount, *relamountp = relamount;
+    if ( baseiQ != 0 && reliQ != 0 )
+    {
+        frombase = baseiQ->baseamount, fromrel = baseiQ->relamount;
+        tobase = reliQ->baseamount, torel = reliQ->relamount;
+        if ( make_jumpquote(refbaseid,refrelid,baseamountp,relamountp,&frombase,&fromrel,&tobase,&torel) == 0. )
+            return(0);
+    } else frombase = fromrel = tobase = torel = 0;
+    json = cJSON_CreateObject();
+    if ( Debuglevel > 2 )
+        printf("%p depth.%d %p %p %.8f %.8f: %.8f %.8f %.8f %.8f\n",iQ,depth,baseiQ,reliQ,dstr(*baseamountp),dstr(*relamountp),dstr(frombase),dstr(fromrel),dstr(tobase),dstr(torel));
+    cJSON_AddItemToObject(json,"askoffer",cJSON_CreateNumber(invert));
+    if ( depth == 0 )
+    {
+        if ( localaccess == 0 )
+            cJSON_AddItemToObject(json,"method",cJSON_CreateString("makeoffer3"));
+        cJSON_AddItemToObject(json,"plugin",cJSON_CreateString("InstantDEX"));
+        set_assetname(&mult,base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
+        set_assetname(&mult,rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
+        cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
+        cJSON_AddItemToObject(json,"duration",cJSON_CreateNumber(iQ->duration));
+        cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
+        if ( iQ->matched != 0 )
+            cJSON_AddItemToObject(json,"matched",cJSON_CreateNumber(1));
+        if ( iQ->sent != 0 )
+            cJSON_AddItemToObject(json,"sent",cJSON_CreateNumber(1));
+        if ( iQ->closed != 0 )
+            cJSON_AddItemToObject(json,"closed",cJSON_CreateNumber(1));
+        iQ_exchangestr(exchange,iQ), cJSON_AddItemToObject(json,"exchange",cJSON_CreateString(exchange));
+        if ( iQ->nxt64bits != 0 )
+            sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"offerNXT",cJSON_CreateString(numstr)), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
+        sprintf(numstr,"%llu",(long long)refbaseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
+        sprintf(numstr,"%llu",(long long)refrelid), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
+        if ( baseiQ != 0 && reliQ != 0 )
+        {
+            if ( baseiQ->minperc > minperc )
+                minperc = baseiQ->minperc;
+            if ( reliQ->minperc > minperc )
+                minperc = reliQ->minperc;
+            baseamount = frombase, relamount = fromrel;
+            if ( jumpasset == 0 )
+            {
+                if ( baseiQ->relid == reliQ->relid )
+                    jumpasset = baseiQ->relid;
+                else printf("mismatched jumpassset: %llu vs %llu\n",(long long)baseiQ->relid,(long long)reliQ->relid), getchar();
+            }
+            baseobj = prices777_InstantDEX_json(depth+1,invert,localaccess,&baseamount,&relamount,baseiQ,refbaseid,jumpasset,0);
+            *baseamountp = baseamount;
+            if ( (ratio= check_ratios(baseamount,relamount,frombase,fromrel)) < .999 || ratio > 1.001 )
+                printf("WARNING: baseiQ ratio %f (%llu/%llu) -> (%llu/%llu)\n",ratio,(long long)baseamount,(long long)relamount,(long long)frombase,(long long)fromrel);
+            baseamount = tobase, relamount = torel;
+            baseobj = prices777_InstantDEX_json(depth+1,invert,localaccess,&baseamount,&relamount,reliQ,refrelid,jumpasset,0);
+            //relobj = gen_InstantDEX_json(localaccess,&baseamount,&relamount,depth+1,!iQ->isask,iQ->reliQ,refrelid,jumpasset,0);
+            *relamountp = baseamount;
+            if ( (ratio= check_ratios(baseamount,relamount,tobase,torel)) < .999 || ratio > 1.001 )
+                printf("WARNING: reliQ ratio %f (%llu/%llu) -> (%llu/%llu)\n",ratio,(long long)baseamount,(long long)relamount,(long long)tobase,(long long)torel);
+        }
+        if ( jumpasset != 0 )
+            sprintf(numstr,"%llu",(long long)jumpasset), cJSON_AddItemToObject(json,"jumpasset",cJSON_CreateString(numstr));
+        price = _prices777_price_volume(&volume,*baseamountp,*relamountp);
+        cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price));
+        cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
+        //printf("price %f vol %f\n",price,volume);
+        sprintf(numstr,"%llu",(long long)*baseamountp), cJSON_AddItemToObject(json,"baseamount",cJSON_CreateString(numstr));
+        sprintf(numstr,"%llu",(long long)*relamountp), cJSON_AddItemToObject(json,"relamount",cJSON_CreateString(numstr));
+        sprintf(numstr,"%llu",(long long)calc_quoteid(iQ)), cJSON_AddItemToObject(json,"quoteid",cJSON_CreateString(numstr));
+        if ( iQ->gui[0] != 0 )
+            cJSON_AddItemToObject(json,"gui",cJSON_CreateString(iQ->gui));
+        if ( baseobj != 0 )
+            cJSON_AddItemToObject(json,"baseiQ",baseobj);
+        if ( relobj != 0 )
+            cJSON_AddItemToObject(json,"reliQ",relobj);
+        cJSON_AddItemToObject(json,"minperc",cJSON_CreateNumber(minperc));
+    }
+    else
+    {
+        price = _prices777_price_volume(&volume,*baseamountp,*relamountp);
+        iQ_exchangestr(exchange,iQ);
+        cJSON_AddItemToObject(json,"exchange",cJSON_CreateString(exchange));
+        if ( iQ->nxt64bits != 0 )
+            sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"offerNXT",cJSON_CreateString(numstr));
+        sprintf(numstr,"%llu",(long long)calc_quoteid(iQ)), cJSON_AddItemToObject(json,"quoteid",cJSON_CreateString(numstr));
+        sprintf(numstr,"%llu",(long long)*baseamountp), cJSON_AddItemToObject(json,"baseamount",cJSON_CreateString(numstr));
+        sprintf(numstr,"%llu",(long long)*relamountp), cJSON_AddItemToObject(json,"relamount",cJSON_CreateString(numstr));
+        cJSON_AddItemToObject(json,"price",cJSON_CreateNumber(price)), cJSON_AddItemToObject(json,"volume",cJSON_CreateNumber(volume));
+    }
+    if ( *baseamountp < min_asset_amount(refbaseid) || *relamountp < min_asset_amount(refrelid) )
+    {
+        if ( Debuglevel > 2 )
+            printf("%.8f < %.8f || rel %.8f < %.8f\n",dstr(*baseamountp),dstr(min_asset_amount(refbaseid)),dstr(*relamountp),dstr(min_asset_amount(refrelid)));
+        if ( *baseamountp < min_asset_amount(refbaseid) )
+            sprintf(numstr,"%llu",(long long)min_asset_amount(refbaseid)), cJSON_AddItemToObject(json,"minbase_error",cJSON_CreateString(numstr));
+        if ( *relamountp < min_asset_amount(refrelid) )
+            sprintf(numstr,"%llu",(long long)min_asset_amount(refrelid)), cJSON_AddItemToObject(json,"minrel_error",cJSON_CreateString(numstr));
+    }
+    return(json);
+}
+
+cJSON *prices777_orderbook_item(int32_t invert,struct InstantDEX_quote *iQ,int32_t allflag,uint64_t baseid,uint64_t relid,uint64_t jumpasset)
+{
+    char offerstr[MAX_JSON_FIELD];
+    uint64_t baseamount=0,relamount=0;
+    double price,volume;
+    cJSON *json = 0;
+    if ( (json= prices777_InstantDEX_json(0,invert,1,&baseamount,&relamount,iQ,invert==0?baseid:relid,invert==0?relid:baseid,jumpasset)) != 0 )
+    {
+        if ( cJSON_GetObjectItem(json,"minbase_error") != 0 || cJSON_GetObjectItem(json,"minrel_error") != 0 )
+        {
+            printf("gen_orderbook_item has error (%s)\n",cJSON_Print(json));
+            free_json(json);
+            return(0);
+        }
+        if ( allflag == 0 )
+        {
+            price = _prices777_price_volume(&volume,baseamount,relamount);
+            sprintf(offerstr,"{\"price\":\"%.8f\",\"volume\":\"%.8f\"}",price,volume);
+            free_json(json);
+            return(cJSON_Parse(offerstr));
+        }
+    } else printf("error generating InstantDEX_json\n");
+    return(json);
+}
+
+char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct orderbook *op,int32_t maxdepth,int32_t allflag)
+{
+    cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t baseid,uint64_t relid,uint64_t jumpasset);
+    cJSON *json,*bids,*asks,*item,*highbid=0,*lowask=0;
+    char baserel[64],assetA[64],assetB[64],NXTaddr[64];
+    int32_t i;
+    if ( op == 0 )
+        return(clonestr("{\"error\":\"empty orderbook\"}"));
+    if ( invert == 0 )
+        sprintf(baserel,"%s/%s",op->base,op->rel);
+    else sprintf(baserel,"%s/%s",op->rel,op->base);
+    if ( Debuglevel > 2 )
+        printf("ORDERBOOK %s/%s iQsize.%ld numbids.%d numasks.%d maxdepth.%d (%llu %llu)\n",op->base,op->rel,sizeof(struct InstantDEX_quote),op->numbids,op->numasks,maxdepth,(long long)op->baseid,(long long)op->relid);
+    json = cJSON_CreateObject();
+    bids = cJSON_CreateArray();
+    asks = cJSON_CreateArray();
+    if ( op->numbids != 0 || op->numasks != 0 )
+    {
+        for (i=0; i<op->numbids; i++)
+        {
+            if ( (i < maxdepth || op->bids[i].nxt64bits == nxt64bits) && (item= prices777_orderbook_item(invert,&op->bids[i],allflag,op->baseid,op->relid,op->jumpasset)) != 0 )
+            {
+                if ( invert == 0 )
+                {
+                    cJSON_AddItemToArray(bids,item);
+                    if ( Debuglevel > 2 && i == 0 )
+                        highbid = item;
+                }
+                else
+                {
+                    cJSON_AddItemToArray(asks,item);
+                    if ( Debuglevel > 2 && i == 0 )
+                        lowask = item;
+                }
+            }
+        }
+        for (i=0; i<op->numasks; i++)
+        {
+            if ( (i < maxdepth || op->asks[i].nxt64bits == nxt64bits) && (item= prices777_orderbook_item(invert,&op->asks[i],allflag,op->baseid,op->relid,op->jumpasset)) != 0 )
+            {
+                if ( invert != 0 )
+                {
+                    cJSON_AddItemToArray(bids,item);
+                    if ( Debuglevel > 2 && i == 0 )
+                        highbid = item;
+                }
+                else
+                {
+                    cJSON_AddItemToArray(asks,item);
+                    if ( Debuglevel > 2 && i == 0 )
+                        lowask = item;
+                }
+            }
+        }
+    }
+    //expand_nxt64bits(obook,_obookid(op->baseid,op->relid));
+    expand_nxt64bits(NXTaddr,nxt64bits);
+    expand_nxt64bits(assetA,invert==0 ? op->baseid : op->relid);
+    expand_nxt64bits(assetB,invert!=0 ? op->baseid : op->relid);
+    cJSON_AddItemToObject(json,"pair",cJSON_CreateString(baserel));
+    //cJSON_AddItemToObject(json,"obookid",cJSON_CreateString(obook));
+    cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(assetA));
+    cJSON_AddItemToObject(json,"relid",cJSON_CreateString(assetB));
+    cJSON_AddItemToObject(json,"bids",bids);
+    cJSON_AddItemToObject(json,"asks",asks);
+    cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(NXTaddr));
+    cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(time(NULL)));
+    cJSON_AddItemToObject(json,"maxdepth",cJSON_CreateNumber(maxdepth));
+    //printf("(%s)\n",jprint(json,0));
+    //if ( Debuglevel > 2 )
+    //    debug_json(highbid), debug_json(lowask);
+    return(jprint(json,1));
+}
+
 cJSON *inner_json(double price,double vol,uint32_t timestamp,uint64_t quoteid,uint64_t nxt64bits,uint64_t qty,uint64_t pqt,uint64_t baseamount,uint64_t relamount)
 {
     cJSON *inner = cJSON_CreateArray();
@@ -705,7 +924,7 @@ cJSON *inner_json(double price,double vol,uint32_t timestamp,uint64_t quoteid,ui
 
 void prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t maxdepth,cJSON *json,char *resultfield,char *bidfield,char *askfield,char *pricefield,char *volfield)
 {
-    cJSON *obj = 0,*bidobj,*askobj; int32_t allflag; struct orderbook *op; char *strs[2];
+    cJSON *obj = 0,*bidobj,*askobj; int32_t allflag; struct orderbook *op; char *strs[4];
     if ( resultfield == 0 )
         obj = json;
     if ( maxdepth == 0 )
@@ -716,17 +935,17 @@ void prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t
         {
             if ( (op= prices777_json_quotes(prices,bidobj,askobj,maxdepth,pricefield,volfield,0)) != 0 )
             {
-                for (allflag=0; allflag<2; allflag++)
-                    strs[allflag] = orderbook_jsonstr(SUPERNET.my64bits,op,prices->base,prices->rel,MAX_DEPTH,allflag);
+                for (allflag=0; allflag<4; allflag++)
+                    strs[allflag] = prices777_orderbook_jsonstr(allflag/2,SUPERNET.my64bits,op,MAX_DEPTH,allflag);
                 portable_mutex_lock(&prices->mutex);
                 if ( prices->op != 0 )
                     free_orderbook(prices->op);
                 prices->op = op;
-                for (allflag=0; allflag<2; allflag++)
+                for (allflag=0; allflag<4; allflag++)
                 {
-                    if ( prices->orderbook_jsonstrs[allflag] != 0 )
-                        free(prices->orderbook_jsonstrs[allflag]);
-                    prices->orderbook_jsonstrs[allflag] = strs[allflag];
+                    if ( prices->orderbook_jsonstrs[allflag/2][allflag%2] != 0 )
+                        free(prices->orderbook_jsonstrs[allflag/2][allflag%2]);
+                    prices->orderbook_jsonstrs[allflag/2][allflag%2] = strs[allflag];
                 }
                 portable_mutex_unlock(&prices->mutex);
             }
@@ -771,6 +990,7 @@ void prices777_NXT(struct prices777 *prices,int32_t maxdepth)
                         qty = j64bits(item,"quantityQNT"), pqt = j64bits(item,"priceNQT");
                         baseamount = (qty * prices->ap_mult), relamount = (qty * pqt);
                         price = _prices777_price_volume(&vol,baseamount,relamount);
+                        //printf("baseamount.%lld relamount.%lld\n",(long long)baseamount,(long long)relamount);
                         timestamp = get_blockutime(juint(item,"height"));
                         item = inner_json(price,vol,timestamp,j64bits(item,"order"),j64bits(item,"account"),qty,pqt,baseamount,relamount);
                         cJSON_AddItemToArray(array,item);
@@ -1631,6 +1851,14 @@ struct prices777 *prices777_initpair(int32_t needfunc,void (*updatefunc)(struct 
     };
     int32_t i,rellen; char basebuf[64],relbuf[64]; struct exchange_info *exchangeptr;
     struct prices777 *prices;
+    if ( strcmp(exchange,"nxtae") == 0 )
+    {
+        if ( strcmp(base,"NXT") == 0 || baseid == NXT_ASSETID )
+        {
+            strcpy(base,rel), baseid = relid;
+            strcpy(rel,"NXT"), relid = NXT_ASSETID;
+        }
+    }
     /*if ( name == 0 && baseid == 0 && relid == 0 )
     {
         strcpy(namebuf,base), strcat(namebuf,rel);
@@ -1833,7 +2061,8 @@ struct prices777 *prices777_poll(char *exchangestr,char *name,char *base,uint64_
     int32_t unstringbits(char *buf,uint64_t bits);
     uint64_t assetids[8192],baseid,relid; int32_t i,n,j,exchangeid,flag; struct prices777 *prices;
     assetids[0] = refbaseid, assetids[1] = refrelid, assetids[2] = stringbits(name);
-    if ( (n= 1) > 0 )//(n= gen_assetpair_list(assetids,sizeof(assetids)/sizeof(*assetids),refbaseid,refrelid)) > 0 )
+    assetids[3] = refrelid, assetids[4] = refbaseid, assetids[5] = stringbits(name);
+    if ( (n= 2) > 0 )//(n= gen_assetpair_list(assetids,sizeof(assetids)/sizeof(*assetids),refbaseid,refrelid)) > 0 )
     {
         for (i=0; i<n; i++)
         {
