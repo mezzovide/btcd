@@ -36,53 +36,66 @@ int32_t prices777_key(char *key,char *exchange,char *name,char *base,uint64_t ba
 
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp)
 {
-    uint64_t baseid,relid,mult,assetbits = 0; char assetidstr[64],*jsonstr; cJSON *json;
+    uint64_t baseid,relid,assetbits = 0; char s,assetidstr[64],*jsonstr; cJSON *json;
     baseid = *baseidp, relid = *relidp;
+    if ( strcmp(base,"5527630") == 0 || baseid == 5527630 )
+        strcpy(base,"NXT");
+    if ( strcmp(rel,"5527630") == 0 || relid == 5527630 )
+        strcpy(rel,"NXT");
     if ( strcmp("nxtae",exchange) == 0 )
     {
-        if ( strcmp(rel,"NXT") == 0 && is_decimalstr(base) != 0 )
-            assetbits = baseid = calc_nxt64bits(base), relid = stringbits("NXT");//, is_native_crypto(base,baseid);
-        else if ( strcmp(base,"NXT") == 0 && is_decimalstr(rel) != 0 )
-            assetbits = relid = calc_nxt64bits(rel), baseid = stringbits("NXT");//, is_native_crypto(rel,relid);
+        if ( strcmp(rel,"NXT") == 0 )
+            s = '+', relid = stringbits("NXT"), strcpy(rel,"NXT");
+        else if ( strcmp(base,"NXT") == 0 )
+            s = '-', baseid = stringbits("NXT"), strcpy(base,"NXT");
+        else s = ' ';
+        if ( relid == 0 )
+            relid = calc_nxt64bits(rel);
+        if ( baseid == 0 )
+            baseid = calc_nxt64bits(base);
+        if ( s == '+' )
+            assetbits = baseid;
+        else assetbits = relid;
         expand_nxt64bits(assetidstr,assetbits);
         if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
         {
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
-                extract_cJSON_str(name,16,json,"name");
+                extract_cJSON_str(name+1,15,json,"name");
+                name[0] = s;
+                if ( s == '+' )
+                    strcpy(base,name+1);
+                else strcpy(rel,name+1);
+                //printf("name.(%s) <- (%s/%s) (%llu %llu) (%s) (%llu)\n",name,base,rel,(long long)baseid,(long long)relid,jsonstr,(long long)assetbits);
                 free_json(json);
             }
             free(jsonstr);
         }
-        //printf("name.(%s)\n",name);
     }
-    else if ( base[0] != 0 && rel[0] != 0 && baseid == 0 && relid == 0 )
+    else
     {
-        baseid = peggy_basebits(base), relid = peggy_basebits(rel);
-        if ( name[0] == 0 && baseid != 0 && relid != 0 )
+        if ( base[0] != 0 && rel[0] != 0 && baseid == 0 && relid == 0 )
         {
-            strcpy(name,base); // need to be smarter
-            strcat(name,rel);
+            baseid = peggy_basebits(base), relid = peggy_basebits(rel);
+            if ( name[0] == 0 && baseid != 0 && relid != 0 )
+            {
+                strcpy(name,base); // need to be smarter
+                strcat(name,rel);
+            }
         }
-    }
-    if ( name[0] == 0 || baseid == 0 || relid == 0 || base[0] == 0 || rel[0] == 0 )
-    {
-        if ( baseid == 0 && base[0] != 0 )
-            baseid = stringbits(base);
-        else if ( baseid != 0 && base[0] == 0 )
-            sprintf(base,"%llu",(long long)baseid);
-        if ( relid == 0 && rel[0] != 0 )
-            relid = stringbits(rel);
-        else if ( relid != 0 && rel[0] == 0 )
-            sprintf(rel,"%llu",(long long)relid);
-        if ( name[0] == 0 && assetbits != 0 )
-            set_assetname(&mult,name,assetbits);
-        else if ( name[0] == 0 )
-            strcpy(name,base), strcat(name,rel);
-        if ( strcmp(base,"5527630") == 0 )
-            strcpy(base,"NXT");
-        if ( strcmp(rel,"5527630") == 0 )
-            strcpy(rel,"NXT");
+        if ( name[0] == 0 || baseid == 0 || relid == 0 || base[0] == 0 || rel[0] == 0 )
+        {
+            if ( baseid == 0 && base[0] != 0 )
+                baseid = stringbits(base);
+            else if ( baseid != 0 && base[0] == 0 )
+                sprintf(base,"%llu",(long long)baseid);
+            if ( relid == 0 && rel[0] != 0 )
+                relid = stringbits(rel);
+            else if ( relid != 0 && rel[0] == 0 )
+                sprintf(rel,"%llu",(long long)relid);
+            if ( name[0] == 0 )
+                strcpy(name,base), strcat(name,rel);
+        }
     }
     *baseidp = baseid, *relidp = relid;
     *keysizep = prices777_key(key,exchange,name,base,baseid,rel,relid);
