@@ -2165,7 +2165,7 @@ uint64_t mgw_calc_unspent(char *smallestaddr,char *smallestaddrB,struct coin777 
     cJSON_AddItemToObject(retjson,"numwithdraws",cJSON_CreateNumber(mgw->numwithdraws));
     cJSON_AddItemToObject(retjson,"withdrawsum",cJSON_CreateNumber(dstr(mgw->withdrawsum)));
     cJSON_AddItemToObject(retjson,"balance",cJSON_CreateNumber(dstr(balance)));
-    sprintf(buf,"G%d:[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d<BR>",SUPERNET.gatewayid,dstr(balance),coin->name,dstr(mgw->S.sentNXT),balance<=0?0:dstr(mgw->S.sentNXT)/dstr(balance),dstr(unspent),dstr(circulation),dstr(coin->supply),dstr(mgw->withdrawsum),dstr(0),coin->RTNXT_height,coin->name,coin->ramchain.RTblocknum);
+    sprintf(buf,"G%d:[+%.8f %s - %.0f NXT rate %.2f] unspent %.8f circ %.8f/%.8f pend.(R%.8f D%.8f) NXT.%d %s.%d<BR>",SUPERNET.gatewayid,dstr(balance),coin->name,dstr(mgw->S.sentNXT),balance<=0?0:dstr(mgw->S.sentNXT)/dstr(balance),dstr(unspent),dstr(circulation),dstr(coin->ramchain.addrsum),dstr(mgw->withdrawsum),dstr(0),coin->RTNXT_height,coin->name,coin->ramchain.RTblocknum);
     if ( balance >= -SATOSHIDEN && mgw->numwithdraws > 0 && mgw_isrealtime(coin) != 0 )
     {
         struct cointx_info *cointx;
