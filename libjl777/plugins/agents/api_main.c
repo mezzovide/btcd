@@ -98,8 +98,8 @@ int main(int argc, char **argv)
     CGI_varlist *varlist; const char *name; CGI_value  *value;  int i,j,iter,localaccess,remoteaccess = 0,portflag = 0; cJSON *json; long offset;
     char urlbuf[512],namebuf[512],postbuf[65536],*retstr,*delim,*url = 0;
     portable_OS_init();
-    fprintf(stderr,"%s\n",getenv("QUERY_STRING"));
-    fprintf(stderr,"%s\n",getenv("CONTENT_TYPE"));
+    fprintf(stderr,"%s\n",getenv("REMOTE_ADDR"));
+    fprintf(stderr,"%s\n",getenv("REMOTE_HOST"));
     fprintf(stderr,"HTTP_REFERER.(%s)\n",getenv("HTTP_REFERER"));
     fprintf(stderr,"%s\n",getenv("USER"));
     fprintf(stderr,"%s\n",getenv("HOME"));
