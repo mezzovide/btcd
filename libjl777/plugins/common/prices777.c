@@ -2873,7 +2873,6 @@ int32_t prices_idle(struct plugin_info *plugin)
     {
         portable_mutex_init(&mutex);
         prices777_init(BUNDLE.jsonstr);
-#define INSIDE_BTCD
 #ifdef INSIDE_BTCD
         int32_t opreturns_init(uint32_t blocknum,uint32_t blocktimestamp,char *path);
         opreturns_init(0,(uint32_t)time(NULL),"peggy");

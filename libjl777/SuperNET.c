@@ -264,33 +264,31 @@ void SuperNET_loop(void *ipaddr)
     strs[n++] = language_func((char *)"coins","",0,0,1,(char *)"coins",jsonargs,call_system);
     while ( COINS.readyflag == 0 || find_daemoninfo(&ind,"coins",0,0) == 0 )
         poll_daemons();
+    strs[n++] = language_func((char *)"relay","",0,0,1,(char *)"relay",jsonargs,call_system);
+    while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"relay",0,0) == 0 )
+        poll_daemons();
 #ifdef INSIDE_MGW
-    //if ( SUPERNET.gatewayid >= 0 )
+    if ( SUPERNET.gatewayid >= 0 )
     {
         strs[n++] = language_func((char *)"MGW","",0,0,1,(char *)"MGW",jsonargs,call_system);
         while ( MGW.readyflag == 0 || find_daemoninfo(&ind,"MGW",0,0) == 0 )
             poll_daemons();
-    }
-    //if ( SUPERNET.gatewayid >= 0 )
-    {
         strs[n++] = language_func((char *)"ramchain","",0,0,1,(char *)"ramchain",jsonargs,call_system);
         while ( RAMCHAINS.readyflag == 0 || find_daemoninfo(&ind,"ramchain",0,0) == 0 )
             poll_daemons();
     }
     if ( SUPERNET.gatewayid >= 0 )
         printf("MGW sock = %d\n",MGW.all.socks.both.bus);
-#endif
-    
-    strs[n++] = language_func((char *)"relay","",0,0,1,(char *)"relay",jsonargs,call_system);
-    while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"relay",0,0) == 0 )
-        poll_daemons();
-#ifndef INSIDE_MGW
+#else
     //if ( SUPERNET.gatewayid < 0 )
     {
         strs[n++] = language_func((char *)"InstantDEX","",0,0,1,(char *)"InstantDEX",jsonargs,call_system);
         while ( INSTANTDEX.readyflag == 0 || find_daemoninfo(&ind,"InstantDEX",0,0) == 0 )
             poll_daemons();
     }
+    strs[n++] = language_func((char *)"prices","",0,0,1,(char *)"prices",jsonargs,call_system);
+    while ( 1 || PRICES.readyflag == 0 || find_daemoninfo(&ind,"prices",0,0) == 0 )
+        poll_daemons();
 #endif
     /*strs[n++] = language_func((char *)"teleport","",0,0,1,(char *)"teleport",jsonargs,call_system);
     while ( TELEPORT.readyflag == 0 || find_daemoninfo(&ind,"teleport",0,0) == 0 )
@@ -300,11 +298,6 @@ void SuperNET_loop(void *ipaddr)
         poll_daemons();
      strs[n++] = language_func((char *)"rps","",0,0,1,(char *)"rps",jsonargs,call_system);
 */
-#ifdef INSIDE_BTCD
-    strs[n++] = language_func((char *)"prices","",0,0,1,(char *)"prices",jsonargs,call_system);
-    while ( 1 || PRICES.readyflag == 0 || find_daemoninfo(&ind,"prices",0,0) == 0 )
-        poll_daemons();
-#endif
     for (i=0; i<n; i++)
     {
         printf("%s ",strs[i]);
@@ -389,16 +382,15 @@ void crypto_update1();
 int SuperNET_start(char *fname,char *myip)
 {
     int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout);
-    int32_t parse_ipaddr(char *ipaddr,char *ip_port);
     char ipaddr[256],*jsonstr = 0;
     uint64_t i,allocsize;
-    printf("myip.(%s)\n",myip);
     portable_OS_init();
+    printf("%p myip.(%s)\n",myip,myip);
+    parse_ipaddr(ipaddr,myip);
     init_SUPERNET_pullsock(10,1);
     Debuglevel = 2;
     if ( (jsonstr= loadfile(&allocsize,fname)) == 0 )
         jsonstr = clonestr("{}");
-    parse_ipaddr(ipaddr,myip);
     strcpy(SUPERNET.myipaddr,ipaddr);
     printf("SuperNET_start myip.(%s) -> ipaddr.(%s)\n",myip!=0?myip:"",ipaddr);
     language_func("SuperNET","",0,0,1,"SuperNET",jsonstr,call_system);
