@@ -606,7 +606,7 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
     op = (struct orderbook *)calloc(1,sizeof(*op));
     strcpy(op->base,prices->base), strcpy(op->rel,prices->rel), strcpy(op->name,prices->contract);
     op->baseid = prices->baseid, op->relid = prices->relid;
-    printf("opbids.%p opasks.%p\n",op->bids,op->asks);
+    //printf("opbids.%p opasks.%p\n",op->bids,op->asks);
     for (iter=numbids=numasks=0; iter<2; iter++)
     {
         for (i=0; i<n||i<m; i++)
@@ -683,7 +683,7 @@ struct orderbook *prices777_json_quotes(struct prices777 *prices,cJSON *bids,cJS
         } else sort_orderbook(op);
     }
     if ( Debuglevel > 1 )
-        printf("numbids.%d numasks.%d (%d %d) %p %p\n",op->numbids,op->numasks,numbids,numasks,op->bids,op->asks);
+        printf("(%s/%s) %s %llu %llu numbids.%d numasks.%d (%d %d) %p %p\n",op->base,op->rel,op->name,(long long)op->baseid,(long long)op->relid,op->numbids,op->numasks,numbids,numasks,op->bids,op->asks);
     if ( op != 0 && (op->numbids + op->numasks) == 0 )
         free_orderbook(op), op = 0;
     return(op);
@@ -962,7 +962,7 @@ void prices777_NXT(struct prices777 *prices,int32_t maxdepth)
 {
     uint32_t timestamp; int32_t flip,i,n; uint64_t baseamount,relamount,qty,pqt; char url[1024],*str,*cmd,*field;
     cJSON *json,*bids,*asks,*srcobj,*item,*array; double price,vol;
-    if ( NXT_ASSETID != stringbits("NXT") && strcmp(prices->rel,"NXT") != 0 && strcmp(prices->rel,"5527630") != 0 )
+    if ( NXT_ASSETID != stringbits("NXT") || (strcmp(prices->rel,"NXT") != 0 && strcmp(prices->rel,"5527630") != 0) )
         printf("NXT_ASSETID.%llu != %llu stringbits rel.%s\n",(long long)NXT_ASSETID,(long long)stringbits("NXT"),prices->rel);
     bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
     for (flip=0; flip<2; flip++)
@@ -970,9 +970,10 @@ void prices777_NXT(struct prices777 *prices,int32_t maxdepth)
         if ( flip == 0 )
             cmd = "getBidOrders", field = "bidOrders", array = bids;
         else cmd = "getAskOrders", field = "askOrders", array = asks;
-        sprintf(url,"requestType=%s&asset=%llu&limit=%d",cmd,(long long)prices->contractnum,maxdepth);
+        sprintf(url,"requestType=%s&asset=%llu&limit=%d",cmd,(long long)prices->baseid,maxdepth);
         if ( (str= issue_NXTPOST(url)) != 0 )
         {
+            //printf("{%s}\n",str);
             if ( (json= cJSON_Parse(str)) != 0 )
             {
                 if ( (srcobj= jarray(&n,json,field)) != 0 )
@@ -2073,7 +2074,7 @@ void prices777_exchangeloop(void *ptr)
                     if ( prices->orderbook[0][0][0] != 0. && prices->orderbook[0][1][0] != 0 )
                         prices->lastprice = _pairaved(prices->orderbook[0][0][0],prices->orderbook[0][1][0]);
                     exchange->lastupdate = milliseconds(), prices->lastupdate = milliseconds();
-                    printf("%s isnxtae.%d poll %u -> %u %.8f\n",prices->contract,isnxtae,exchange->pollnxtblock,prices777_NXTBLOCK,prices->lastprice);
+                    printf("%s (%s/%s) %llu %llu isnxtae.%d poll %u -> %u %.8f\n",prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,exchange->pollnxtblock,prices777_NXTBLOCK,prices->lastprice);
                     n++;
                 }
             }
@@ -2109,6 +2110,7 @@ struct prices777 *prices777_poll(char *exchangestr,char *name,char *base,uint64_
                         break;
                 if ( j == BUNDLE.num )
                 {
+                    (Exchanges[exchangeid].updatefunc)(prices,MAX_DEPTH);
                     BUNDLE.ptrs[BUNDLE.num++] = prices;
                     printf("total polling.%d added.(%s)\n",BUNDLE.num,prices->contract);
                     if ( Exchanges[exchangeid].polling == 0 )
