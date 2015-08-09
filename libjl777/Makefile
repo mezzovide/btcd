@@ -58,8 +58,11 @@ COMMON = plugins/common/busdata777.c plugins/common/relays777.c plugins/common/c
 MGW = plugins/mgw/MGW_main.c $(S)/sophia.c $(S)/db777.c
 
 SRCS = SuperNET.c libjl777.c $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(RAMCHAIN) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
- 
+
+MGWSRCS = SuperNET.c plugins/mgw/MGW_main.c $(S)/sophia.c $(S)/db777.c libjl777.c $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(RAMCHAIN) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
+
 OBJS	:= $(SRCS:%.c=%.o)
+MGWOBJS	:= $(MGWSRCS:%.c=%.o)
 
 all: $(TARGET)
 
@@ -69,6 +72,12 @@ $(TARGET): $(OBJS)
 
 test:	all
 	(cd tests; make test)
+
+MGW: $(MGWOBJS)
+    clang -c $(CFLAGS) $(OBJS); clang -o MGW -D INSIDE_MGW -D STANDALONE $(CFLAGS) $(MGWSRCS) $(LIBS)
+
+SuperNET: $(SRCS) $(TARGET); \
+    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
 
 clean: doesntexist
 	rm libs/libjl777.a SuperNET; rm -f libjl777.a libs/libjl777.so $(OBJS) *~
@@ -133,12 +142,6 @@ stockfish: lib/stockfish; \
 
 sophia: lib/sophia; \
  	cd plugins; $(_sophia); cd ..
-
-MGW: $(SRCS) $(TARGET); \
-    clang -o MGW -DINSIDE_MGW $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
-
-SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
 
 #-lz -ldl -lutil -lpcre -lexpat
 
