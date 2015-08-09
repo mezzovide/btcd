@@ -12,9 +12,15 @@ else
 endif
 endif
 
-PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lanl -lm
+ifeq (OS,Darwin)
+    LANL := ../libjl777/plugins/nonportable/Darwin/libanl.a
+else
+    LANL := -lanl
+#endif
 
-LIBS= libs/libjl777.a nanomsg/.libs/libnanomsg.a libs/libminiupnpc.a -lpthread -lcurl -lanl -lm #-lssl -lcrypto
+PLIBS := ../libs/libjl777.a ../libs/libminiupnpc.a ../nanomsg/.libs/libnanomsg.a -lpthread -lcurl -lm $(LANL)
+
+LIBS= libs/libjl777.a nanomsg/.libs/libnanomsg.a libs/libminiupnpc.a -lpthread -lcurl -lm $(LANL)
 
 CC=clang
 CFLAGS=-Wall -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  #-Iplugins/utils -Iplugins/nonportable -Iincludes  -Iplugins/mgw -Iplugins/InstantDEX -Iplugins/sophia -Iplugins/ramchain -Iplugins/coins  -I../includes -I../../includes -I/usr/include -Iplugins#-DADDRINFO_SIZE=256
