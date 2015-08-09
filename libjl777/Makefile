@@ -56,7 +56,7 @@ COMMON = plugins/common/busdata777.c plugins/common/console777.c plugins/common/
 SHAREDMGW = plugins/coins/coins777.c plugins/coins/coins777_main.c plugins/InstantDEX/InstantDEX_main.c plugins/KV/kv777_main.c plugins/utils/NXT777.c plugins/common/relays777.c
 MGW = plugins/mgw/MGW_main.c plugins/mgw/old/sophia.c plugins/mgw/old/db777.c  plugins/ramchain/ramchain.c  plugins/ramchain/ramchain_main.c
 
-SRCS = $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
+SRCS = SuperNET.c $(CRYPTO) $(UTILS) $(COINS) $(NONPORTABLE) $(INSTANTDEX) $(PEGGY) $(KV) $(COMMON)
 
 OBJS	:= $(SRCS:%.c=%.o)
 
