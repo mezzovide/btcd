@@ -73,11 +73,16 @@ $(TARGET): $(OBJS)
 test:	all
 	(cd tests; make test)
 
-MGW: $(MGWOBJS);
-    clang -c $(CFLAGS) $(OBJS); clang -o MGW -D INSIDE_MGW -D STANDALONE $(CFLAGS) $(MGWSRCS) $(LIBS)
+MGWTARGET = MGW
+
+$(MGWTARGET): $(MGWOBJS)
+  	clang $(CFLAGS) -o $(MGWTARGET) -D INSIDE_MGW -D STANDALONE $(MGWOBJS) $(LIBS)
+
+MGW: $(MGWSRCS) $(MGWTARGET); \
+    clang -o MGW -D INSIDE_MGW -D STANDALONE $(CFLAGS) $(MGWOBJS) $(LIBS)
 
 SuperNET: $(SRCS) $(TARGET); \
-    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(SRCS) $(LIBS) 
+    pkill SuperNET; rm SuperNET; clang -o SuperNET $(CFLAGS) -D STANDALONE $(OBJS) $(LIBS)
 
 clean: doesntexist
 	rm libs/libjl777.a SuperNET; rm -f libjl777.a libs/libjl777.so $(OBJS) *~
