@@ -246,7 +246,7 @@ void kv777_free(struct kv777 *kv,struct kv777_item *ptr,int32_t freeall)
 
 int32_t kv777_update(struct kv777 *kv,struct kv777_item *ptr)
 {
-    struct kv777_hdditem *item; uint32_t valuesize; long savepos; int32_t retval = -1;
+    struct kv777_hdditem *item; uint32_t valuesize; long savepos; int32_t i,retval = -1;
     if ( kv->fp == 0 )
         return(-1);
     item = (void *)ptr->item;
@@ -303,7 +303,7 @@ int32_t kv777_update(struct kv777 *kv,struct kv777_item *ptr)
         }
         if ( 0 && kv->dispflag != 0 )
         {
-            for (int i=0; i<ptr->itemsize; i++)
+            for (i=0; i<ptr->itemsize; i++)
                 fprintf(stderr,"%02x ",((uint8_t *)ptr->item)[i]);
             fprintf(stderr,"(%s).(%s)\n",kv->path,kv->name);
         }
