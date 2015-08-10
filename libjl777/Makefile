@@ -91,7 +91,7 @@ _two := rm agents/two; gcc -o agents/two -O2 $(PINCLUDES) agents/two/two.c $(PLI
 
 _stockfish := cd agents/stockfish; rm stockfish; make build ARCH=x86-64-modern; cp stockfish ../agents; cd ../..
 
-agents: plugins/agents/echodemo plugins/agents/stockfish plugins/cgi/api plugins/agents/nxt plugins/agents/two plugins/agents/eth plugins/agents/msc; \
+agents: plugins/agents/echodemo plugins/cgi/api plugins/agents/nxt plugins/agents/two plugins/agents/eth plugins/agents/msc; \
 	cd plugins; \
     $(_echodemo); \
     $(_api); \

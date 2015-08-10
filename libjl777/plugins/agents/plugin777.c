@@ -129,7 +129,7 @@ static struct dKV777 *agent_initprotocol(struct plugin_info *plugin,cJSON *json,
         copy_cJSON((void *)prot->transport,jobj(argjson,"transport"));
         copy_cJSON((void *)prot->ipaddr,jobj(argjson,"myipaddr"));
         prot->port = juint(argjson,"port");
-        printf("found %s path.(%s) protocol.(%s) json secret.(%s) %s:port.%d\n",agent,path,protocol,(void *)prot->NXTACCTSECRET,prot->ipaddr,prot->port);
+        printf("found %s path.(%s) protocol.(%s) json secret.(%s) %s:port.%d\n",agent,path,protocol,(char *)prot->NXTACCTSECRET,prot->ipaddr,prot->port);
     }
     if ( prot->NXTACCTSECRET[0] == 0 )
     {
