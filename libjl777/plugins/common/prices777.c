@@ -2338,6 +2338,10 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
             }
             strcpy(rel,"NXT");
         }
+        else
+        {
+            assetids[n*4] = stringbits(base), assetids[n*4+1] = stringbits(rel), n++;
+        }
         if ( n > 0 )//(n= gen_assetpair_list(assetids,sizeof(assetids)/sizeof(*assetids),refbaseid,refrelid)) > 0 )
         {
             for (i=0; i<n; i++)
@@ -2391,7 +2395,6 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                                 printf("basket.(%s) already there\n",prices->contract);
                             prices->lastprice = prices777_basket(prices,MAX_DEPTH);
                             printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
-                            
                             return(prices);
                         }
                     }

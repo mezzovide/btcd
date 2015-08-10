@@ -787,13 +787,19 @@ void init_exchanges()
     find_exchange(0,INSTANTDEX_NXTAEUNCONF);
     find_exchange(0,INSTANTDEX_NXTAENAME);
     find_exchange(0,INSTANTDEX_BASKETNAME);
-    //POLLGAP = get_API_int(cJSON_GetObjectItem(MGWconf,"POLLGAP"),10);
-    //DEFAULT_MAXDEPTH = get_API_int(cJSON_GetObjectItem(MGWconf,"DEFAULT_MAXDEPTH"),DEFAULT_MAXDEPTH);
-    /*if ( (exchanges= cJSON_GetObjectItem(SUPERNET.argjson,"exchanges")) != 0 && (n= cJSON_GetArraySize(exchanges)) > 0 )
-    {
-        for (i=0; i<n; i++)
-            init_exchange(cJSON_GetArrayItem(exchanges,i));
-    }*/
+    find_exchange(0,"bitfinex");
+    find_exchange(0,"btc38");
+    find_exchange(0,"bitstamp");
+    find_exchange(0,"btce");
+    find_exchange(0,"bittrex");
+    find_exchange(0,"poloniex");
+    find_exchange(0,"huobi");
+    find_exchange(0,"coinbase");
+    find_exchange(0,"okcoin");
+    find_exchange(0,"bityes");
+    find_exchange(0,"lakebtc");
+    find_exchange(0,"bter");
+    find_exchange(0,"exmo");
 }
 
 char *trollbox_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
