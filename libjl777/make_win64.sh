@@ -29,6 +29,7 @@ cp ./usr/x86_64-w64-mingw32.static/include/windows.h ./usr/x86_64-w64-mingw32.st
 cd ..
 cd nanomsg
 echo ">>>>>>>>>>>>>>>>>>building nanomsg"
+make clean
 sh ./autogen.sh
 CC=x86_64-w64-mingw32.static-gcc CXX=x86_64-w64-mingw32.static-g++ ./configure --disable-replication --enable-cxx --host x86_64-w64-mingw32.static
 make
