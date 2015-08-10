@@ -202,8 +202,8 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
             char *call_SuperNET_JSON(char *JSONstr);
             if ( (retstr= call_SuperNET_JSON(str)) != 0 )
             {
-                if ( Debuglevel > 2 )
-                    fprintf(stderr,"send return from (%s) <<<<<<<<<<<<<<<<<<<<<< \n",str);
+                //if ( Debuglevel > 2 )
+                    fprintf(stderr,"send return from (%s) <<<<<<<<<<<<<<<<<<<<<< (%s) \n",str,retstr);
                 nn_local_broadcast(dp->pushsock,instanceid,0,(uint8_t *)retstr,(int32_t)strlen(retstr)+1), dp->numsent++;
                 free(retstr), retstr = 0;
             }
