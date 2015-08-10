@@ -85,7 +85,7 @@ void *issue_cgicall(void *_ptr)
         }
         else
         {
-            if ( Debuglevel > 2 )
+            //if ( Debuglevel > 2 )
                 fprintf(stderr,"call plugin_method.(%s)\n",ptr->jsonstr);
             str = plugin_method(ptr->sock,0,localaccess,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout,0);
         }
@@ -159,15 +159,26 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
     char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout);
     char buf[65536],plugin[MAX_JSON_FIELD],method[MAX_JSON_FIELD],request[MAX_JSON_FIELD],*bstr,*retstr;
     uint64_t daemonid,instanceid,tag;
-    int32_t broadcastflag = 0;
+    int32_t override=0,broadcastflag = 0;
     cJSON *json;
     //fprintf(stderr,"process_jl777_msg previpaddr.(%s) (%s)\n",previpaddr!=0?previpaddr:"",jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
         copy_cJSON(plugin,cJSON_GetObjectItem(json,"plugin"));
+        if ( jstr(json,"plugin") != 0 && jstr(json,"agent") != 0 )
+            override = 1;
+        fprintf(stderr,"SuperNET_JSON override.%d\n",override);
         if ( plugin[0] == 0 )
             copy_cJSON(plugin,cJSON_GetObjectItem(json,"agent"));
+        if ( override == 0 && strcmp(plugin,"InstantDEX") == 0 )
+        {
+            if ( (retstr= InstantDEX(jsonstr,0,1)) != 0 )
+            {
+                free_json(json);
+                return(retstr);
+            }
+        }
         if ( strcmp(request,"install") == 0 && plugin[0] != 0 )
         {
             fprintf(stderr,"call install path\n");
@@ -199,27 +210,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
 
 char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
 {
-    cJSON *json; int32_t override = 0; char plugin[MAX_JSON_FIELD],*retstr = 0;
-    if ( (json= cJSON_Parse(jsonstr)) != 0 )
-    {
-        if ( jstr(json,"plugin") != 0 && jstr(json,"agent") != 0 )
-            override = 1;
-        fprintf(stderr,"SuperNET_JSON override.%d\n",override);
-        copy_cJSON(plugin,jobj(json,"agent"));
-        if ( plugin[0] == 0 )
-            copy_cJSON(plugin,jobj(json,"plugin"));
-        //printf("plugin.(%s) %s\n",plugin,jsonstr);
-        if ( override == 0 && strcmp(plugin,"InstantDEX") == 0 )
-        {
-            if ( (retstr= InstantDEX(jsonstr,0,1)) != 0 )
-            {
-                free_json(json);
-                return(retstr);
-            }
-        }
-        free_json(json);
-    }
-    return(process_jl777_msg(0,jsonstr,60));
+     return(process_jl777_msg(0,jsonstr,60));
 }
 
 char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point

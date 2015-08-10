@@ -483,7 +483,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
 {
     struct daemon_info *dp; char retbuf[8192],*str,*methodsstr,*retstr; uint64_t tag; cJSON *json; int32_t ind,async;
     //if ( Debuglevel > 2 )
-        printf("localaccess.%d origargstr.(%s).%d retstrp.%p token.(%s)\n",localaccess,origargstr,len,retstrp,tokenstr!=0?tokenstr:"");
+        printf("inside plugin_method: localaccess.%d origargstr.(%s).%d retstrp.%p token.(%s)\n",localaccess,origargstr,len,retstrp,tokenstr!=0?tokenstr:"");
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
         retstrp = &retstr;
@@ -536,7 +536,7 @@ fprintf(stderr,"null tag from send_to_daemon\n");
             }
             else if ( async != 0 )
                 return(0);
-fprintf(stderr,"wait_for_daemon\n");
+fprintf(stderr,"wait_for_daemon retstrp.%p\n",retstrp);
             if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
             {
                 if ( (json= cJSON_Parse(origargstr)) != 0 )
@@ -549,6 +549,7 @@ fprintf(stderr,"wait_for_daemon\n");
                 } else *retstrp = clonestr("{\"error\":\"cant parse command\"}");
             }
         }
+        fprintf(stderr,"return.(%s)\n",*retstrp!=0?*retstrp:"");
         return(*retstrp);
     }
 }

@@ -411,10 +411,10 @@ uint32_t is_ipaddr(char *str)
 uint32_t conv_domainname(char *ipaddr,char *domain)
 {
     int32_t conv_domain(struct sockaddr_storage *ss,const char *addr,int32_t ipv4only);
-    int32_t ipv4only = 1;
+    //int32_t ipv4only = 1;
     uint32_t ipbits;
     struct sockaddr_in ss;
-    if ( conv_domain((struct sockaddr_storage *)&ss,(const char *)domain,ipv4only) == 0 )
+    if ( 1 )//conv_domain((struct sockaddr_storage *)&ss,(const char *)domain,ipv4only) == 0 )
     {
         ipbits = *(uint32_t *)&ss.sin_addr;
         expand_ipbits(ipaddr,ipbits);

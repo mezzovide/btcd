@@ -6,7 +6,6 @@
 //  Copyright (c) 2015 jl777. All rights reserved.
 //
 
-//#define BUNDLED
 #define PLUGINSTR "echodemo"
 #define PLUGNAME(NAME) echodemo ## NAME
 #define STRUCTNAME struct PLUGNAME(_info) 

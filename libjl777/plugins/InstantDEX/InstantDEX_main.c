@@ -18,7 +18,7 @@
 #include "../includes/portable777.h"
 #undef DEFINES_ONLY
 
-queue_t InstantDEXQ;
+queue_t InstantDEXQ,TelepathyQ;
 
 
 int32_t prices777_key(char *key,char *exchange,char *name,char *base,uint64_t baseid,char *rel,uint64_t relid)
