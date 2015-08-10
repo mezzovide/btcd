@@ -100,7 +100,7 @@ agents: plugins/agents/echodemo plugins/agents/stockfish plugins/cgi/api plugins
 rps: plugins/agents/rps; \
  	cd plugins; $(_rps); cd ..
 
-echodemo: plugins/agents/echodemo; \
+echodemo: doesntexist; \
  	cd plugins; $(_echodemo); cd ..
 
 api: plugins/cgi/api; \
