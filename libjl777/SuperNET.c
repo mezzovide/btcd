@@ -167,6 +167,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
             copy_cJSON(plugin,cJSON_GetObjectItem(json,"agent"));
         if ( strcmp(request,"install") == 0 && plugin[0] != 0 )
         {
+            fprintf(stderr,"call install path\n");
             retstr = SuperNET_install(plugin,jsonstr,json);
             free_json(json);
             return(retstr);
