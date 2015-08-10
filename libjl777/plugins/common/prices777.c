@@ -2889,6 +2889,7 @@ double blend_price(double *volp,double wtA,cJSON *jsonA,double wtB,cJSON *jsonB)
 
 void _crypto_update(double cryptovols[2][8][2],struct prices777_data *dp,int32_t selector)
 {
+#ifdef INSIDE_BTCD
     char *cryptonatorA = "https://www.cryptonator.com/api/full/%s-%s"; //unity-btc
     char *cryptocoinchartsB = "http://api.cryptocoincharts.info/tradingPair/%s_%s"; //bts_btc
     char *cryptostrs[9] = { "btc", "nxt", "unity", "eth", "ltc", "xmr", "bts", "xcp", "etc" };
@@ -2946,6 +2947,7 @@ void _crypto_update(double cryptovols[2][8][2],struct prices777_data *dp,int32_t
             //    break;
         }
     }
+#endif
 }
 
 void crypto_update0()
@@ -3142,22 +3144,28 @@ int32_t prices777_getmatrix(double *basevals,double *btcusdp,double *btcdbtcp,do
 
 int32_t prices_idle(struct plugin_info *plugin)
 {
-    static double lastupdate,lastdayupdate; static int32_t didinit; static portable_mutex_t mutex;
-    int32_t i,datenum; struct prices777_data *dp = &BUNDLE.tmp;
+    static int32_t didinit; static portable_mutex_t mutex;
+    struct prices777_data *dp = &BUNDLE.tmp;
     *dp = BUNDLE.data;
     if ( didinit == 0 )
     {
         portable_mutex_init(&mutex);
         prices777_init(BUNDLE.jsonstr);
+        didinit = 1;
 #ifdef INSIDE_BTCD
         int32_t opreturns_init(uint32_t blocknum,uint32_t blocktimestamp,char *path);
         opreturns_init(0,(uint32_t)time(NULL),"peggy");
 #endif
     }
+#ifdef INSIDE_BTCD
+    static double lastupdate,lastdayupdate;
     if ( milliseconds() > lastupdate + 60000 )
     {
+        lastupdate = milliseconds();
         if ( milliseconds() > lastdayupdate + 60000*60 )
         {
+            lastdayupdate = milliseconds();
+            int32_t i,datenum;
             if ( (datenum= ecb_matrix(dp->ecbmatrix,dp->edate)) > 0 )
             {
                 dp->ecbdatenum = datenum;
@@ -3165,7 +3173,6 @@ int32_t prices_idle(struct plugin_info *plugin)
                 expand_datenum(dp->edate,datenum);
                 memcpy(dp->RTmatrix,dp->ecbmatrix,sizeof(dp->RTmatrix));
             }
-            lastdayupdate = milliseconds();
         }
         for (i=0; i<sizeof(Yahoo_metals)/sizeof(*Yahoo_metals); i++)
             BUNDLE.data.metals[i] = prices777_yahoo(Yahoo_metals[i]);
@@ -3184,7 +3191,6 @@ int32_t prices_idle(struct plugin_info *plugin)
             BUNDLE.data.btcdbtc = dp->btcdbtc;
         if ( dp->ecbmatrix[USD][USD] > SMALLVAL && dp->ecbmatrix[CNY][CNY] > SMALLVAL )
             BUNDLE.cnyusd = (dp->ecbmatrix[CNY][CNY] / dp->ecbmatrix[USD][USD]);
-        lastupdate = milliseconds();
         portable_mutex_lock(&mutex);
         BUNDLE.data = *dp;
         portable_mutex_unlock(&mutex);
@@ -3195,6 +3201,7 @@ int32_t prices_idle(struct plugin_info *plugin)
         peggy();
         didinit = 1;
     }
+#endif
     return(0);
 }
 
