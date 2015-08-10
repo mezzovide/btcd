@@ -2889,7 +2889,7 @@ double blend_price(double *volp,double wtA,cJSON *jsonA,double wtB,cJSON *jsonB)
 
 void _crypto_update(double cryptovols[2][8][2],struct prices777_data *dp,int32_t selector)
 {
-#ifdef INSIDE_BTCD
+#ifdef INSIDE_PEGGY
     char *cryptonatorA = "https://www.cryptonator.com/api/full/%s-%s"; //unity-btc
     char *cryptocoinchartsB = "http://api.cryptocoincharts.info/tradingPair/%s_%s"; //bts_btc
     char *cryptostrs[9] = { "btc", "nxt", "unity", "eth", "ltc", "xmr", "bts", "xcp", "etc" };
@@ -3152,12 +3152,12 @@ int32_t prices_idle(struct plugin_info *plugin)
         portable_mutex_init(&mutex);
         prices777_init(BUNDLE.jsonstr);
         didinit = 1;
-#ifdef INSIDE_BTCD
+#ifdef INSIDE_PEGGY
         int32_t opreturns_init(uint32_t blocknum,uint32_t blocktimestamp,char *path);
         opreturns_init(0,(uint32_t)time(NULL),"peggy");
 #endif
     }
-#ifdef INSIDE_BTCD
+#ifdef INSIDE_PEGGY
     static double lastupdate,lastdayupdate;
     if ( milliseconds() > lastupdate + 60000 )
     {
