@@ -75,21 +75,21 @@ clean: doesntexist
 
 PINCLUDES := -Iincludes -Inonportable/$(OS)  -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp #-I. -Iutils -Iramchain -Icoins -Imgw -I -Isophia -I../includes -I../.. -I../coins -I../ramchain -I../sophia -I../utils -I../mgw
 
-_echodemo := rm agents/echodemo; gcc -o agents/echodemo -O2 $(PINCLUDES) echodemo.c $(PLIBS)
+_echodemo := rm agents/echodemo; gcc -o agents/echodemo -O2 $(PINCLUDES) agents/echodemo.c $(PLIBS)
 
-_rps := rm agents/rps; gcc -o agents/rps -O2 $(PINCLUDES) rps777.c $(PLIBS)
+_rps := rm agents/rps; gcc -o agents/rps -O2 $(PINCLUDES) common/rps777.c $(PLIBS)
 
 _api := rm cgi/*; gcc -o cgi/api -O2 $(PINCLUDES) agents/api_main.c ccgi/ccgi.c ccgi/prefork.c coins/bitcoind_RPC.c  $(PLIBS); ln cgi/api cgi/nxt; ln cgi/api cgi/nxts; ln cgi/api cgi/port; ln cgi/api cgi/ports; ln cgi/api cgi/InstantDEX; ln cgi/api cgi/init;  ln cgi/api cgi/public
 
-_msc := rm agents/msc; gcc -o agents/msc -O2 $(PINCLUDES) two/msc.c $(PLIBS)
+_msc := rm agents/msc; gcc -o agents/msc -O2 $(PINCLUDES) agents/two/msc.c $(PLIBS)
 
-_nxt := rm agents/nxt; gcc -o agents/nxt -O2 $(PINCLUDES) two/nxt.c $(PLIBS)
+_nxt := rm agents/nxt; gcc -o agents/nxt -O2 $(PINCLUDES) agents/two/nxt.c $(PLIBS)
 
-_eth := rm agents/eth; gcc -o agents/eth -O2 $(PINCLUDES) two/eth.c $(PLIBS)
+_eth := rm agents/eth; gcc -o agents/eth -O2 $(PINCLUDES) agents/two/eth.c $(PLIBS)
 
-_two := rm agents/two; gcc -o agents/two -O2 $(PINCLUDES) two/two.c $(PLIBS)
+_two := rm agents/two; gcc -o agents/two -O2 $(PINCLUDES) agents/two/two.c $(PLIBS)
 
-_stockfish := cd stockfish; rm stockfish; make build ARCH=x86-64-modern; cp stockfish ../agents; cd ..
+_stockfish := cd agents/stockfish; rm stockfish; make build ARCH=x86-64-modern; cp stockfish ../agents; cd ../..
 
 agents: plugins/agents/rps plugins/agents/echodemo plugins/agents/stockfish plugins/cgi/api plugins/agents/nxt plugins/agents/two plugins/agents/eth plugins/agents/msc; \
 	cd plugins; \
@@ -323,16 +323,16 @@ cstdlib/errno.o: cstdlib/errno.c interpreter.h platform.h
 cstdlib/ctype.o: cstdlib/ctype.c interpreter.h platform.h
 cstdlib/stdbool.o: cstdlib/stdbool.c interpreter.h platform.h
 cstdlib/unistd.o: cstdlib/unistd.c interpreter.h platform.h
-plugins/agents/stockfish: plugins/stockfish/stockfish.cpp
+plugins/agents/stockfish: plugins/agents/stockfish/stockfish.cpp
 plugins/agents/sophia: plugins/sophia/sophia.c plugins/sophia/sophia_main.c
-plugins/agents/echodemo: plugins/echodemo.c
+plugins/agents/echodemo: plugins/agents/echodemo.c
 #plugins/nonportable/$(OS)/files.o: plugins/nonportable/$(OS)/files.c
 #plugins/nonportable/$(OS)/random.o: plugins/nonportable/$(OS)/random.c
-plugins/agents/rps: plugins/rps777.c
-plugins/agents/eth: plugins/two/eth.c
-plugins/agents/msc: plugins/two/msc.c
-plugins/agents/nxt: plugins/two/nxt.c
-plugins/agents/two: plugins/two/two.c
+plugins/agents/rps: plugins/common/rps777.c
+plugins/agents/eth: plugins/agents/two/eth.c
+plugins/agents/msc: plugins/agents/two/msc.c
+plugins/agents/nxt: plugins/agents/two/nxt.c
+plugins/agents/two: plugins/agents/two/two.c
 plugins/InstantDEX/InstantDEX_main.o: plugins/InstantDEX/InstantDEX_main.c plugins/InstantDEX/assetids.h plugins/InstantDEX/atomic.h plugins/InstantDEX/bars.h plugins/InstantDEX/exchangepairs.h plugins/InstantDEX/feeds.h plugins/InstantDEX/NXT_tx.h plugins/InstantDEX/orderbooks.h plugins/InstantDEX/quotes.h plugins/InstantDEX/rambooks.h plugins/InstantDEX/signals.h plugins/InstantDEX/tradebot.h plugins/InstantDEX/trades.h plugins/InstantDEX/InstantDEX.h
 
 plugins/cgi/api: plugins/agents/api_main.c plugins/ccgi/ccgi.c plugins/ccgi/prefork.c

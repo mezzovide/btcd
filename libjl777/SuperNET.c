@@ -85,7 +85,7 @@ void *issue_cgicall(void *_ptr)
         }
         else
         {
-            //if ( Debuglevel > 2 )
+            if ( Debuglevel > 2 )
                 fprintf(stderr,"call plugin_method.(%s)\n",ptr->jsonstr);
             str = plugin_method(ptr->sock,0,localaccess,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout,0);
         }
@@ -161,7 +161,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
     uint64_t daemonid,instanceid,tag;
     int32_t broadcastflag = 0;
     cJSON *json;
-    fprintf(stderr,"process_jl777_msg previpaddr.(%s) (%s)\n",previpaddr!=0?previpaddr:"",jsonstr);
+    //fprintf(stderr,"process_jl777_msg previpaddr.(%s) (%s)\n",previpaddr!=0?previpaddr:"",jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
