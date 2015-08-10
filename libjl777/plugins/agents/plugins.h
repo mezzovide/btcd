@@ -205,8 +205,8 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
             {
                 //if ( Debuglevel > 2 )
                     fprintf(stderr,"send return from (%s) <<<<<<<<<<<<<<<<<<<<<< (%s) \n",str,retstr);
-                nn_local_broadcast(dp->pushsock,instanceid,0,(uint8_t *)retstr,(int32_t)strlen(retstr)+1), dp->numsent++;
-                free(retstr), retstr = 0;
+                //nn_local_broadcast(dp->pushsock,instanceid,0,(uint8_t *)retstr,(int32_t)strlen(retstr)+1), dp->numsent++;
+                free(str), str = retstr, retstr = 0;
             }
         }
         else if ( instanceid != 0 && (broadcastflag= get_API_int(cJSON_GetObjectItem(json,"broadcast"),0)) > 0 )
