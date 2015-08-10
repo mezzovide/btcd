@@ -74,6 +74,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( jstr(json,"passthru") != 0 )
         {
+            if ( jstr(json,"destplugin") != 0 )
+            {
+                cJSON_RemoveItemFromObject(json,"plugin");
+                jaddstr(json,"plugin",jstr(json,"destplugin"));
+            }
             cJSON_AddItemToObject(json,"pluginrequest",cJSON_CreateString("SuperNET"));
             retstr = jprint(json,0);
         }
