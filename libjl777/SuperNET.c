@@ -85,7 +85,7 @@ void *issue_cgicall(void *_ptr)
         }
         else
         {
-            //if ( Debuglevel > 2 )
+            if ( Debuglevel > 2 )
                 fprintf(stderr,"call plugin_method.(%s)\n",ptr->jsonstr);
             str = plugin_method(ptr->sock,0,localaccess,plugin,method,0,0,ptr->jsonstr,(int32_t)strlen(ptr->jsonstr)+1,timeout,0);
         }
@@ -342,7 +342,7 @@ void SuperNET_apiloop(void *ipaddr)
                     jsonstr = clonestr(msg);
                     nn_freemsg(msg);
                     retstr = 0;
-                    fprintf(stderr,"apirecv.(%s)\n",jsonstr);
+                    //fprintf(stderr,"apirecv.(%s)\n",jsonstr);
                     if ( INSTANTDEX.readyflag != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
                     {
                         copy_cJSON(plugin,jobj(json,"agent"));
@@ -350,7 +350,8 @@ void SuperNET_apiloop(void *ipaddr)
                             copy_cJSON(plugin,jobj(json,"plugin"));
                         if ( strcmp(plugin,"InstantDEX") == 0 )
                         {
-                            if ( (retstr= InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
+                            retstr = clonestr("retstr");
+                            //if ( (retstr= InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
                             {
                                 retlen = (int32_t)strlen(retstr) + 1;
                                 if ( (checklen= nn_send(sock,retstr,retlen,0)) != retlen )
@@ -361,13 +362,6 @@ void SuperNET_apiloop(void *ipaddr)
                     }
                     if ( retstr == 0 && (retstr= process_nn_message(sock,jsonstr)) != 0 )
                         free(retstr);
-                    /*if ( strlen(jsonstr) < sizeof(buf)-1 )
-                    {
-                        strcpy(buf,jsonstr);
-                        nn_freemsg(jsonstr);
-                        if ( (str= process_nn_message(sock,buf)) != 0 )
-                            free(str);
-                    } else fprintf(stderr,"api recv string too long %ld\n",strlen(jsonstr));*/
                 }
             }
         }
