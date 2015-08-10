@@ -43,7 +43,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*addr,*retstr = 0;
     retbuf[0] = 0;
     plugin->allowremote = 1;
-    //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
