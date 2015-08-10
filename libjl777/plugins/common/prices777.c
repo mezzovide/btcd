@@ -2154,14 +2154,18 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     }
     for (i=0; i<BUNDLE.num; i++)
     {
-        if ( strcmp(exchange,BUNDLE.ptrs[i]->exchange) == 0 && strcmp(base,BUNDLE.ptrs[i]->origbase) == 0 )
+        if ( strcmp(exchange,BUNDLE.ptrs[i]->exchange) == 0 )
         {
-            if ( (rel == 0 && BUNDLE.ptrs[i]->origrel[0] == 0) || strcmp(rel,BUNDLE.ptrs[i]->origrel) == 0 )
+            if ( strcmp(base,BUNDLE.ptrs[i]->origbase) == 0 )
             {
-                if ( Debuglevel > 2 )
-                    printf("duplicate initpair.(%s) (%s) (%s)\n",exchange,base,BUNDLE.ptrs[i]->origrel);
+                if ( (rel == 0 && BUNDLE.ptrs[i]->origrel[0] == 0) || strcmp(rel,BUNDLE.ptrs[i]->origrel) == 0 )
+                {
+                    if ( Debuglevel > 2 )
+                        printf("duplicate initpair.(%s) (%s) (%s)\n",exchange,base,BUNDLE.ptrs[i]->origrel);
+                    return(BUNDLE.ptrs[i]);
+                }
+            } else if ( strcmp(base,BUNDLE.ptrs[i]->origrel) == 0 && strcmp(rel,BUNDLE.ptrs[i]->origbase) == 0 )
                 return(BUNDLE.ptrs[i]);
-            }
         }
     }
     prices = calloc(1,sizeof(*prices));
@@ -2314,7 +2318,8 @@ void prices777_exchangeloop(void *ptr)
 
 struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint64_t refbaseid,char *_rel,uint64_t refrelid)
 {
-    char exchangestr[64],base[64],rel[64],name[64]; uint64_t assetids[8192],baseid,relid; int32_t iter,i,n,j,exchangeid; struct exchange_info *exchange;
+    char exchangestr[64],base[64],rel[64],name[64]; uint64_t assetids[8192],baseid,relid; int32_t iter,i,n,j,exchangeid,basenum;
+    struct exchange_info *exchange;
     struct prices777 *prices,*firstprices = 0;
     strcpy(exchangestr,_exchangestr), strcpy(base,_base), strcpy(rel,_rel), strcpy(name,_name);
     for (iter=0; iter<2; iter++)
@@ -2340,7 +2345,9 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
         }
         else
         {
-            assetids[n*4] = stringbits(base), assetids[n*4+1] = stringbits(rel), n++;
+            if ( strcmp(base,"BTC") == 0 && ((basenum= prices777_basenum(rel)) < 0 || basenum > RUB) )
+                assetids[n*4] = stringbits(rel), assetids[n*4+1] = stringbits(base), strcpy(base,rel), strcpy(rel,"BTC"), n++;
+            else assetids[n*4] = stringbits(base), assetids[n*4+1] = stringbits(rel), n++;
         }
         if ( n > 0 )//(n= gen_assetpair_list(assetids,sizeof(assetids)/sizeof(*assetids),refbaseid,refrelid)) > 0 )
         {

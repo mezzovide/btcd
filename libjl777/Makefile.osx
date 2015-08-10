@@ -16,6 +16,9 @@ else
     PLANL := -lanl
 endif
 
+LANL =
+PLANL =
+
 PLIBS := ../libs/libjl777-osx.a ../libs/libminiupnpc-osx.a ../libs/libnanomsg-osx.a -lpthread -lcurl -lm $(PLANL)
 
 LIBS= libs/libjl777-osx.a libs/libnanomsg-osx.a libs/libminiupnpc-osx.a -lpthread -lcurl -lm $(LANL)
