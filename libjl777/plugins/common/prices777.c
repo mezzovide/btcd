@@ -1047,10 +1047,10 @@ int32_t prices777_groupbidasks(double *bidasks,double groupwt,double minvol,stru
                 lowask = ask, askvol = vol, lowaski = i;
             else if ( groupwt < -SMALLVAL && group[i].aski < feature->op->numasks && (vol= feature->orderbook[group[i].aski][1][1]) > minvol && (bid= feature->orderbook[group[i].aski][1][0]) > SMALLVAL && (highbid == 0. || bid > highbid) )
                 highbid = bid, bidvol = vol, highbidi = i;
-        }
+        } else printf("null feature.%p or no orderbook.%p\n",feature,feature!=0?feature->op:0);
     }
     bidasks[0*2 + 0] = highbid, bidasks[0*2 + 1] = bidvol, bidasks[1*2 + 0] = lowask, bidasks[1*2 + 1] = askvol;
-    printf("highbid %f vol %f, lowask %f vol %f\n",highbid,bidvol,lowask,askvol);
+    printf("groupsize.%d highbid %f vol %f, lowask %f vol %f\n",groupsize,highbid,bidvol,lowask,askvol);
     if ( highbidi >= 0 )
         group[highbidi].bidi++;
     if ( lowaski >= 0 )
@@ -2156,7 +2156,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
             strcpy(prices->contract,prices->base);
             if ( strcmp(prices->rel,&prices->contract[strlen(prices->contract)-3]) != 0 )
                 strcat(prices->contract,prices->rel);
-            printf("base.(%s) rel.(%s)\n",prices->base,prices->rel);
+            //printf("base.(%s) rel.(%s)\n",prices->base,prices->rel);
         }
         else
         {
@@ -2321,11 +2321,19 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                         if ( strcmp(exchangestr,"nxtae") == 0 && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
                         {
                             struct prices777_basket basket[2];
-                            basket[0].prices = firstprices, basket[1].prices = prices;
-                            basket[0].wt = 1., basket[1].wt = -1.;
-                            basket[0].groupid = 0, basket[1].groupid = 1;
-                            BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(_name,_base,_rel,refbaseid,refrelid,basket,2);
-                            printf("total polling.%d added.(%s) (%s/%s)\n",BUNDLE.num,prices->contract,_base,_rel);
+                            for (j=0; j<BUNDLE.num; j++)
+                            {
+                                if ( (prices= BUNDLE.ptrs[j]) != 0 && ((prices->baseid == refbaseid && prices->relid == refrelid) || (prices->relid == refbaseid && prices->baseid == refrelid)) )
+                                    break;
+                            }
+                            if ( j == BUNDLE.num )
+                            {
+                                basket[0].prices = firstprices, basket[1].prices = prices;
+                                basket[0].wt = 1., basket[1].wt = -1.;
+                                basket[0].groupid = 0, basket[1].groupid = 1;
+                                BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(_name,_base,_rel,refbaseid,refrelid,basket,2);
+                                printf("total polling.%d added.(%s) (%s/%s)\n",BUNDLE.num,prices->contract,_base,_rel);
+                            } else printf("basket.(%s) already there\n",prices->contract);
                             return(prices);
                         }
                     }
