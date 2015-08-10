@@ -834,7 +834,7 @@ cJSON *prices777_orderbook_item(char *base,char *rel,int32_t invert,struct Insta
     cJSON *json = 0;
     if ( (json= prices777_InstantDEX_json(base,rel,0,invert,1,&baseamount,&relamount,iQ,invert==0?baseid:relid,invert==0?relid:baseid,jumpasset)) != 0 )
     {
-        if ( cJSON_GetObjectItem(json,"minbase_error") != 0 || cJSON_GetObjectItem(json,"minrel_error") != 0 )
+        if ( iQ->exchangeid == INSTANTDEX_NXTAEID && (cJSON_GetObjectItem(json,"minbase_error") != 0 || cJSON_GetObjectItem(json,"minrel_error") != 0) )
         {
             printf("gen_orderbook_item has error (%s)\n",cJSON_Print(json));
             free_json(json);
@@ -1122,7 +1122,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         }
         if ( j != prices->numgroups )
         {
-            j++;
+            slot++;
             break;
         }
         if ( prices->numgroups == 2 )
@@ -1167,7 +1167,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         op->numbids = op->numasks = j;
         op->bids = calloc(1,sizeof(*op->bids) * op->numbids);
         op->asks = calloc(1,sizeof(*op->asks) * op->numasks);
-        for (i=0; i<j; i++)
+        for (i=0; i<slot; i++)
         {
             memset(&iQ,0,sizeof(iQ));
             create_InstantDEX_quote(&iQ,timestamp,0,0,prices->orderbook[i][0][0],prices->orderbook[i][0][1],prices->baseid,0,prices->relid,0,prices->exchange,0,"",0,0,3600);
