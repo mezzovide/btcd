@@ -76,15 +76,15 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             if ( jstr(json,"destplugin") != 0 )
             {
-                cJSON_RemoveItemFromObject(json,"plugin");
+                cJSON_DeleteItemFromObject(json,"plugin");
                 jaddstr(json,"plugin",jstr(json,"destplugin"));
             }
             if ( jstr(json,"destmethod") != 0 )
             {
-                cJSON_RemoveItemFromObject(json,"destmethod");
+                cJSON_DeleteItemFromObject(json,"destmethod");
                 jaddstr(json,"method",jstr(json,"destmethod"));
             }
-            cJSON_AddItemToObject(json,"pluginrequest",cJSON_CreateString("SuperNET"));
+            jaddstr(json,"pluginrequest","SuperNET");
             retstr = jprint(json,0);
             printf("passhru.(%s)\n",retstr);
         }
