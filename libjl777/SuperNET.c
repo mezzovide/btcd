@@ -159,6 +159,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
     uint64_t daemonid,instanceid,tag;
     int32_t broadcastflag = 0;
     cJSON *json;
+    fprintf(stderr,"process_jl777_msg previpaddr.(%s) (%s)\n",previpaddr!=0?previpaddr:"",jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
@@ -197,6 +198,7 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
 char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
 {
     cJSON *json; char plugin[MAX_JSON_FIELD],*retstr = 0;
+    fprintf(stderr,"SuperNET_JSON\n");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         copy_cJSON(plugin,jobj(json,"agent"));
@@ -221,6 +223,7 @@ char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
     char request[MAX_JSON_FIELD],name[MAX_JSON_FIELD],*retstr = 0;;
     uint64_t daemonid,instanceid;
     cJSON *json;
+    fprintf(stderr,"call_SuperNET_JSON\n");
     if ( (json= cJSON_Parse(JSONstr)) != 0 )
     {
         copy_cJSON(request,cJSON_GetObjectItem(json,"requestType"));
