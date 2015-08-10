@@ -1121,10 +1121,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 break;
         }
         if ( j != prices->numgroups )
-        {
-            slot++;
             break;
-        }
         if ( prices->numgroups == 2 )
         {
             if ( prices->groupwts[0] > 0. )
@@ -1158,13 +1155,13 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             }
         } else printf("only paired baskets for now\n");
     }
-    if ( j > 0 )
+    if ( slot > 0 )
     {
         struct InstantDEX_quote iQ;
         op = (struct orderbook *)calloc(1,sizeof(*op));
         strcpy(op->base,prices->base), strcpy(op->rel,prices->rel), strcpy(op->name,prices->contract);
         op->baseid = prices->baseid, op->relid = prices->relid;
-        op->numbids = op->numasks = j;
+        op->numbids = op->numasks = slot;
         op->bids = calloc(1,sizeof(*op->bids) * op->numbids);
         op->asks = calloc(1,sizeof(*op->asks) * op->numasks);
         for (i=0; i<slot; i++)
@@ -1177,6 +1174,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             create_InstantDEX_quote(&iQ,timestamp,1,0,prices->orderbook[i][1][0],prices->orderbook[i][1][1],prices->baseid,0,prices->relid,0,prices->exchange,0,"",0,0,3600);
             iQ.minperc = 1;
             op->asks[i] = iQ;
+            printf("%d of %d: %f %f %f %f\n",i,slot,prices->orderbook[i][0][0],prices->orderbook[i][0][1],prices->orderbook[i][1][0],prices->orderbook[i][1][1]);
         }
         prices777_jsonstrs(prices,op);
     }
