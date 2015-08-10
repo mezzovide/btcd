@@ -168,7 +168,7 @@ struct orderbook
     int32_t numbids,numasks;
 };
 
-struct prices777_nxtquote { uint64_t assetid,nxt64bits,quoteid,qty,priceNQT,baseamount,relamount; uint32_t timestamp; };
+struct prices777_nxtquote { uint64_t baseid,relid,nxt64bits,quoteid,qty,priceNQT,baseamount,relamount; uint32_t timestamp; };
 struct prices777_nxtbooks { struct prices777_nxtquote orderbook[MAX_DEPTH][2],prevorderbook[MAX_DEPTH][2],prev2orderbook[MAX_DEPTH][2]; };
 struct prices777_basket { struct prices777 *prices; double wt; int32_t groupid,groupsize,aski,bidi; };
 
@@ -184,13 +184,13 @@ struct prices777
 };
 
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess);
+cJSON *prices777_InstantDEX_json(char *_base,char *_rel,int32_t depth,int32_t invert,int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset);
 
 int32_t iQ_exchangestr(char *exchange,struct InstantDEX_quote *iQ);
 int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t isask,uint64_t quoteid,double price,double volume,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount,char *exchange,uint64_t nxt64bits,char *gui,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,int32_t duration);
 void add_to_orderbook(struct orderbook *op,int32_t iter,int32_t *numbidsp,int32_t *numasksp,struct InstantDEX_quote *iQ,int32_t polarity,int32_t oldest,char *gui);
 void free_orderbook(struct orderbook *op);
 void sort_orderbook(struct orderbook *op);
-cJSON *prices777_InstantDEX_json(int32_t depth,int32_t invert,int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset);
 char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct orderbook *op,int32_t maxdepth,int32_t allflag);
 uint64_t calc_quoteid(struct InstantDEX_quote *iQ);
 double check_ratios(uint64_t baseamount,uint64_t relamount,uint64_t baseamount2,uint64_t relamount2);

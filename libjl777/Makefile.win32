@@ -27,7 +27,7 @@ CFLAGS= -w -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/sr
 
 
 
-TARGET  = libjl777.a
+TARGET  = libjl777-win32.a
 
 PICOC   = picoc.c table.c lex.c parse.c expression.c heap.c type.c variable.c clibrary.c platform.c include.c \
         platform/platform_unix.c platform/library_unix.c  cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
@@ -70,7 +70,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
   	#$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LIBS)
-	ar rcu  libs/win/libjl777-win32.a  $(OBJS)
+	ar rcu  libs/libjl777-win32.a  $(OBJS)
 
 test:	all
 	(cd tests; make test)
@@ -277,14 +277,14 @@ patch2: doesntexist; \
 dependencies: doesntexist; \
     sudo apt-get install autopoint bison bzip2 cmake flex gcc g++ gperf intltool libtool ruby scons wine zlib1g-dev libffi-dev;
 
-onetime: doesntexist: \
+onetime: doesntexist; \
     cd nanomsg; ./autogen.sh; ./configure; make -lanl; cp .libs/libnanomsg.a ../libs/libnanomsg-win32.a cd ..; \
     cd miniupnpc; make; cp libminiupnpc.a ../libs/libminiupnpc.a-win32.a; cd ..; \
     git clone https://github.com/joewalnes/websocketd; cd websocketd; make; cp websocketd ../libs/websocketd-win32; cd ..; \
 
 
 winpatch: doesntexist; \
-   sh make_windows.sh;
+   sh make_win32.sh;
 
 winexe: doesntexist; \
     sh quick_win.sh;

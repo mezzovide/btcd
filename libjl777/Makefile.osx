@@ -23,7 +23,7 @@ LIBS= libs/libjl777-osx.a libs/libnanomsg-osx.a libs/libminiupnpc-osx.a -lpthrea
 CC=clang
 CFLAGS=-Wall -O2  -pedantic -g -fPIC -Iplugins/includes -Inanomsg/src -Inanomsg/src/utils -Iplugins/includes/libtom  -Iplugins/includes/miniupnp -I.. -Iplugins/nonportable/$(OS)  -Wno-unused-function -fPIC -fvisibility=hidden -fstack-protector-all -Wstack-protector -D_FORTIFY_SOURCE=2  #-Iplugins/utils -Iplugins/nonportable -Iincludes  -Iplugins/mgw -Iplugins/InstantDEX -Iplugins/sophia -Iplugins/ramchain -Iplugins/coins  -I../includes -I../../includes -I/usr/include -Iplugins#-DADDRINFO_SIZE=256
 
-TARGET	= libjl777.a
+TARGET	= libjl777-osx.a
 
 PICOC	= picoc.c table.c lex.c parse.c expression.c heap.c type.c variable.c clibrary.c platform.c include.c \
 	platform/platform_unix.c platform/library_unix.c  cstdlib/stdio.c cstdlib/math.c cstdlib/string.c cstdlib/stdlib.c \
