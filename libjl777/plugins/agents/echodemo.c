@@ -86,6 +86,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             }
             cJSON_AddItemToObject(json,"pluginrequest",cJSON_CreateString("SuperNET"));
             retstr = jprint(json,0);
+            printf("passhru.(%s)\n",retstr);
         }
         else if ( strcmp(methodstr,"RS") == 0 )
         {
