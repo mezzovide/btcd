@@ -65,6 +65,8 @@ void *issue_cgicall(void *_ptr)
         copy_cJSON(plugin,cJSON_GetObjectItem(ptr->json,"plugin"));
     copy_cJSON(method,cJSON_GetObjectItem(ptr->json,"method"));
     localaccess = juint(ptr->json,"localaccess");
+    if ( ptr->sock < 0 )
+        localaccess = 1;
     timeout = get_API_int(cJSON_GetObjectItem(ptr->json,"timeout"),SUPERNET.PLUGINTIMEOUT);
     broadcaststr = cJSON_str(cJSON_GetObjectItem(ptr->json,"broadcast"));
     fprintf(stderr,"sock.%d (%s) API RECV.(%s)\n",ptr->sock,broadcaststr!=0?broadcaststr:"",ptr->jsonstr);
