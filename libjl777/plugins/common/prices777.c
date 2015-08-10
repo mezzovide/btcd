@@ -2433,9 +2433,11 @@ int32_t prices777_init(char *jsonstr)
             if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,btcusdexchanges[i],"BTC","USD",0.,0,0,0)) != 0 )
                 BUNDLE.num++;
     }
+#ifdef INSIDE_PEGGY
     for (i=0; i<sizeof(btcdexchanges)/sizeof(*btcdexchanges); i++)
         if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,btcdexchanges[i],"BTCD","BTC",0.,0,0,0)) != 0 )
             BUNDLE.num++;
+#endif
     if ( (json= cJSON_Parse(jsonstr)) != 0 && (exchanges= jarray(&n,json,"prices")) != 0 )
     {
         for (i=0; i<n; i++)

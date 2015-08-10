@@ -351,7 +351,7 @@ void SuperNET_apiloop(void *ipaddr)
                         if ( strcmp(plugin,"InstantDEX") == 0 )
                         {
                             retstr = clonestr("retstr");
-                            //if ( (retstr= InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
+                            if ( (retstr= InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
                             {
                                 retlen = (int32_t)strlen(retstr) + 1;
                                 if ( (checklen= nn_send(sock,retstr,retlen,0)) != retlen )
