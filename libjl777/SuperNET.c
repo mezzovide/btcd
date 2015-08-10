@@ -199,15 +199,17 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
 
 char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
 {
-    cJSON *json; char plugin[MAX_JSON_FIELD],*retstr = 0;
+    cJSON *json; int32_t override = 0; char plugin[MAX_JSON_FIELD],*retstr = 0;
     fprintf(stderr,"SuperNET_JSON\n");
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         copy_cJSON(plugin,jobj(json,"agent"));
         if ( plugin[0] == 0 )
             copy_cJSON(plugin,jobj(json,"plugin"));
+        else if ( jstr(json,"plugin") == 0 )
+            override = 1;
         //printf("plugin.(%s) %s\n",plugin,jsonstr);
-        if ( strcmp(plugin,"InstantDEX") == 0 )
+        if ( override == 0 && strcmp(plugin,"InstantDEX") == 0 )
         {
             if ( (retstr= InstantDEX(jsonstr,0,1)) != 0 )
             {
