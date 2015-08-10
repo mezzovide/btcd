@@ -200,10 +200,10 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         if ( strcmp(request,"SuperNET") == 0 )
         {
             char *call_SuperNET_JSON(char *JSONstr);
-            fprintf(stderr,"processing pluginrequest.(%s)\n",str);
+            //fprintf(stderr,"processing pluginrequest.(%s)\n",str);
             if ( (retstr= call_SuperNET_JSON(str)) != 0 )
             {
-                //if ( Debuglevel > 2 )
+                if ( Debuglevel > 2 )
                     fprintf(stderr,"send return from (%s) <<<<<<<<<<<<<<<<<<<<<< (%s) \n",str,retstr);
                 //nn_local_broadcast(dp->pushsock,instanceid,0,(uint8_t *)retstr,(int32_t)strlen(retstr)+1), dp->numsent++;
                 free(str), str = retstr, retstr = 0;
@@ -482,7 +482,7 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
 char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout,char *tokenstr)
 {
     struct daemon_info *dp; char retbuf[8192],*str,*methodsstr,*retstr; uint64_t tag; cJSON *json; int32_t ind,async;
-    //if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 )
         printf("inside plugin_method: localaccess.%d origargstr.(%s).%d retstrp.%p token.(%s)\n",localaccess,origargstr,len,retstrp,tokenstr!=0?tokenstr:"");
     async = (timeout == 0 || retstrp != 0);
     if ( retstrp == 0 )
@@ -501,7 +501,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
     }
     else
     {
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             fprintf(stderr,">>>>>>> PLUGINMETHOD.(%s) for (%s) bundled.%d ready.%d allowremote.%d localaccess.%d retstrp.%p\n",method,plugin,is_bundled_plugin(plugin),dp->readyflag,dp->allowremote,localaccess,retstrp);
         if ( dp->readyflag == 0 )
         {
@@ -518,7 +518,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         else if ( in_jsonarray(localaccess != 0 ? dp->methodsjson : dp->pubmethods,method) == 0 )
         {
             methodsstr = cJSON_Print(localaccess != 0 ? dp->methodsjson : dp->pubmethods);
-           // if ( Debuglevel > 2 )
+            if ( Debuglevel > 2 )
                 fprintf(stderr,"available.%s methods.(%s) vs (%s)\n",plugin,methodsstr,method);
             sprintf(retbuf,"{\"error\":\"method not allowed\",\"plugin\":\"%s\",\"%s\":\"%s\",\"daemonid\":\"%llu\",\"myid\":\"%llu\"}",plugin,method,methodsstr,(long long)dp->daemonid,(long long)dp->myid);
             free(methodsstr);
@@ -526,7 +526,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         }
         else
         {
-            //if ( Debuglevel > 2 )
+            if ( Debuglevel > 2 )
                 fprintf(stderr,"B send_to_daemon.(%s).%d\n",origargstr,len);
             if ( (tag= send_to_daemon(sock,retstrp,dp->name,daemonid,instanceid,origargstr,len,localaccess,tokenstr)) == 0 )
             {
@@ -536,7 +536,7 @@ fprintf(stderr,"null tag from send_to_daemon\n");
             }
             else if ( async != 0 )
                 return(0);
-fprintf(stderr,"wait_for_daemon retstrp.%p\n",retstrp);
+//fprintf(stderr,"wait_for_daemon retstrp.%p\n",retstrp);
             if ( ((*retstrp)= wait_for_daemon(retstrp,tag,timeout,10)) == 0 || (*retstrp)[0] == 0 )
             {
                 if ( (json= cJSON_Parse(origargstr)) != 0 )
@@ -549,7 +549,7 @@ fprintf(stderr,"wait_for_daemon retstrp.%p\n",retstrp);
                 } else *retstrp = clonestr("{\"error\":\"cant parse command\"}");
             }
         }
-        fprintf(stderr,"return.(%s)\n",*retstrp!=0?*retstrp:"");
+        //fprintf(stderr,"return.(%s)\n",*retstrp!=0?*retstrp:"");
         return(*retstrp);
     }
 }
