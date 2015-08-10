@@ -967,28 +967,105 @@ double prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32
     return(hbla);
 }
 
-struct prices777 *prices777_createbasket(char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,struct prices777 **features,double *wts,int32_t n)
+struct prices777 *prices777_createbasket(char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,struct prices777_basket *basket,int32_t n)
 {
-    int32_t i; struct prices777 *feature,*prices = calloc(1,sizeof(*prices));
+    int32_t i,j,m,max = 0; double firstwt,wtsum; struct prices777 *prices,*feature;
+    prices = prices777_initpair(1,0,"basket",base,rel,0.,name,baseid,relid);
+    prices->basket = calloc(1,sizeof(*prices->basket) * n);
     for (i=0; i<n; i++)
     {
-        feature = features[i];
+        feature = basket[i].prices;
         feature->dependents = realloc(feature->dependents,sizeof(*feature->dependents) * (feature->numdependents + 1));
         feature->dependents[feature->numdependents++] = &prices->changed;
-        prices->basket = realloc(prices->basket,sizeof(*prices->basket) * (prices->basketsize + 1));
-        prices->basketwts = realloc(prices->basketwts,sizeof(*prices->basketwts) * (prices->basketsize + 1));
-        prices->basketprices = realloc(prices->basketprices,sizeof(*prices->basketprices) * 2 * (prices->basketsize + 1));
-        prices->basket[prices->basketsize] = feature, prices->basketwts[prices->basketsize] = wts[i], prices->basketsize++;
+        if ( basket[i].groupid > max )
+            max = basket[i].groupid;
+        if ( fabs(basket[i].wt) < SMALLVAL )
+        {
+            printf("all basket features must have nonzero wt\n");
+            free(prices);
+            return(0);
+        }
     }
-    return(0);
+    prices->numgroups = (max + 1);
+    prices->groupbidasks = calloc(1,prices->numgroups * sizeof(*prices->groupbidasks) * 4);
+    prices->groupwts = calloc(1,prices->numgroups * sizeof(*prices->groupwts));
+    for (j=0; j<prices->numgroups; j++)
+    {
+        for (firstwt=i=m=0; i<n; i++)
+        {
+            //printf("i.%d groupid.%d wt %f\n",i,basket[i].groupid,basket[i].wt);
+            if ( basket[i].groupid == j )
+            {
+                if ( firstwt == 0. )
+                    prices->groupwts[j] = firstwt = basket[i].wt;
+                else if ( basket[i].wt != firstwt )
+                {
+                    printf("all features of same group.%d must have same wt: %d %f != %f\n",j,i,firstwt,basket[i].wt);
+                    free(prices);
+                    return(0);
+                }
+                prices->basket[prices->basketsize++] = basket[i];
+                m++;
+            }
+        }
+        for (i=0; i<n; i++)
+            if ( basket[i].groupid == j )
+                basket[i].groupsize = m;
+    }
+    for (i=-1; i<=1; i+=2)
+    {
+        for (wtsum=j=m=0; j<prices->numgroups; j++)
+        {
+            if ( prices->groupwts[j]*i > 0 )
+                wtsum += prices->groupwts[j], m++;
+        }
+        if ( wtsum != 0. )
+        {
+            if ( wtsum < 0. )
+                wtsum = -wtsum;
+            for (j=0; j<prices->numgroups; j++)
+                prices->groupwts[j] /= wtsum;
+        }
+    }
+    for (j=0; j<prices->numgroups; j++)
+        printf("%9.6f ",prices->groupwts[j]);
+    printf("groupwts\n");
+    return(prices);
+}
+
+int32_t prices777_groupbidasks(double *bidasks,double groupwt,double minvol,struct prices777_basket *group,int32_t groupsize)
+{
+    int32_t i,highbidi,lowaski; double highbid,lowask,bidvol,askvol,bid,ask,vol; struct prices777 *feature;
+    memset(bidasks,0,sizeof(*bidasks) * 4);
+    highbidi = lowaski = -1;
+    for (bidvol=askvol=highbid=lowask=i=0; i<groupsize; i++)
+    {
+        if ( (feature= group[i].prices) != 0 && feature->op != 0 )
+        {
+            if ( groupwt > SMALLVAL && group[i].bidi < feature->op->numbids && (vol= feature->orderbook[group[i].bidi][0][1]) > minvol && (ask= feature->orderbook[group[i].bidi][0][0]) > SMALLVAL && (lowask == 0. || ask < lowask) )
+                lowask = ask, askvol = vol, lowaski = i;
+            else if ( groupwt < -SMALLVAL && group[i].aski < feature->op->numasks && (vol= feature->orderbook[group[i].aski][1][1]) > minvol && (bid= feature->orderbook[group[i].aski][1][0]) > SMALLVAL && (highbid == 0. || bid > highbid) )
+                highbid = bid, bidvol = vol, highbidi = i;
+        }
+    }
+    bidasks[0*2 + 0] = highbid, bidasks[0*2 + 1] = bidvol, bidasks[1*2 + 0] = lowask, bidasks[1*2 + 1] = askvol;
+    if ( highbidi >= 0 )
+        group[highbidi].bidi++;
+    if ( lowaski >= 0 )
+        group[lowaski].aski++;
+    if ( bidasks[0*2 + 0] > SMALLVAL && bidasks[1*2 + 0] > SMALLVAL )
+        return(0);
+    return(-1);
 }
 
 double prices777_basket(struct prices777 *prices,int32_t maxdepth)
 {
-    int32_t i,j; double gap,wt,bidsum,asksum,bidwtsum,askwtsum,bid,ask,hbla = 0.; struct prices777 *feature;
+    int32_t i,j,groupsize,slot; double *posbidask,*negbidask,gap,bid,ask,bidvol2,minvol,askvol2,bidvol,askvol,hbla = 0.;
+    uint32_t timestamp; struct prices777 *feature;
+    timestamp = (uint32_t)time(NULL);
     for (i=0; i<prices->basketsize; i++)
     {
-        if ( (feature= prices->basket[i]) != 0 )
+        if ( (feature= prices->basket[i].prices) != 0 )
         {
             if ( (gap= (prices->lastupdate - feature->lastupdate)) < 0 )
             {
@@ -1001,31 +1078,57 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             printf("unexpected null basket item %s[%d]\n",prices->contract,i);
             return(0.);
         }
+        prices->basket[i].aski = prices->basket[i].bidi = 0;
     }
-    for (bidsum=asksum=bidwtsum=askwtsum=j=0; j<maxdepth; j++)
+    for (slot=0; slot<maxdepth; slot++)
     {
-        for (i=0; i<prices->basketsize; i++)
+        groupsize = prices->basket[0].groupsize;
+        minvol = (1. / SATOSHIDEN);
+        memset(prices->groupbidasks,0,sizeof(*prices->groupbidasks) * 4 * prices->numgroups);
+        for (j=i=0; j<prices->numgroups; j++,i+=groupsize)
         {
-            if ( (feature= prices->basket[i]) != 0 )
-            {
-                wt = prices->basketwts[i];
-                bid = feature->orderbook[j][0][0];
-                ask = feature->orderbook[j][1][0];
-                if ( wt > SMALLVAL && ask > SMALLVAL )
-                    bidsum += (wt * ask), bidwtsum += wt;
-                else if ( wt < -SMALLVAL && bid > SMALLVAL )
-                    asksum += (wt * bid), askwtsum += wt;
-            }
+            groupsize = prices->basket[i].groupsize;
+            if ( prices777_groupbidasks(&prices->groupbidasks[j * 4],prices->groupwts[j],minvol,&prices->basket[i],groupsize) != 0 )
+                break;
         }
-        if ( bidwtsum > SMALLVAL )
-            bidsum /= bidwtsum;
-        if ( askwtsum > SMALLVAL )
-            asksum /= askwtsum;
+        if ( j != prices->numgroups )
+            break;
+        if ( prices->numgroups == 2 )
+        {
+            if ( prices->groupwts[0] > 0. )
+            {
+                posbidask = &prices->groupbidasks[0];
+                negbidask = &prices->groupbidasks[4];
+            }
+            else
+            {
+                negbidask = &prices->groupbidasks[0];
+                posbidask = &prices->groupbidasks[4];
+            }
+            if ( negbidask[0*2 + 0] > SMALLVAL && negbidask[1*2 + 0] > SMALLVAL )
+            {
+                bidvol = (posbidask[0*2 + 0] * posbidask[0*2 + 1]);
+                bidvol2 = (negbidask[0*2 + 0] * negbidask[0*2 + 1]);
+                askvol = (posbidask[1*2 + 0] * posbidask[1*2 + 1]);
+                askvol2 = (negbidask[1*2 + 0] * negbidask[1*2 + 1]);
+                bid = (posbidask[0*2 + 0] / negbidask[0*2 + 0]);
+                ask = (posbidask[1*2 + 0] / negbidask[1*2 + 0]);
+                printf("slot.%d bid %f bidvol %f:%f, ask %f askvol %f:%f\n",slot,bid,bidvol,bidvol2,ask,askvol,askvol2);
+                if ( bidvol2 < bidvol )
+                    bidvol = bidvol2;
+                if ( askvol2 < askvol )
+                    askvol = askvol2;
+                if ( bid > SMALLVAL )
+                    prices777_addquote(prices,timestamp,0,slot,bid,bidvol,0);
+                if ( ask > SMALLVAL )
+                    prices777_addquote(prices,timestamp,1,slot,ask,askvol,0);
+            }
+        } else printf("only paired baskets for now\n");
     }
-    if ( prices->basketprices[0] )
-        prices->lastbid = prices->basketprices[0];
-    if ( prices->basketprices[1] )
-        prices->lastask = prices->basketprices[1];
+    if ( prices->orderbook[0][0][0] )
+        prices->lastbid = prices->orderbook[0][0][0];
+    if ( prices->orderbook[0][1][0] )
+        prices->lastask = prices->orderbook[0][1][0];
     if ( prices->lastbid != 0. && prices->lastask != 0. )
         hbla = 0.5 * (prices->lastbid + prices->lastask);
     return(hbla);
@@ -1048,7 +1151,7 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
     uint32_t timestamp; int32_t flip,i,n; uint64_t baseamount,relamount,qty,pqt; char url[1024],*str,*cmd,*field;
     cJSON *json,*bids,*asks,*srcobj,*item,*array; double price,vol,hbla = 0.;
     if ( NXT_ASSETID != stringbits("NXT") || (strcmp(prices->rel,"NXT") != 0 && strcmp(prices->rel,"5527630") != 0) )
-        printf("NXT_ASSETID.%llu != %llu stringbits rel.%s\n",(long long)NXT_ASSETID,(long long)stringbits("NXT"),prices->rel);
+        printf("NXT_ASSETID.%llu != %llu stringbits rel.%s\n",(long long)NXT_ASSETID,(long long)stringbits("NXT"),prices->rel), getchar();
     bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
     for (flip=0; flip<2; flip++)
     {
@@ -2125,8 +2228,11 @@ void prices777_exchangeloop(void *ptr)
                     if ( strcmp(exchange->name,"unconf") != 0 )
                         printf("%-13s %12s (%10s %10s) %022llu %022llu isnxtae.%d poll %u -> %u %.8f hbla %.8f %.8f\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,prices->pollnxtblock,prices777_NXTBLOCK,prices->lastprice,prices->lastbid,prices->lastask);
                     for (i=0; i<prices->numdependents; i++)
+                    {
                         if ( (*prices->dependents[i]) < 0xff )
                             (*prices->dependents[i])++;
+                        printf("numdependents.%d of %d %p %d\n",i,prices->numdependents,prices->dependents[i],*prices->dependents[i]);
+                    }
                     prices->pollnxtblock = prices777_NXTBLOCK;
                     n++;
                 }
@@ -2141,7 +2247,7 @@ void prices777_exchangeloop(void *ptr)
                 if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->basketsize != 0 && prices->changed != 0 )
                 {
                     prices->lastupdate = updated;
-                    prices->lastprice = (*exchange->updatefunc)(prices,MAX_DEPTH);
+                    prices->lastprice = prices777_basket(prices,MAX_DEPTH);
                     prices->changed = 0;
                 }
             }
@@ -2166,13 +2272,13 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
         if ( strcmp(exchangestr,"nxtae") == 0 )
         {
             if ( refbaseid == NXT_ASSETID )
-                assetids[n*3] = refrelid, assetids[n*3+1] = NXT_ASSETID, strncpy((char *)&assetids[n*3+2],rel,7), n++;
+                assetids[n*4] = refrelid, assetids[n*4+1] = NXT_ASSETID, strncpy((char *)&assetids[n*4+2],rel,14), n++;
             else if ( refbaseid == NXT_ASSETID )
-                assetids[n*3] = refbaseid, assetids[n*3+1] = NXT_ASSETID, strncpy((char *)&assetids[n*3+2],base,7), n++;
+                assetids[n*4] = refbaseid, assetids[n*4+1] = NXT_ASSETID, strncpy((char *)&assetids[n*4+2],base,14), n++;
             else
             {
-                assetids[n*3] = refbaseid, assetids[n*3+1] = NXT_ASSETID, strncpy((char *)&assetids[n*3+2],base,7), n++;
-                assetids[n*3] = refrelid, assetids[n*3+1] = NXT_ASSETID, strncpy((char *)&assetids[n*3+2],rel,7), n++;
+                assetids[n*4] = refbaseid, assetids[n*4+1] = NXT_ASSETID, strncpy((char *)&assetids[n*4+2],base,14), n++;
+                assetids[n*4] = refrelid, assetids[n*4+1] = NXT_ASSETID, strncpy((char *)&assetids[n*4+2],rel,14), n++;
             }
             strcpy(rel,"NXT");
         }
@@ -2180,12 +2286,13 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
         {
             for (i=0; i<n; i++)
             {
-                baseid = assetids[i*3], relid = assetids[i*3 + 1];
+                baseid = assetids[i*4], relid = assetids[i*4 + 1];
                 if ( relid == NXT_ASSETID )
                 {
-                    strncpy(base,(char *)&assetids[n*3+2],7);
-                    strcpy(name,base), strcat(name,"NXT");
-                    printf("override base.(%s) <- %s\n",base,name);
+                    get_assetname(base,baseid);
+                    strcpy(name,base), strcat(name,"/"), strcat(name,"NXT");
+                    strcpy(rel,"NXT");
+                    printf("override base.(%s) <- %s rel.(%s)\n",base,name,rel);
                 }
                 if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid)) != 0 )
                 {
@@ -2210,13 +2317,15 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                     {
                         if ( strcmp(exchangestr,"nxtae") == 0 && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
                         {
-                            double wts[2]; struct prices777 *features[2];
-                            features[0] = firstprices, features[1] = prices;
-                            wts[0] = 1., wts[1] = -1.;
-                            return(prices777_createbasket(_name,_base,_rel,refbaseid,refrelid,features,wts,2));
+                            struct prices777_basket basket[2];
+                            basket[0].prices = firstprices, basket[1].prices = prices;
+                            basket[0].wt = 1., basket[1].wt = -1.;
+                            basket[0].groupid = 0, basket[1].groupid = 1;
+                            BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(_name,_base,_rel,refbaseid,refrelid,basket,2);
+                            printf("total polling.%d added.(%s) (%s/%s)\n",BUNDLE.num,prices->contract,_base,_rel);
+                            return(prices);
                         }
                     }
-                    break;
                 }
             }
         }

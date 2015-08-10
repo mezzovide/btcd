@@ -102,7 +102,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
             else if ( relid != 0 && rel[0] == 0 )
                 sprintf(rel,"%llu",(long long)relid);
             if ( name[0] == 0 )
-                strcpy(name,base), strcat(name,rel);
+                strcpy(name,base), strcat(name,"/"), strcat(name,rel);
         }
     }
     *baseidp = baseid, *relidp = relid;
