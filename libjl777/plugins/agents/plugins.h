@@ -200,6 +200,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
         if ( strcmp(request,"SuperNET") == 0 )
         {
             char *call_SuperNET_JSON(char *JSONstr);
+            fprintf(stderr,"processing pluginrequest.(%s)\n",str);
             if ( (retstr= call_SuperNET_JSON(str)) != 0 )
             {
                 //if ( Debuglevel > 2 )

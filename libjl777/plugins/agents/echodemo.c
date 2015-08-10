@@ -43,7 +43,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*addr,*retstr = 0;
     retbuf[0] = 0;
     plugin->allowremote = 1;
-    printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+    fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
         // configure settings
@@ -78,11 +78,13 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             {
                 cJSON_DeleteItemFromObject(json,"plugin");
                 jaddstr(json,"plugin",jstr(json,"destplugin"));
+                cJSON_DeleteItemFromObject(json,"destplugin");
             }
             if ( jstr(json,"destmethod") != 0 )
             {
-                cJSON_DeleteItemFromObject(json,"destmethod");
+                cJSON_DeleteItemFromObject(json,"method");
                 jaddstr(json,"method",jstr(json,"destmethod"));
+                cJSON_DeleteItemFromObject(json,"destmethod");
             }
             jaddstr(json,"pluginrequest","SuperNET");
             retstr = jprint(json,0);
