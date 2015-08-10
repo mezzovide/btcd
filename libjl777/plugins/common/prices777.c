@@ -1042,6 +1042,7 @@ int32_t prices777_groupbidasks(double *bidasks,double groupwt,double minvol,stru
     {
         if ( (feature= group[i].prices) != 0 && feature->op != 0 )
         {
+            printf("i.%d of %d: %s numbids.%d numasks.%d (%f %f %f %f)\n",i,groupsize,feature->contract,feature->op->numbids,feature->op->numasks,feature->orderbook[group[i].bidi][0][0],feature->orderbook[group[i].bidi][0][1],feature->orderbook[group[i].aski][1][0],feature->orderbook[group[i].aski][1][1]);
             if ( groupwt > SMALLVAL && group[i].bidi < feature->op->numbids && (vol= feature->orderbook[group[i].bidi][0][1]) > minvol && (ask= feature->orderbook[group[i].bidi][0][0]) > SMALLVAL && (lowask == 0. || ask < lowask) )
                 lowask = ask, askvol = vol, lowaski = i;
             else if ( groupwt < -SMALLVAL && group[i].aski < feature->op->numasks && (vol= feature->orderbook[group[i].aski][1][1]) > minvol && (bid= feature->orderbook[group[i].aski][1][0]) > SMALLVAL && (highbid == 0. || bid > highbid) )
