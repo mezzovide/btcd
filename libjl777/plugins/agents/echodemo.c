@@ -25,9 +25,9 @@ STRUCTNAME
 
 int32_t echodemo_idle(struct plugin_info *plugin) { return(0); }
 
-char *PLUGNAME(_methods)[] = { "echo", "RS" }; // list of supported methods approved for local access
-char *PLUGNAME(_pubmethods)[] = { "echo", "RS" }; // list of supported methods approved for public (Internet) access
-char *PLUGNAME(_authmethods)[] = { "echo", "RS" }; // list of supported methods that require authentication
+char *PLUGNAME(_methods)[] = { "echo", "passthru", "RS" }; // list of supported methods approved for local access
+char *PLUGNAME(_pubmethods)[] = { "echo", "passthru", "RS" }; // list of supported methods approved for public (Internet) access
+char *PLUGNAME(_authmethods)[] = { "echo", "passthru", "RS" }; // list of supported methods that require authentication
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
@@ -71,6 +71,11 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         else if ( strcmp(methodstr,"echo") == 0 )
         {
             sprintf(retbuf,"{\"result\":\"%s\"}",echostr);
+        }
+        else if ( strcmp(methodstr,"passthru") == 0 )
+        {
+            cJSON_AddItemToObject(json,"pluginrequest",cJSON_CreateString("SuperNET"));
+            retstr = jprint(json,0);
         }
         else if ( strcmp(methodstr,"RS") == 0 )
         {
