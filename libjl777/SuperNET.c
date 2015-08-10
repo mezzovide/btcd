@@ -672,6 +672,7 @@ int main(int argc,const char *argv[])
     while ( 1 )
     {
         char line[1024];
+        line[0] = 0;
         if ( getline777(line,sizeof(line)-1) > 0 )
             process_userinput(line);
     }

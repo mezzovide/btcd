@@ -1049,6 +1049,7 @@ int32_t prices777_groupbidasks(double *bidasks,double groupwt,double minvol,stru
         }
     }
     bidasks[0*2 + 0] = highbid, bidasks[0*2 + 1] = bidvol, bidasks[1*2 + 0] = lowask, bidasks[1*2 + 1] = askvol;
+    printf("highbid %f vol %f, lowask %f vol %f\n",highbid,bidvol,lowask,askvol);
     if ( highbidi >= 0 )
         group[highbidi].bidi++;
     if ( lowaski >= 0 )
@@ -2248,6 +2249,7 @@ void prices777_exchangeloop(void *ptr)
                 {
                     prices->lastupdate = updated;
                     prices->lastprice = prices777_basket(prices,MAX_DEPTH);
+                    printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                     prices->changed = 0;
                 }
             }
