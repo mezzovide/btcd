@@ -40,7 +40,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*addr;
+    char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*addr,*retstr = 0;
     retbuf[0] = 0;
     plugin->allowremote = 1;
     //printf("<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
@@ -104,7 +104,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             else sprintf(retbuf,"{\"error\":\"no addr field\"}");
         }
     }
-    return(plugin_copyretstr(retbuf,maxlen,0));
+    return(plugin_copyretstr(retbuf,maxlen,retstr));
 }
 
 int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
