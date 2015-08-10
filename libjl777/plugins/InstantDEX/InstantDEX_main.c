@@ -125,7 +125,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     cJSON *json; uint64_t orderid,baseid,relid,assetbits; int32_t invert,keysize,allfields; struct prices777 *prices;
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        // asset/asset orderbooks, hybrid orderbooks, instantdex orders and orderbooks, openorders/cancelorder/tradehistory
+        // hybrid orderbooks, instantdex orders and orderbooks, openorders/cancelorder/tradehistory
         // placebid/ask, makeoffer3/bid/ask/respondtx verify phasing, asset/nxtae, asset/asset, asset/external, external/external
         // autofill and automatch
         // tradehistory and other stats -> peggy integration
