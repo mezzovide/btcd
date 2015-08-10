@@ -1174,7 +1174,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             create_InstantDEX_quote(&iQ,timestamp,1,0,prices->orderbook[i][1][0],prices->orderbook[i][1][1],prices->baseid,0,prices->relid,0,prices->exchange,0,"",0,0,3600);
             iQ.minperc = 1;
             op->asks[i] = iQ;
-            printf("%d of %d: %f %f %f %f\n",i,slot,prices->orderbook[i][0][0],prices->orderbook[i][0][1],prices->orderbook[i][1][0],prices->orderbook[i][1][1]);
+            //printf("%d of %d: %f %f %f %f\n",i,slot,prices->orderbook[i][0][0],prices->orderbook[i][0][1],prices->orderbook[i][1][0],prices->orderbook[i][1][1]);
         }
         prices777_jsonstrs(prices,op);
     }
