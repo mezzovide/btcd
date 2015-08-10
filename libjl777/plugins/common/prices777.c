@@ -2302,7 +2302,8 @@ void prices777_exchangeloop(void *ptr)
                 {
                     prices->lastupdate = updated;
                     prices->lastprice = prices777_basket(prices,MAX_DEPTH);
-                    printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
+                    if ( Debuglevel > 2 )
+                        printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                     prices->changed = 0;
                 }
             }
@@ -2347,7 +2348,8 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                     get_assetname(base,baseid);
                     strcpy(name,base), strcat(name,"/"), strcat(name,"NXT");
                     strcpy(rel,"NXT");
-                    printf("i.%d override base.(%s) <- %s rel.(%s) baseid.%llu relid.%llu\n",i,base,name,rel,(long long)baseid,(long long)relid);
+                    if ( Debuglevel > 2 )
+                        printf("i.%d override base.(%s) <- %s rel.(%s) baseid.%llu relid.%llu\n",i,base,name,rel,(long long)baseid,(long long)relid);
                 }
                 if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid)) != 0 )
                 {
@@ -2385,7 +2387,8 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                                 basket[0].groupid = 0, basket[1].groupid = 1;
                                 BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(_name,_base,_rel,refbaseid,refrelid,basket,2);
                                 printf("total polling.%d added.(%s) (%s/%s) {%s && %s}\n",BUNDLE.num,prices->contract,_base,_rel,firstprices->contract,basket[1].prices->contract);
-                            } else printf("basket.(%s) already there\n",prices->contract);
+                            } else if ( Debuglevel > 2 )
+                                printf("basket.(%s) already there\n",prices->contract);
                             prices->lastprice = prices777_basket(prices,MAX_DEPTH);
                             printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                             
