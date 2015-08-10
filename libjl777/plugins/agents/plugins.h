@@ -271,7 +271,8 @@ int32_t call_system(struct daemon_info *dp,int32_t permanentflag,char *cmd,char 
     if ( dp->websocket != 0 && permanentflag == 0 )
     {
         args[n++] = SUPERNET.WEBSOCKETD;
-        sprintf(portstr,"--sameorigin=true --port=%d",dp->websocket), args[n++] = portstr;
+        args[n++] = "--sameorigin=true";
+        sprintf(portstr,"--port=%d",dp->websocket), args[n++] = portstr;
         if ( Debuglevel > 0 )
             args[n++] = "--devconsole";
     }
