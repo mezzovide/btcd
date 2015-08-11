@@ -1171,13 +1171,13 @@ int32_t prices777_groupbidasks(struct prices777 **bidsourcep,struct prices777 **
     bidasks[0*2 + 0] = highbid, bidasks[0*2 + 1] = bidvol, bidasks[1*2 + 0] = lowask, bidasks[1*2 + 1] = askvol;
     if ( highbidi >= 0 )
     {
-        printf("%s.(%d %d) groupsize.%d highbid %.8f vol %f, lowask %.8f vol %f\n",group[highbidi].prices->exchange,group[highbidi].bidi,group[lowaski].aski,groupsize,highbid,bidvol,lowask,askvol);
+        printf("%s.(%d %d) groupsize.%d highbid %.8f vol %f\n",group[highbidi].prices->exchange,group[highbidi].bidi,group[highbidi].aski,groupsize,highbid,bidvol);
         group[highbidi].bidi++;
         *bidsourcep = group[highbidi].prices;
     } else printf("warning: no highbidi? [%f %f %f %f]\n",highbid,bidvol,lowask,askvol);
     if ( lowaski >= 0 )
     {
-        printf("%s.(%d %d) groupsize.%d highbid %.8f vol %f, lowask %.8f vol %f\n",group[highbidi].prices->exchange,group[highbidi].bidi,group[lowaski].aski,groupsize,highbid,bidvol,lowask,askvol);
+        printf("%s.(%d %d) groupsize.%d lowask %.8f vol %f\n",group[lowaski].prices->exchange,group[lowaski].bidi,group[lowaski].aski,groupsize,lowask,askvol);
         group[lowaski].aski++;
         *asksourcep = group[lowaski].prices;
     } else printf("warning: no lowaski? [%f %f %f %f]\n",highbid,bidvol,lowask,askvol);
@@ -1222,7 +1222,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             if ( prices777_groupbidasks(&bidsource,&asksource,&prices->groupbidasks[j * 4],prices->groupwts[j],minvol,&prices->basket[i],groupsize) != 0 )
                 break;
             b = prices->groupbidasks[j*4 + 0], bv = prices->groupbidasks[j*4 + 1], a = prices->groupbidasks[j*4 + 2], av = prices->groupbidasks[j*4 + 3];
-//printf("[%f %f %f %f]\n",b,bv,a,av);
+//printf("[%f %f %f %f] bid %f ask %f \n",b,bv,a,av,bid,ask);
             if ( a > SMALLVAL && b > SMALLVAL && av > SMALLVAL && bv > SMALLVAL )
             {
                 if ( prices->groupwts[j] < 0 )
