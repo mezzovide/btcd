@@ -1193,8 +1193,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 {
                     if ( prices->groupwts[j] < 0 )
                         bv /= b;
-                    else bv *= b;
-                    bv /= bid;
+                    else bv *= b, bv /= bid;
                     if ( bv < bidvol )
                         bidvol = bv;
                 }
@@ -1204,12 +1203,11 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 {
                     if ( prices->groupwts[j] < 0 )
                         av /= a;
-                    else av *= a;
-                    av /= ask;
+                    else av *= a, av /= ask;
                     if ( av < askvol )
                         askvol = av;
                 }
-              //  if ( Debuglevel > 2 )
+                if ( Debuglevel > 2 )
                     printf("%s wt %2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f %12.6f ask %.8f %12.6f inv %f %f\n",prices->contract,prices->groupwts[j],j,b,bv,a,av,bid,bidvol,ask,askvol,b*bv,a*av);
             }
             else
@@ -2493,7 +2491,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
     InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
     if ( (i= prices777_addbundle(0,0,exchangestr,baseid,relid)) > 0 )
     {
-        printf("found (%s/%s).%s %llu %llu in slot.%d\n",base,rel,exchangestr,(long long)baseid,(long long)relid,i);
+        printf("found (%s/%s).%s %llu %llu in slot.%d -> %p\n",base,rel,exchangestr,(long long)baseid,(long long)relid,i,BUNDLE.ptrs[i]);
         return(BUNDLE.ptrs[i]);
     }
     for (iter=0; iter<2; iter++)
