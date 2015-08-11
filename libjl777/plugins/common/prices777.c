@@ -1001,7 +1001,7 @@ void prices777_jsonstrs(struct prices777 *prices,struct orderbook *op)
     for (allflag=0; allflag<4; allflag++)
     {
         strs[allflag] = prices777_orderbook_jsonstr(allflag/2,SUPERNET.my64bits,op,MAX_DEPTH,allflag%2);
-        //printf("strs[%d].(%s)\n",allflag,strs[allflag]);
+        printf("strs[%d].(%s)\n",allflag,strs[allflag]);
     }
     portable_mutex_lock(&prices->mutex);
     if ( prices->op != 0 )
@@ -1182,7 +1182,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             if ( prices777_groupbidasks(&bidsource,&asksource,&prices->groupbidasks[j * 4],prices->groupwts[j],minvol,&prices->basket[i],groupsize) != 0 )
                 break;
             b = prices->groupbidasks[j*4 + 0], bv = prices->groupbidasks[j*4 + 1], a = prices->groupbidasks[j*4 + 2], av = prices->groupbidasks[j*4 + 3];
-            // printf("[%f %f %f %f]\n",b,bv,a,av);
+//printf("[%f %f %f %f]\n",b,bv,a,av);
             if ( a > SMALLVAL && b > SMALLVAL && av > SMALLVAL && bv > SMALLVAL )
             {
                 if ( prices->groupwts[j] < 0 )
@@ -2416,7 +2416,8 @@ void prices777_exchangeloop(void *ptr)
                     {
                         if ( (*prices->dependents[i]) < 0xff )
                             (*prices->dependents[i])++;
-                        printf("numdependents.%d of %d %p %d\n",i,prices->numdependents,prices->dependents[i],*prices->dependents[i]);
+                        if ( Debuglevel > 2 )
+                            printf("numdependents.%d of %d %p %d\n",i,prices->numdependents,prices->dependents[i],*prices->dependents[i]);
                     }
                     prices->pollnxtblock = prices777_NXTBLOCK;
                     n++;
@@ -2433,7 +2434,7 @@ void prices777_exchangeloop(void *ptr)
                 {
                     prices->lastupdate = updated;
                     prices->lastprice = prices777_basket(prices,MAX_DEPTH);
-                    //if ( Debuglevel > 2 )
+                    if ( Debuglevel > 2 )
                         printf("updating basket(%s) lastprice %.8f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                     prices->changed = 0;
                 }
@@ -2539,7 +2540,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                 if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid)) != 0 )
                 {
                     if ( strcmp(exchangestr,"basket") != 0 )
-                        prices777_addbundle(&valid,0,prices,0,0,0);
+                        prices777_addbundle(&valid,1,prices,0,0,0);
                     if ( firstprices == 0 )
                         firstprices = prices;
                     else
@@ -2550,7 +2551,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                             basket[0].prices = firstprices, basket[1].prices = prices;
                             basket[0].wt = 1., basket[1].wt = -1.;
                             basket[0].groupid = 0, basket[1].groupid = 1;
-                            prices = prices777_addbundle(&valid,0,0,"basket",refbaseid,refrelid);
+                            prices = prices777_addbundle(&valid,1,0,"basket",refbaseid,refrelid);
                             if ( valid >= 0 )
                             {
                                 BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(_name,_base,_rel,refbaseid,refrelid,basket,2);
