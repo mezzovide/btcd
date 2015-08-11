@@ -612,6 +612,7 @@ struct orderbook *prices777_json_quotes(double *hblap,struct prices777 *prices,c
     if ( maxdepth != 0 && m > maxdepth )
         m = maxdepth;
     op = (struct orderbook *)calloc(1,sizeof(*op));
+printf("calloc op %ld\n",sizeof(*op));
     strcpy(op->base,prices->base), strcpy(op->rel,prices->rel), strcpy(op->name,prices->contract);
     op->baseid = prices->baseid, op->relid = prices->relid;
     //printf("opbids.%p opasks.%p\n",op->bids,op->asks);
@@ -1519,7 +1520,8 @@ double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
         sprintf(prices->url,"https://www.okcoin.com/api/v1/depth.do?symbol=%s_%s",prices->lbase,prices->lrel);
     if ( strcmp(prices->rel,"USD") != 0 )
     {
-        printf("OKCOIN.(%s) only supports USD\n",prices->url);
+        fprintf(stderr,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FATAL ERROR OKCOIN.(%s) only supports USD\n",prices->url);
+        printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FATAL ERROR OKCOIN.(%s) only supports USD\n",prices->url);
         exit(-1);
         return(0);
     }
@@ -2339,6 +2341,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         }
     }
     prices = calloc(1,sizeof(*prices));
+    printf("new prices %ld\n",sizeof(*prices));
     if ( base == 0 )
         base = "";
     if ( rel == 0 )
@@ -2363,7 +2366,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         safecopy(prices->lrel,rel,sizeof(prices->lrel)), tolowercase(prices->lrel);
         rellen = (int32_t)(strlen(prices->rel) + 1);
         set_assetname(&prices->ap_mult,tmp,baseid);
-        printf("nxtbook.(%s) -> NXT %s %llu vs (%s)\n",base,prices->contract,(long long)baseid,tmp);
+        printf("size %ld nxtbook.(%s) -> NXT %s %llu vs (%s)\n",sizeof(*prices->nxtbooks),base,prices->contract,(long long)baseid,tmp);
     }
     else
     {
@@ -2711,7 +2714,7 @@ int32_t prices777_init(char *jsonstr)
     if ( BUNDLE.ptrs[0] != 0 )
         return(0);
    // "BTCUSD", "NXTBTC", "SuperNET", "ETHBTC", "LTCBTC", "XMRBTC", "BTSBTC", "XCPBTC",  // BTC priced
-    if ( 0 )
+    if ( SUPERNET.peggy != 0 )
     {
         if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,"huobi","BTC","USD",0.,0,0,0)) != 0 )
             BUNDLE.num++;
@@ -2730,12 +2733,10 @@ int32_t prices777_init(char *jsonstr)
         for (i=0; i<sizeof(btcdexchanges)/sizeof(*btcdexchanges); i++)
             if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,btcusdexchanges[i],"BTC","USD",0.,0,0,0)) != 0 )
                 BUNDLE.num++;
+        for (i=0; i<sizeof(btcdexchanges)/sizeof(*btcdexchanges); i++)
+            if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,btcdexchanges[i],"BTCD","BTC",0.,0,0,0)) != 0 )
+                BUNDLE.num++;
     }
-#ifdef INSIDE_PEGGY
-    for (i=0; i<sizeof(btcdexchanges)/sizeof(*btcdexchanges); i++)
-        if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,btcdexchanges[i],"BTCD","BTC",0.,0,0,0)) != 0 )
-            BUNDLE.num++;
-#endif
     if ( (json= cJSON_Parse(jsonstr)) != 0 && (exchanges= jarray(&n,json,"prices")) != 0 )
     {
         for (i=0; i<n; i++)
@@ -3189,65 +3190,66 @@ double blend_price(double *volp,double wtA,cJSON *jsonA,double wtB,cJSON *jsonB)
 
 void _crypto_update(double cryptovols[2][8][2],struct prices777_data *dp,int32_t selector)
 {
-#ifdef INSIDE_PEGGY
     char *cryptonatorA = "https://www.cryptonator.com/api/full/%s-%s"; //unity-btc
     char *cryptocoinchartsB = "http://api.cryptocoincharts.info/tradingPair/%s_%s"; //bts_btc
     char *cryptostrs[9] = { "btc", "nxt", "unity", "eth", "ltc", "xmr", "bts", "xcp", "etc" };
     int32_t iter,i,j; double btcusd,btcdbtc,cnyusd,prices[8][2],volumes[8][2];
     char base[16],rel[16],url[512],*str; cJSON *jsonA,*jsonB;
-    cnyusd = BUNDLE.cnyusd;
-    btcusd = BUNDLE.btcusd;
-    btcdbtc = BUNDLE.btcdbtc;
-    //printf("update with btcusd %f btcd %f cnyusd %f cnybtc %f\n",btcusd,btcdbtc,cnyusd,cnyusd/btcusd);
-    if ( btcusd < SMALLVAL || btcdbtc < SMALLVAL )
+    if ( SUPERNET.peggy != 0 )
     {
-        price777_update(&btcusd,&btcdbtc);
-        printf("price777_update with btcusd %f btcd %f\n",btcusd,btcdbtc);
-    }
-    memset(prices,0,sizeof(prices));
-    memset(volumes,0,sizeof(volumes));
-    for (j=0; j<sizeof(cryptostrs)/sizeof(*cryptostrs); j++)
-    {
-        str = cryptostrs[j];
-        if ( strcmp(str,"etc") == 0 )
+        cnyusd = BUNDLE.cnyusd;
+        btcusd = BUNDLE.btcusd;
+        btcdbtc = BUNDLE.btcdbtc;
+        //printf("update with btcusd %f btcd %f cnyusd %f cnybtc %f\n",btcusd,btcdbtc,cnyusd,cnyusd/btcusd);
+        if ( btcusd < SMALLVAL || btcdbtc < SMALLVAL )
         {
-            if ( prices[3][0] > SMALLVAL )
-                break;
-            i = 3;
-        } else i = j;
-        for (iter=0; iter<1; iter++)
+            price777_update(&btcusd,&btcdbtc);
+            printf("price777_update with btcusd %f btcd %f\n",btcusd,btcdbtc);
+        }
+        memset(prices,0,sizeof(prices));
+        memset(volumes,0,sizeof(volumes));
+        for (j=0; j<sizeof(cryptostrs)/sizeof(*cryptostrs); j++)
         {
-            if ( i == 0 && iter == 0 )
-                strcpy(base,"btcd"), strcpy(rel,"btc");
-            else strcpy(base,str), strcpy(rel,iter==0?"btc":"cny");
-            //if ( selector == 0 )
+            str = cryptostrs[j];
+            if ( strcmp(str,"etc") == 0 )
             {
-                sprintf(url,cryptonatorA,base,rel);
-                jsonA = url_json(url);
-            }
-            //else
+                if ( prices[3][0] > SMALLVAL )
+                    break;
+                i = 3;
+            } else i = j;
+            for (iter=0; iter<1; iter++)
             {
-                sprintf(url,cryptocoinchartsB,base,rel);
-                jsonB = url_json(url);
-            }
-            prices[i][iter] = blend_price(&volumes[i][iter],0.4,jsonA,0.6,jsonB);
-            if ( iter == 1 )
-            {
-                if ( btcusd > SMALLVAL )
+                if ( i == 0 && iter == 0 )
+                    strcpy(base,"btcd"), strcpy(rel,"btc");
+                else strcpy(base,str), strcpy(rel,iter==0?"btc":"cny");
+                //if ( selector == 0 )
                 {
-                    prices[i][iter] *= cnyusd / btcusd;
-                    volumes[i][iter] *= cnyusd / btcusd;
-                } else prices[i][iter] = volumes[i][iter] = 0.;
+                    sprintf(url,cryptonatorA,base,rel);
+                    jsonA = url_json(url);
+                }
+                //else
+                {
+                    sprintf(url,cryptocoinchartsB,base,rel);
+                    jsonB = url_json(url);
+                }
+                prices[i][iter] = blend_price(&volumes[i][iter],0.4,jsonA,0.6,jsonB);
+                if ( iter == 1 )
+                {
+                    if ( btcusd > SMALLVAL )
+                    {
+                        prices[i][iter] *= cnyusd / btcusd;
+                        volumes[i][iter] *= cnyusd / btcusd;
+                    } else prices[i][iter] = volumes[i][iter] = 0.;
+                }
+                cryptovols[0][i][iter] = _pairaved(cryptovols[0][i][iter],prices[i][iter]);
+                cryptovols[1][i][iter] = _pairaved(cryptovols[1][i][iter],volumes[i][iter]);
+                if ( Debuglevel > 2 )
+                    printf("(%f %f).%d:%d ",cryptovols[0][i][iter],cryptovols[1][i][iter],i,iter);
+                //if ( cnyusd < SMALLVAL || btcusd < SMALLVAL )
+                //    break;
             }
-            cryptovols[0][i][iter] = _pairaved(cryptovols[0][i][iter],prices[i][iter]);
-            cryptovols[1][i][iter] = _pairaved(cryptovols[1][i][iter],volumes[i][iter]);
-            if ( Debuglevel > 2 )
-                printf("(%f %f).%d:%d ",cryptovols[0][i][iter],cryptovols[1][i][iter],i,iter);
-            //if ( cnyusd < SMALLVAL || btcusd < SMALLVAL )
-            //    break;
         }
     }
-#endif
 }
 
 void crypto_update0()
@@ -3445,27 +3447,26 @@ int32_t prices777_getmatrix(double *basevals,double *btcusdp,double *btcdbtcp,do
 int32_t prices_idle(struct plugin_info *plugin)
 {
     static int32_t didinit; static portable_mutex_t mutex;
-    struct prices777_data *dp = &BUNDLE.tmp;
+    int32_t i,datenum; struct prices777_data *dp = &BUNDLE.tmp;
     *dp = BUNDLE.data;
     if ( didinit == 0 )
     {
         portable_mutex_init(&mutex);
         prices777_init(BUNDLE.jsonstr);
         didinit = 1;
-#ifdef INSIDE_PEGGY
-        int32_t opreturns_init(uint32_t blocknum,uint32_t blocktimestamp,char *path);
-        opreturns_init(0,(uint32_t)time(NULL),"peggy");
-#endif
+        if ( SUPERNET.peggy != 0 )
+        {
+            int32_t opreturns_init(uint32_t blocknum,uint32_t blocktimestamp,char *path);
+            opreturns_init(0,(uint32_t)time(NULL),"peggy");
+        }
     }
-#ifdef INSIDE_PEGGY
     static double lastupdate,lastdayupdate;
-    if ( milliseconds() > lastupdate + 60000 )
+    if ( SUPERNET.peggy != 0 && milliseconds() > lastupdate + 60000 )
     {
         lastupdate = milliseconds();
         if ( milliseconds() > lastdayupdate + 60000*60 )
         {
             lastdayupdate = milliseconds();
-            int32_t i,datenum;
             if ( (datenum= ecb_matrix(dp->ecbmatrix,dp->edate)) > 0 )
             {
                 dp->ecbdatenum = datenum;
@@ -3501,7 +3502,6 @@ int32_t prices_idle(struct plugin_info *plugin)
         peggy();
         didinit = 1;
     }
-#endif
     return(0);
 }
 
