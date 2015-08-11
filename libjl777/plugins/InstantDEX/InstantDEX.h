@@ -779,28 +779,22 @@ void orderbook_test(uint64_t nxt64bits,uint64_t refbaseid,uint64_t refrelid,int3
 }
 */
 
-void init_exchanges()
+void init_exchanges(cJSON *json)
 {
-    //cJSON *exchanges;
-    //int32_t i,n;
+    static char *exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
+    cJSON *array; int32_t i,n;
     find_exchange(0,INSTANTDEX_NAME);
     find_exchange(0,INSTANTDEX_NXTAEUNCONF);
     find_exchange(0,INSTANTDEX_NXTAENAME);
     find_exchange(0,INSTANTDEX_BASKETNAME);
-    find_exchange(0,"bitfinex");
-    find_exchange(0,"btc38");
-    find_exchange(0,"bitstamp");
-    find_exchange(0,"btce");
-    find_exchange(0,"bittrex");
-    find_exchange(0,"poloniex");
-    find_exchange(0,"huobi");
-    find_exchange(0,"coinbase");
-    find_exchange(0,"okcoin");
-    find_exchange(0,"bityes");
-    find_exchange(0,"lakebtc");
-    find_exchange(0,"bter");
-    find_exchange(0,"exmo");
-    prices777_makebasket("{\"name\":\"NXT/BTC\",\"base\":\"NXT\",\"rel\":\"BTC\",\"basket\":[{\"exchange\":\"poloniex\"},{\"exchange\":\"btc38\"}]}",0);
+    for (i=0; i<sizeof(exchanges)/sizeof(*exchanges); i++)
+        find_exchange(0,exchanges[i]);
+    if ( (array= jarray(&n,json,"baskets")) != 0 )
+    {
+        for (i=0; i<n; i++)
+            prices777_makebasket(0,jitem(array,i));
+    }
+    //prices777_makebasket("{\"name\":\"NXT/BTC\",\"base\":\"NXT\",\"rel\":\"BTC\",\"basket\":[{\"exchange\":\"bittrex\"},{\"exchange\":\"poloniex\"},{\"exchange\":\"btc38\"}]}",0);
 }
 
 char *trollbox_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
@@ -810,12 +804,12 @@ char *trollbox_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,
     else return(clonestr("{\"result\":\"sell it will be dumped\",\"user\":\"troll\",\"whaleindex\":\"0\"}"));
 }
 
-void init_InstantDEX(uint64_t nxt64bits,int32_t testflag)
+void init_InstantDEX(uint64_t nxt64bits,int32_t testflag,cJSON *json)
 {
     int32_t a,b;
     init_pingpong_queue(&Pending_offersQ,"pending_offers",process_Pending_offersQ,0,0);
     Pending_offersQ.offset = 0;
-    init_exchanges();
+    init_exchanges(json);
     find_exchange(&a,INSTANTDEX_NXTAENAME), find_exchange(&b,INSTANTDEX_NAME);
     if ( a != INSTANTDEX_NXTAEID || b != INSTANTDEX_EXCHANGEID )
         printf("invalid exchangeid %d, %d\n",a,b);

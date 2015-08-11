@@ -164,7 +164,9 @@ struct orderbook
 {
     uint64_t baseid,relid,jumpasset;
     char base[64],rel[64],jumper[64],exchangestr[64],name[64];
-    struct InstantDEX_quote *bids,*asks;
+    struct InstantDEX_quote bids[MAX_DEPTH],asks[MAX_DEPTH];
+    struct prices777 *bidsources[MAX_DEPTH],*asksources[MAX_DEPTH];
+    double lastbid,lastask,bidasks[MAX_DEPTH][4];
     int32_t numbids,numasks;
 };
 

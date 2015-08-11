@@ -395,7 +395,7 @@ double calc_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount)
     else return(0.);
     set_best_amounts(&checkbase,&checkrel,price,vol);
     if ( checkbase != baseamount || checkrel != relamount )
-        printf("calc_price_volume error: (%llu/%llu) -> %f %f -> (%llu %llu)\n",(long long)baseamount,(long long)relamount,price,vol,(long long)checkbase,(long long)checkrel);
+        printf("calc_price_volume error: (%llu/%llu) -> %f %f -> (%llu %llu)\n",(long long)baseamount,(long long)relamount,price,vol,(long long)checkbase,(long long)checkrel);//, getchar();
     return(price);
 }
 

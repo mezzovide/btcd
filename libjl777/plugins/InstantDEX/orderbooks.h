@@ -88,10 +88,10 @@ void free_orderbook(struct orderbook *op)
 {
     if ( op != 0 )
     {
-        if ( op->bids != 0 )
+        /*if ( op->bids != 0 )
             free(op->bids);
         if ( op->asks != 0 )
-            free(op->asks);
+            free(op->asks);*/
         free(op);
     }
 }
@@ -209,7 +209,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
             {
                 if ( Debuglevel > 2 )
                     printf("(%llu %llu, %llu %llu): ",(long long)to->baseid,(long long)to->relid,(long long)from->baseid,(long long)from->relid);
-                op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
+                //op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
                 n = 0;
                 if ( to->numasks > 0 && from->numbids > 0 )
                 {
@@ -226,7 +226,7 @@ struct orderbook *make_jumpbook(char *base,uint64_t baseid,uint64_t jumpasset,ch
             {
                 if ( Debuglevel > 2 )
                     printf("(%llu %llu, %llu %llu): ",(long long)from->baseid,(long long)from->relid,(long long)to->baseid,(long long)to->relid);
-                op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
+                //op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
                 n = 0;
                 if ( from->numasks > 0 && to->numbids > 0 )
                 {
@@ -387,10 +387,10 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
         }
         if ( iter == 0 )
         {
-            if ( op->numbids > 0 )
+            /*if ( op->numbids > 0 )
                 op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
             if ( op->numasks > 0 )
-                op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
+                op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));*/
         } else sort_orderbook(op);
     }
     if ( Debuglevel > 2 )//|| op->numbids+op->numasks > 0 )
@@ -469,14 +469,14 @@ struct orderbook *merge_books(char *base,uint64_t refbaseid,char *rel,uint64_t r
     op->jumpasset = 0;
     if ( (op->numbids= numbids) > 0 )
     {
-        op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
+        //op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
         for (i=numbids=0; i<n; i++)
             if ( books[i]->numbids != 0 )
                 memcpy(&op->bids[numbids],books[i]->bids,books[i]->numbids * sizeof(*op->bids)), numbids += books[i]->numbids;
     }
     if ( (op->numasks= numasks) > 0 )
     {
-        op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
+        //op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));
         for (i=numasks=0; i<n; i++)
             if ( books[i]->numasks != 0 )
                 memcpy(&op->asks[numasks],books[i]->asks,books[i]->numasks * sizeof(*op->asks)), numasks += books[i]->numasks;

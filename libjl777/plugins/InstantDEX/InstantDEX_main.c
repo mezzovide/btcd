@@ -144,7 +144,6 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             else strcpy(exchangestr,"basket");
         }
         assetbits = InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
-        // "makeoffer3", "jumptrades""
         if ( strcmp(method,"allorderbooks") == 0 )
             retstr = prices777_allorderbooks();
         else if ( strcmp(method,"openorders") == 0 )
@@ -368,7 +367,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         // configure settings
         plugin->allowremote = 1;
         portable_mutex_init(&plugin->mutex);
-        init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0);
+        init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0,json);
         update_NXT_assettrades();
         INSTANTDEX.readyflag = 1;
         strcpy(retbuf,"{\"result\":\"InstantDEX init\"}");
