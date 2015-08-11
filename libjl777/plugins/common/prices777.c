@@ -1192,7 +1192,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 else
                 {
                     if ( prices->groupwts[j] < 0 )
-                        bv /= b;
+                        bv /= b, bv *= bid;
                     else bv *= b, bv /= bid;
                     if ( bv < bidvol )
                         bidvol = bv;
@@ -1202,7 +1202,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 else
                 {
                     if ( prices->groupwts[j] < 0 )
-                        av /= a;
+                        av /= a, av *= ask;
                     else av *= a, av /= ask;
                     if ( av < askvol )
                         askvol = av;
@@ -2442,9 +2442,10 @@ void prices777_exchangeloop(void *ptr)
     }
 }
 
-int32_t prices777_addbundle(int32_t loadprices,struct prices777 *prices,char *exchangestr,uint64_t baseid,uint64_t relid)
+struct prices777 *prices777_addbundle(int32_t *validp,int32_t loadprices,struct prices777 *prices,char *exchangestr,uint64_t baseid,uint64_t relid)
 {
     int32_t j; struct prices777 *ptr; struct exchange_info *exchange;
+    *validp = -1;
     if ( prices != 0 )
     {
         exchangestr = prices->exchange;
@@ -2453,7 +2454,7 @@ int32_t prices777_addbundle(int32_t loadprices,struct prices777 *prices,char *ex
     for (j=0; j<BUNDLE.num; j++)
     {
         if ( (ptr= BUNDLE.ptrs[j]) != 0 && ((ptr->baseid == baseid && ptr->relid == relid) || (ptr->relid == baseid && ptr->baseid == relid)) && strcmp(ptr->exchange,exchangestr) == 0 )
-            return(j);
+            return(ptr);
     }
     if ( j == BUNDLE.num )
     {
@@ -2476,23 +2477,23 @@ int32_t prices777_addbundle(int32_t loadprices,struct prices777 *prices,char *ex
             BUNDLE.ptrs[BUNDLE.num++] = prices;
             printf("prices777_addbundle.(%s) (%s/%s).%s %llu %llu\n",prices->contract,prices->base,prices->rel,prices->exchange,(long long)prices->baseid,(long long)prices->rel);
         }
-        return(BUNDLE.num);
+        *validp = BUNDLE.num;
+        return(0);
     } else printf("(%llu/%llu).%s already there\n",(long long)baseid,(long long)relid,exchangestr);
-    return(-1);
+    return(0);
 }
 
 struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint64_t refbaseid,char *_rel,uint64_t refrelid)
 {
-    char exchangestr[64],base[64],rel[64],name[64],key[1024]; uint64_t assetids[8192],baseid,relid; int32_t keysize,iter,i,n,exchangeid,basenum;
-    struct exchange_info *exchange;
-    struct prices777 *prices,*firstprices = 0;
+    char exchangestr[64],base[64],rel[64],name[64],key[1024]; uint64_t assetids[8192],baseid,relid;
+    int32_t keysize,iter,i,n,exchangeid,basenum,valid; struct exchange_info *exchange; struct prices777 *prices,*firstprices = 0;
     baseid = refbaseid, relid = refrelid;
     strcpy(exchangestr,_exchangestr), strcpy(base,_base), strcpy(rel,_rel), strcpy(name,_name);
     InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
-    if ( (i= prices777_addbundle(0,0,exchangestr,baseid,relid)) > 0 )
+    if ( (prices= prices777_addbundle(&valid,0,0,exchangestr,baseid,relid)) != 0 )
     {
-        printf("found (%s/%s).%s %llu %llu in slot.%d -> %p\n",base,rel,exchangestr,(long long)baseid,(long long)relid,i,BUNDLE.ptrs[i]);
-        return(BUNDLE.ptrs[i]);
+        printf("found (%s/%s).%s %llu %llu in slot-> %p\n",base,rel,exchangestr,(long long)baseid,(long long)relid,prices);
+        return(prices);
     }
     for (iter=0; iter<2; iter++)
     {
@@ -2537,15 +2538,16 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                 if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid)) != 0 )
                 {
                     if ( strcmp(exchangestr,"basket") != 0 )
-                        prices777_addbundle(0,prices,0,0,0);
+                        prices777_addbundle(&valid,0,prices,0,0,0);
                     if ( firstprices == 0 )
                         firstprices = prices;
                     else
                     {
                         if ( strcmp(exchangestr,"nxtae") == 0 && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
                         {
-                            struct prices777_basket basket[2];
-                            if ( prices777_addbundle(0,0,"basket",refbaseid,refrelid) >= 0 )
+                            struct prices777_basket basket[2]; int32_t valid;
+                            prices777_addbundle(&valid,0,0,"basket",refbaseid,refrelid);
+                            if ( valid >= 0 )
                             {
                                 basket[0].prices = firstprices, basket[1].prices = prices;
                                 basket[0].wt = 1., basket[1].wt = -1.;
@@ -2575,7 +2577,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
 struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson)
 {
     //{"name":"NXT/BTC","base":"NXT","rel":"BTC","basket":[{"exchange":"poloniex"},{"exchange":"btc38"}]}
-    int32_t i,n,keysize,groupid; char refname[64],refbase[64],refrel[64],name[64],base[64],rel[64],exchangestr[64],key[8192];
+    int32_t i,n,keysize,groupid,valid; char refname[64],refbase[64],refrel[64],name[64],base[64],rel[64],exchangestr[64],key[8192];
     uint64_t baseid,relid,refbaseid=0,refrelid=0; double wt;
     struct prices777_basket *basket = 0; cJSON *basketjson,*array,*item; struct prices777 *prices = 0;
     if ( (basketjson= _basketjson) == 0 && (basketjson= cJSON_Parse(basketstr)) == 0 )
@@ -2617,7 +2619,7 @@ struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson)
             InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
             if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid)) != 0 )
             {
-                prices777_addbundle(0,prices,0,0,0);
+                prices777_addbundle(&valid,0,prices,0,0,0);
                 basket[i].prices = prices;
                 basket[i].wt = wt;
                 basket[i].groupid = groupid;
@@ -2634,7 +2636,8 @@ struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson)
         printf(">>>>> (%s/%s).%s %llu %llu\n",refbase,refrel,"basket",(long long)refbaseid,(long long)refrelid);
         InstantDEX_name(key,&keysize,"basket",refname,refbase,&refbaseid,refrel,&refrelid);
         printf("<<<<< (%s/%s).%s %llu %llu\n",refbase,refrel,"basket",(long long)refbaseid,(long long)refrelid);
-        if ( prices777_addbundle(0,0,"basket",refbaseid,refrelid) >= 0 )
+        prices777_addbundle(&valid,0,0,"basket",refbaseid,refrelid);
+        if ( valid >= 0 )
         {
             BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(refname,refbase,refrel,refbaseid,refrelid,basket,n);
             prices->lastprice = prices777_basket(prices,MAX_DEPTH);
