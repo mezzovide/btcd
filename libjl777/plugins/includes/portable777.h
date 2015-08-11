@@ -171,18 +171,22 @@ struct orderbook
 struct prices777_nxtquote { uint64_t baseid,relid,nxt64bits,quoteid,qty,priceNQT,baseamount,relamount; uint32_t timestamp; };
 struct prices777_nxtbooks { struct prices777_nxtquote orderbook[MAX_DEPTH][2],prevorderbook[MAX_DEPTH][2],prev2orderbook[MAX_DEPTH][2]; };
 struct prices777_basket { struct prices777 *prices; double wt; int32_t groupid,groupsize,aski,bidi; };
+struct prices777_orderentry { struct prices777 *bidsource,*asksource; double bid,bidvol,ask,askvol; };
 
 struct prices777
 {
     char url[512],exchange[64],base[64],rel[64],lbase[64],lrel[64],key[512],oppokey[512],contract[64],oppocontract[64],origbase[64],origrel[64];
     uint64_t contractnum,ap_mult,baseid,relid; int32_t keysize,oppokeysize; double lastupdate,decay,oppodecay;
     uint32_t pollnxtblock,exchangeid,numquotes,updated,lasttimestamp,RTflag,fifoinds[6];
-    double orderbook[MAX_DEPTH][2][2],prevorderbook[MAX_DEPTH][2][2],prev2orderbook[MAX_DEPTH][2][2],lastprice,lastbid,lastask;
+    struct prices777_orderentry orderbook[MAX_DEPTH],prevorderbook[MAX_DEPTH],prev2orderbook[MAX_DEPTH];
+    double lastprice,lastbid,lastask;
+    struct prices777_orderentry ordersources[MAX_DEPTH][2];
     struct prices777_nxtbooks *nxtbooks; portable_mutex_t mutex; struct orderbook *op; char *orderbook_jsonstrs[2][2];
     uint8_t **dependents,changed; int32_t numgroups,numdependents,basketsize; struct prices777_basket *basket; double *groupbidasks,*groupwts;
     float days[DAYS_FIFO],hours[HOURS_FIFO],minutes[MINUTES_FIFO];
 };
 
+struct prices777 *prices777_makebasket(char *basketstr,cJSON *basketjson);
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess);
 cJSON *prices777_InstantDEX_json(char *_base,char *_rel,int32_t depth,int32_t invert,int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset);
 

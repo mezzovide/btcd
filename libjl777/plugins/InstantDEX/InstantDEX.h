@@ -800,6 +800,7 @@ void init_exchanges()
     find_exchange(0,"lakebtc");
     find_exchange(0,"bter");
     find_exchange(0,"exmo");
+    prices777_makebasket("{\"name\":\"NXT/BTC\",\"base\":\"NXT\",\"rel\":\"BTC\",\"basket\":[{\"exchange\":\"poloniex\"},{\"exchange\":\"btc38\"}]}",0);
 }
 
 char *trollbox_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)

@@ -268,9 +268,9 @@ uint64_t _obookid(uint64_t baseid,uint64_t relid) { return(baseid ^ relid); }
 struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint64_t refrelid,uint32_t oldest,char *gui,char *exchangestr)
 {
     int32_t i,j,iter,polarity,numbids,numasks,numbooks,numbase,numrel,keysize;
-    struct prices777_nxtquote *bid,*ask;//nxtbook[MAX_DEPTH][2]; double buf[MAX_DEPTH][2][2];
+    //struct prices777_nxtquote *bid,*ask;//nxtbook[MAX_DEPTH][2]; double buf[MAX_DEPTH][2][2];
     char obookstr[64],_base[16],_rel[16],name[64],key[512];
-    struct rambook_info **obooks,*rb; struct prices777 *prices;
+    struct rambook_info **obooks,*rb; //struct prices777 *prices;
     struct orderbook *op = 0;
     uint64_t baseequivs[512],relequivs[512];
     printf("create_orderbook deprecated\n"); getchar();
@@ -292,7 +292,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
     name[0] = 0;
     InstantDEX_name(key,&keysize,exchangestr,name,base,&refbaseid,rel,&refrelid);
     //strcpy(name,base);
-    if ( 0 )//&& (prices= prices777_stablebooks(&polarity,exchangestr,name,key,keysize,refbaseid,refrelid,buf,strcmp(exchangestr,"nxtae") == 0 ? nxtbook : 0)) != 0 )
+   /* if ( 0 )//&& (prices= prices777_stablebooks(&polarity,exchangestr,name,key,keysize,refbaseid,refrelid,buf,strcmp(exchangestr,"nxtae") == 0 ? nxtbook : 0)) != 0 )
     {
         if ( prices->op != 0 )
             return(prices->op);
@@ -310,9 +310,9 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
                 else bid = &prices->nxtbooks->orderbook[j][1], ask = &prices->nxtbooks->orderbook[j][0];
                 //fprintf(stderr,"bid.(%f %f).t%u ",prices->orderbook[j][0][0],prices->orderbook[j][0][1],bid->timestamp);
                 //fprintf(stderr,"ask.(%f %f).t%u ",prices->orderbook[j][1][0],prices->orderbook[j][1][1],ask->timestamp);
-                if ( bid->priceNQT != 0 && bid->timestamp > 0 && create_InstantDEX_quote(&iQ,bid->timestamp,0,bid->quoteid,prices->orderbook[j][0][0],prices->orderbook[j][0][1],refbaseid,bid->baseamount,refrelid,bid->relamount,"nxtae",bid->nxt64bits,gui,baseiQ,reliQ,duration) == 0 )
+                if ( bid->priceNQT != 0 && bid->timestamp > 0 && create_InstantDEX_quote(&iQ,bid->timestamp,0,bid->quoteid,prices->orderbook[j].bid,prices->orderbook[j].bidvol,refbaseid,bid->baseamount,refrelid,bid->relamount,"nxtae",bid->nxt64bits,gui,baseiQ,reliQ,duration) == 0 )
                     add_to_orderbook(op,iter,&numbids,&numasks,&iQ,polarity,oldest,gui);
-                if ( ask->priceNQT != 0 && ask->timestamp > 0 && create_InstantDEX_quote(&iQ,ask->timestamp,1,ask->quoteid,prices->orderbook[j][0][0],prices->orderbook[j][0][1],refbaseid,ask->baseamount,refrelid,ask->relamount,"nxtae",ask->nxt64bits,gui,baseiQ,reliQ,duration) < 0 )
+                if ( ask->priceNQT != 0 && ask->timestamp > 0 && create_InstantDEX_quote(&iQ,ask->timestamp,1,ask->quoteid,prices->orderbook[j].ask,prices->orderbook[j].askvol,refbaseid,ask->baseamount,refrelid,ask->relamount,"nxtae",ask->nxt64bits,gui,baseiQ,reliQ,duration) < 0 )
                     add_to_orderbook(op,iter,&numbids,&numasks,&iQ,-polarity,oldest,gui);
             }
             if ( iter == 0 )
@@ -327,7 +327,7 @@ struct orderbook *create_orderbook(char *base,uint64_t refbaseid,char *rel,uint6
         if ( op != 0 && (op->numbids + op->numasks) == 0 )
             free_orderbook(op), op = 0;
         return(op);
-    }
+    }*/
     /*if ( refbaseid == 0 && base != 0 && base[0] != 0 )
         refbaseid = stringbits(base);
     else set_assetname(&basemult,base,refbaseid);

@@ -130,15 +130,19 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         // autofill and automatch
         // tradehistory and other stats -> peggy integration
         baseid = j64bits(json,"baseid"), relid = j64bits(json,"relid");
-        copy_cJSON(exchangestr,jobj(json,"exchange"));
-        if ( exchangestr[0] == 0 )
-            strcpy(exchangestr,"nxtae");
         copy_cJSON(name,jobj(json,"name"));
         copy_cJSON(base,jobj(json,"base"));
         copy_cJSON(rel,jobj(json,"rel"));
         copy_cJSON(method,jobj(json,"method"));
         orderid = j64bits(json,"orderid");
         allfields = juint(json,"allfields");
+        copy_cJSON(exchangestr,jobj(json,"exchange"));
+        if ( exchangestr[0] == 0 )
+        {
+            if ( baseid != 0 && relid != 0 )
+                strcpy(exchangestr,"nxtae");
+            else strcpy(exchangestr,"basket");
+        }
         assetbits = InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
         // "makeoffer3", "jumptrades""
         if ( strcmp(method,"allorderbooks") == 0 )
