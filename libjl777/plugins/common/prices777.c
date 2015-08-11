@@ -612,7 +612,6 @@ struct orderbook *prices777_json_quotes(double *hblap,struct prices777 *prices,c
     if ( maxdepth != 0 && m > maxdepth )
         m = maxdepth;
     op = (struct orderbook *)calloc(1,sizeof(*op));
-printf("calloc op %ld\n",sizeof(*op));
     strcpy(op->base,prices->base), strcpy(op->rel,prices->rel), strcpy(op->name,prices->contract);
     op->baseid = prices->baseid, op->relid = prices->relid;
     //printf("opbids.%p opasks.%p\n",op->bids,op->asks);
@@ -1503,7 +1502,7 @@ double prices777_bitfinex(struct prices777 *prices,int32_t maxdepth)
 double prices777_btce(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
-        sprintf(prices->url,"https://btc-e.com/api/3/%s%s/depth",prices->lbase,prices->lrel);
+        sprintf(prices->url,"https://btc-e.com/api/3/depth/%s_%s",prices->lbase,prices->lrel);
     return(prices777_standard("btce",prices->url,prices,0,0,maxdepth));
 }
 
