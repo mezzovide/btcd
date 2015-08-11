@@ -68,12 +68,12 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         else s = "";
         if ( relid == 0 && rel[0] != 0 )
             relid = calc_nxt64bits(rel);
-        //else if ( (str= is_MGWasset(relid)) != 0 )
-        //    strcpy(rel,str);
+        else if ( (str= is_MGWasset(relid)) != 0 )
+            strcpy(rel,str);
         if ( baseid == 0 && base[0] != 0 )
             baseid = calc_nxt64bits(base);
-        //else if ( (str= is_MGWasset(baseid)) != 0 )
-        //    strcpy(base,str);
+        else if ( (str= is_MGWasset(baseid)) != 0 )
+            strcpy(base,str);
         if ( base[0] == 0 )
             get_assetname(base,baseid);
         if ( rel[0] == 0 )
