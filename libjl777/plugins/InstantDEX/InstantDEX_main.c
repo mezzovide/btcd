@@ -211,7 +211,7 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
         free_queueitem(jsonstr);
     }
     //printf("InstantDEX_idle\n");
-    //poll_pending_offers(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET);
+    poll_pending_offers(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET);
     return(0);
 }
 
