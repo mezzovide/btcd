@@ -1085,9 +1085,9 @@ struct prices777 *prices777_createbasket(char *name,char *base,char *rel,uint64_
                     prices->groupwts[j] = firstwt = basket[i].wt;
                 else if ( basket[i].wt != firstwt )
                 {
-                    printf("all features of same group.%d must have same wt: %d %f != %f\n",j,i,firstwt,basket[i].wt);
-                    free(prices);
-                    return(0);
+                    printf("warning features of same group.%d different wt: %d %f != %f\n",j,i,firstwt,basket[i].wt);
+                   // free(prices);
+                   // return(0);
                 }
                 prices->basket[prices->basketsize++] = basket[i];
                 m++;
@@ -1130,35 +1130,57 @@ int32_t prices777_groupbidasks(struct prices777 **bidsourcep,struct prices777 **
         if ( (feature= group[i].prices) != 0 && feature->op != 0 )
         {
             //printf("i.%d of %d: %s numbids.%d numasks.%d %p.(%f %f %f %f).%d \n",i,groupsize,feature->contract,feature->op->numbids,feature->op->numasks,&feature->orderbook[group[i].bidi][0][0],feature->orderbook[group[i].bidi][0][0],feature->orderbook[group[i].bidi][0][1],feature->orderbook[group[i].aski][1][0],feature->orderbook[group[i].aski][1][1],group[i].bidi);
-            
-            if ( group[i].bidi < feature->op->numbids && (vol= feature->orderbook[group[i].bidi].bidvol) > minvol && (price= feature->orderbook[group[i].bidi].bid) > SMALLVAL )
+            if ( i > 0 && strcmp(feature->base,group[0].rel) == 0 && strcmp(feature->rel,group[0].base) == 0 )
             {
-                if ( groupwt < -SMALLVAL && (lowask == 0. || price < lowask) )
-                    lowask = price, askvol = vol, lowaski = i;
-                else if ( groupwt > SMALLVAL && (highbid == 0. || price > highbid) )
-                    highbid = price, bidvol = vol, highbidi = i;
+                if ( group[i].bidi < feature->op->numbids && (vol= feature->orderbook[group[i].bidi].bidvol) > minvol && (price= feature->orderbook[group[i].bidi].bid) > SMALLVAL )
+                {
+                    vol *= price, price = (1. / price);
+                    if ( groupwt > SMALLVAL && (lowask == 0. || price < lowask) )
+                        lowask = price, askvol = vol, lowaski = i;
+                    else if ( groupwt < -SMALLVAL && (highbid == 0. || price > highbid) )
+                        highbid = price, bidvol = vol, highbidi = i;
+                }
+                if ( group[i].aski < feature->op->numasks && (vol= feature->orderbook[group[i].aski].askvol) > minvol && (price= feature->orderbook[group[i].aski].ask) > SMALLVAL )
+                {
+                    vol *= price, price = (1. / price);
+                    if ( groupwt > SMALLVAL && (highbid == 0. || price > highbid) )
+                        highbid = price, bidvol = vol, highbidi = i;
+                    else if ( groupwt < -SMALLVAL && (lowask == 0. || price < lowask) )
+                        lowask = price, askvol = vol, lowaski = i;
+                }
             }
-            if ( group[i].aski < feature->op->numasks && (vol= feature->orderbook[group[i].aski].askvol) > minvol && (price= feature->orderbook[group[i].aski].ask) > SMALLVAL )
+            else
             {
-                if ( groupwt < -SMALLVAL && (highbid == 0. || price > highbid) )
-                    highbid = price, bidvol = vol, highbidi = i;
-                else if ( groupwt > SMALLVAL && (lowask == 0. || price < lowask) )
-                    lowask = price, askvol = vol, lowaski = i;
+                if ( group[i].bidi < feature->op->numbids && (vol= feature->orderbook[group[i].bidi].bidvol) > minvol && (price= feature->orderbook[group[i].bidi].bid) > SMALLVAL )
+                {
+                    if ( groupwt < -SMALLVAL && (lowask == 0. || price < lowask) )
+                        lowask = price, askvol = vol, lowaski = i;
+                    else if ( groupwt > SMALLVAL && (highbid == 0. || price > highbid) )
+                        highbid = price, bidvol = vol, highbidi = i;
+                }
+                if ( group[i].aski < feature->op->numasks && (vol= feature->orderbook[group[i].aski].askvol) > minvol && (price= feature->orderbook[group[i].aski].ask) > SMALLVAL )
+                {
+                    if ( groupwt < -SMALLVAL && (highbid == 0. || price > highbid) )
+                        highbid = price, bidvol = vol, highbidi = i;
+                    else if ( groupwt > SMALLVAL && (lowask == 0. || price < lowask) )
+                        lowask = price, askvol = vol, lowaski = i;
+                }
             }
         } //else printf("null feature.%p or no orderbook.%p\n",feature,feature!=0?feature->op:0);
     }
     bidasks[0*2 + 0] = highbid, bidasks[0*2 + 1] = bidvol, bidasks[1*2 + 0] = lowask, bidasks[1*2 + 1] = askvol;
-    //printf("(%d %d) groupsize.%d highbid %f vol %f, lowask %f vol %f\n",group[highbidi].bidi,group[lowaski].aski,groupsize,highbid,bidvol,lowask,askvol);
     if ( highbidi >= 0 )
     {
+        printf("%s.(%d %d) groupsize.%d highbid %.8f vol %f, lowask %.8f vol %f\n",group[highbidi].prices->exchange,group[highbidi].bidi,group[lowaski].aski,groupsize,highbid,bidvol,lowask,askvol);
         group[highbidi].bidi++;
         *bidsourcep = group[highbidi].prices;
-    }
+    } else printf("warning: no highbidi? [%f %f %f %f]\n",highbid,bidvol,lowask,askvol);
     if ( lowaski >= 0 )
     {
+        printf("%s.(%d %d) groupsize.%d highbid %.8f vol %f, lowask %.8f vol %f\n",group[highbidi].prices->exchange,group[highbidi].bidi,group[lowaski].aski,groupsize,highbid,bidvol,lowask,askvol);
         group[lowaski].aski++;
         *asksourcep = group[lowaski].prices;
-    }
+    } else printf("warning: no lowaski? [%f %f %f %f]\n",highbid,bidvol,lowask,askvol);
     if ( bidasks[0*2 + 0] > SMALLVAL && bidasks[1*2 + 0] > SMALLVAL )
         return(0);
     return(-1);
@@ -2569,6 +2591,8 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                             basket[0].prices = firstprices, basket[1].prices = prices;
                             basket[0].wt = 1., basket[1].wt = -1.;
                             basket[0].groupid = 0, basket[1].groupid = 1;
+                            strcpy(basket[0].base,firstprices->base), strcpy(basket[0].rel,firstprices->rel);
+                            strcpy(basket[1].base,prices->base), strcpy(basket[1].rel,prices->rel);
                             prices = prices777_addbundle(&valid,1,0,"basket",refbaseid,refrelid);
                             if ( valid >= 0 )
                             {
@@ -2643,6 +2667,8 @@ struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson)
                 basket[i].prices = prices;
                 basket[i].wt = wt;
                 basket[i].groupid = groupid;
+                strcpy(basket[i].base,base);
+                strcpy(basket[i].rel,rel);
             }
             else
             {
