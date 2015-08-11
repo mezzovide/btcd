@@ -1176,12 +1176,13 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         memset(prices->groupbidasks,0,sizeof(*prices->groupbidasks) * 4 * prices->numgroups);
         bid = ask = 1.;
         bidvol = askvol = 0.;
-            for (j=i=0; j<prices->numgroups; j++,i+=groupsize)
+        for (j=i=0; j<prices->numgroups; j++,i+=groupsize)
         {
             groupsize = prices->basket[i].groupsize;
             if ( prices777_groupbidasks(&bidsource,&asksource,&prices->groupbidasks[j * 4],prices->groupwts[j],minvol,&prices->basket[i],groupsize) != 0 )
                 break;
             b = prices->groupbidasks[j*4 + 0], bv = prices->groupbidasks[j*4 + 1], a = prices->groupbidasks[j*4 + 2], av = prices->groupbidasks[j*4 + 3];
+            printf("[%f %f %f %f]\n",b,bv,a,av);
             if ( a > SMALLVAL && b > SMALLVAL && av > SMALLVAL && bv > SMALLVAL )
             {
                 if ( prices->groupwts[j] < 0 )
@@ -1192,7 +1193,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 else
                 {
                     if ( prices->groupwts[j] < 0 )
-                        bv /= b, bv *= bid;
+                        bv *= b, bv *= bid, printf("new bv %f\n",bv);
                     else bv *= b, bv /= bid;
                     if ( bv < bidvol )
                         bidvol = bv;
@@ -1202,13 +1203,13 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 else
                 {
                     if ( prices->groupwts[j] < 0 )
-                        av /= a, av *= ask;
+                        av *= a, av *= ask;
                     else av *= a, av /= ask;
                     if ( av < askvol )
                         askvol = av;
                 }
-                if ( Debuglevel > 2 )
-                    printf("%s wt %2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f %12.6f ask %.8f %12.6f inv %f %f\n",prices->contract,prices->groupwts[j],j,b,bv,a,av,bid,bidvol,ask,askvol,b*bv,a*av);
+                //if ( Debuglevel > 2 )
+                    printf("%s wt %2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f %12.6f ask %.8f %12.6f inv %f %f\n",prices->contract,prices->groupwts[j],j,b,bv,a,av,bid,bidvol,ask,askvol,bv,av);
             }
             else
             {
@@ -2546,17 +2547,17 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                         if ( strcmp(exchangestr,"nxtae") == 0 && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
                         {
                             struct prices777_basket basket[2]; int32_t valid;
-                            prices777_addbundle(&valid,0,0,"basket",refbaseid,refrelid);
+                            basket[0].prices = firstprices, basket[1].prices = prices;
+                            basket[0].wt = 1., basket[1].wt = -1.;
+                            basket[0].groupid = 0, basket[1].groupid = 1;
+                            prices = prices777_addbundle(&valid,0,0,"basket",refbaseid,refrelid);
                             if ( valid >= 0 )
                             {
-                                basket[0].prices = firstprices, basket[1].prices = prices;
-                                basket[0].wt = 1., basket[1].wt = -1.;
-                                basket[0].groupid = 0, basket[1].groupid = 1;
                                 BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(_name,_base,_rel,refbaseid,refrelid,basket,2);
                                 prices->lastprice = prices777_basket(prices,MAX_DEPTH);
                                 printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                                 printf("total polling.%d added.(%s) (%s/%s) {%s && %s}\n",BUNDLE.num,prices->contract,_base,_rel,firstprices->contract,basket[1].prices->contract);
-                            } else if ( Debuglevel > 2 )
+                            } else //if ( Debuglevel > 2 )
                                 printf("basket.(%s) already there\n",prices->contract);
                             return(prices);
                         }
