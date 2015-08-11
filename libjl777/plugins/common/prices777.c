@@ -723,7 +723,7 @@ struct orderbook *prices777_json_quotes(double *hblap,struct prices777 *prices,c
                 op->bids = (struct InstantDEX_quote *)calloc(op->numbids,sizeof(*op->bids));
             if ( op->numasks > 0 )
                 op->asks = (struct InstantDEX_quote *)calloc(op->numasks,sizeof(*op->asks));*/
-        } else sort_orderbook(op);
+        } //else sort_orderbook(op);
     }
     if ( Debuglevel > 2 )
         printf("(%s/%s) %s %llu %llu numbids.%d numasks.%d (%d %d) %p %p\n",op->base,op->rel,op->name,(long long)op->baseid,(long long)op->relid,op->numbids,op->numasks,numbids,numasks,op->bids,op->asks);
@@ -1469,7 +1469,7 @@ double prices777_standard(char *exchangestr,char *url,struct prices777 *prices,c
     char *jsonstr; cJSON *json; double hbla = 0.;
     if ( (jsonstr= issue_curl(url)) != 0 )
     {
-        //if ( strcmp(exchangestr,"coinbase") == 0 )
+        //if ( strcmp(exchangestr,"okcoin") == 0 )
         //    printf("(%s) -> (%s)\n",url,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
@@ -1517,6 +1517,12 @@ double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://www.okcoin.com/api/v1/depth.do?symbol=%s_%s",prices->lbase,prices->lrel);
+    if ( strcmp(prices->rel,"USD") != 0 )
+    {
+        printf("OKCOIN.(%s) only supports USD\n",prices->url);
+        exit(-1);
+        return(0);
+    }
     return(prices777_standard("okcoin",prices->url,prices,0,0,maxdepth));
 }
 
