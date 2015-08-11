@@ -1188,7 +1188,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                     b = 1./b, a = 1./a;
                 bid *= b, ask *= a;
                 if ( prices->groupwts[j] < 0 )
-                    bv *= bid, av *= ask;
+                    bv /= bid, av /= ask;
                 if ( bidvol == 0. )
                     bidvol = bv;
                 else if ( bv < bidvol )
