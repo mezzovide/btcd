@@ -1187,6 +1187,8 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 if ( prices->groupwts[j] < 0 )
                     b = 1./b, a = 1./a;
                 bid *= b, ask *= a;
+                if ( prices->groupwts[j] < 0 )
+                    bv *= bid, av *= ask;
                 if ( bidvol == 0. )
                     bidvol = bv;
                 else if ( bv < bidvol )
@@ -2477,7 +2479,10 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
     strcpy(exchangestr,_exchangestr), strcpy(base,_base), strcpy(rel,_rel), strcpy(name,_name);
     InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
     if ( (i= prices777_addbundle(0,0,exchangestr,baseid,relid)) > 0 )
+    {
+        printf("found (%s/%s).%s %llu %llu in slot.%d\n",base,rel,exchangestr,(long long)baseid,(long long)relid,i);
         return(BUNDLE.ptrs[i]);
+    }
     for (iter=0; iter<2; iter++)
     {
         n = 0;
