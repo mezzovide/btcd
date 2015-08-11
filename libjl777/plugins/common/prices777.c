@@ -1464,16 +1464,16 @@ double prices777_bter(struct prices777 *prices,int32_t maxdepth)
     return(hbla);
 }
 
-double prices777_standard(char *exchangestr,char *url,struct prices777 *prices,char *price,char *volume,int32_t maxdepth)
+double prices777_standard(char *exchangestr,char *url,struct prices777 *prices,char *price,char *volume,int32_t maxdepth,char *field)
 {
     char *jsonstr; cJSON *json; double hbla = 0.;
     if ( (jsonstr= issue_curl(url)) != 0 )
     {
-        //if ( strcmp(exchangestr,"okcoin") == 0 )
+        //if ( strcmp(exchangestr,"btce") == 0 )
         //    printf("(%s) -> (%s)\n",url,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            hbla = prices777_json_orderbook(exchangestr,prices,maxdepth,json,0,"bids","asks",price,volume);
+            hbla = prices777_json_orderbook(exchangestr,prices,maxdepth,json,field,"bids","asks",price,volume);
             free_json(json);
         }
         free(jsonstr);
@@ -1489,28 +1489,30 @@ double prices777_poloniex(struct prices777 *prices,int32_t maxdepth)
         sprintf(market,"%s_%s",prices->rel,prices->base);
         sprintf(prices->url,"https://poloniex.com/public?command=returnOrderBook&currencyPair=%s&depth=%d",market,maxdepth);
     }
-    return(prices777_standard("poloniex",prices->url,prices,0,0,maxdepth));
+    return(prices777_standard("poloniex",prices->url,prices,0,0,maxdepth,0));
 }
 
 double prices777_bitfinex(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://api.bitfinex.com/v1/book/%s%s",prices->base,prices->rel);
-    return(prices777_standard("bitfinex",prices->url,prices,"price","amount",maxdepth));
+    return(prices777_standard("bitfinex",prices->url,prices,"price","amount",maxdepth,0));
 }
 
 double prices777_btce(struct prices777 *prices,int32_t maxdepth)
 {
+    char field[64];
+    sprintf(field,"%s_%s",prices->lbase,prices->lrel);
     if ( prices->url[0] == 0 )
-        sprintf(prices->url,"https://btc-e.com/api/3/depth/%s_%s",prices->lbase,prices->lrel);
-    return(prices777_standard("btce",prices->url,prices,0,0,maxdepth));
+        sprintf(prices->url,"https://btc-e.com/api/3/depth/%s",field);
+    return(prices777_standard("btce",prices->url,prices,0,0,maxdepth,field));
 }
 
 double prices777_bitstamp(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://www.bitstamp.net/api/order_book/");
-    return(prices777_standard("bitstamp",prices->url,prices,0,0,maxdepth));
+    return(prices777_standard("bitstamp",prices->url,prices,0,0,maxdepth,0));
 }
 
 double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
@@ -1524,28 +1526,28 @@ double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
         exit(-1);
         return(0);
     }
-    return(prices777_standard("okcoin",prices->url,prices,0,0,maxdepth));
+    return(prices777_standard("okcoin",prices->url,prices,0,0,maxdepth,0));
 }
 
 double prices777_huobi(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"http://api.huobi.com/staticmarket/depth_%s_json.js ",prices->lbase);
-    return(prices777_standard("huobi",prices->url,prices,0,0,maxdepth));
+    return(prices777_standard("huobi",prices->url,prices,0,0,maxdepth,0));
 }
 
 double prices777_bityes(struct prices777 *prices,int32_t maxdepth)
 {
     //if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://market.bityes.com/%s_%s/depth.js?time=%ld",prices->lrel,prices->lbase,time(NULL));
-    return(prices777_standard("bityes",prices->url,prices,0,0,maxdepth));
+    return(prices777_standard("bityes",prices->url,prices,0,0,maxdepth,0));
 }
 
 double prices777_coinbase(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://api.exchange.coinbase.com/products/%s-%s/book?level=2",prices->base,prices->rel);
-    return(prices777_standard("coinbase",prices->url,prices,0,0,maxdepth));
+    return(prices777_standard("coinbase",prices->url,prices,0,0,maxdepth,0));
 }
 
 double prices777_lakebtc(struct prices777 *prices,int32_t maxdepth)
@@ -1558,14 +1560,14 @@ double prices777_lakebtc(struct prices777 *prices,int32_t maxdepth)
             sprintf(prices->url,"https://www.LakeBTC.com/api_v1/bcorderbook_cny");
         else printf("illegal lakebtc pair.(%s/%s)\n",prices->base,prices->rel);
     }
-    return(prices777_standard("lakebtc",prices->url,prices,0,0,maxdepth));
+    return(prices777_standard("lakebtc",prices->url,prices,0,0,maxdepth,0));
 }
 
 double prices777_exmo(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://api.exmo.com/api_v2/orders_book?pair=%s_%s",prices->base,prices->rel);
-    return(prices777_standard("exmo",prices->url,prices,0,0,maxdepth));
+    return(prices777_standard("exmo",prices->url,prices,0,0,maxdepth,0));
 }
 
 double prices777_btc38(struct prices777 *prices,int32_t maxdepth)
@@ -1573,7 +1575,7 @@ double prices777_btc38(struct prices777 *prices,int32_t maxdepth)
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"http://api.btc38.com/v1/depth.php?c=%s&mk_type=%s",prices->lbase,prices->lrel);
     printf("btc38.(%s)\n",prices->url);
-    return(prices777_standard("btc38",prices->url,prices,0,0,maxdepth));
+    return(prices777_standard("btc38",prices->url,prices,0,0,maxdepth,0));
 }
 
 /*void prices777_kraken(struct prices777 *prices,int32_t maxdepth)
