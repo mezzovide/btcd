@@ -2363,6 +2363,7 @@ void prices777_update_NXT(uint32_t newblocknum)
     cJSON *InstantDEX_lottostats();
     extern cJSON *Lottostats_json;
     static cJSON *oldjson;
+    //printf("prices777_update_NXT\n");
     if ( newblocknum > prices777_NXTBLOCK )
     {
         if ( oldjson != 0 )
@@ -2439,7 +2440,7 @@ int32_t prices777_addbundle(int32_t loadprices,struct prices777 *prices,char *ex
     for (j=0; j<BUNDLE.num; j++)
     {
         if ( (ptr= BUNDLE.ptrs[j]) != 0 && ((ptr->baseid == baseid && ptr->relid == relid) || (ptr->relid == baseid && ptr->baseid == relid)) && strcmp(ptr->exchange,exchangestr) == 0 )
-            break;
+            return(j);
     }
     if ( j == BUNDLE.num )
     {
@@ -2469,10 +2470,14 @@ int32_t prices777_addbundle(int32_t loadprices,struct prices777 *prices,char *ex
 
 struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint64_t refbaseid,char *_rel,uint64_t refrelid)
 {
-    char exchangestr[64],base[64],rel[64],name[64]; uint64_t assetids[8192],baseid,relid; int32_t iter,i,n,exchangeid,basenum;
+    char exchangestr[64],base[64],rel[64],name[64],key[1024]; uint64_t assetids[8192],baseid,relid; int32_t keysize,iter,i,n,exchangeid,basenum;
     struct exchange_info *exchange;
     struct prices777 *prices,*firstprices = 0;
+    baseid = refbaseid, relid = refrelid;
     strcpy(exchangestr,_exchangestr), strcpy(base,_base), strcpy(rel,_rel), strcpy(name,_name);
+    InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
+    if ( (i= prices777_addbundle(0,0,exchangestr,baseid,relid)) > 0 )
+        return(BUNDLE.ptrs[i]);
     for (iter=0; iter<2; iter++)
     {
         n = 0;
