@@ -2450,8 +2450,8 @@ void prices777_exchangeloop(void *ptr)
             if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->basketsize == 0 && prices->exchangeid == exchange->exchangeid )
             {
                 if ( isnxtae == 0 )
-                    pollflag = milliseconds() > exchange->lastupdate + exchange->pollgap && milliseconds() > prices->lastupdate + 60000;
-                else if ( strcmp(exchange->name,"unconf") == 0 || prices->pollnxtblock < prices777_NXTBLOCK || milliseconds() > prices->lastupdate + 60000 )
+                    pollflag = milliseconds() > (exchange->lastupdate + exchange->pollgap) && milliseconds() > (prices->lastupdate + 1000*SUPERNET.idlegap);
+                else if ( strcmp(exchange->name,"unconf") == 0 || prices->pollnxtblock < prices777_NXTBLOCK || milliseconds() > prices->lastupdate + 1000*SUPERNET.idlegap )
                     pollflag = 1;
                 else continue;
                 if ( pollflag != 0 )
@@ -3462,7 +3462,7 @@ int32_t prices_idle(struct plugin_info *plugin)
         }
     }
     static double lastupdate,lastdayupdate;
-    if ( SUPERNET.peggy != 0 && milliseconds() > lastupdate + 60000 )
+    if ( SUPERNET.peggy != 0 && milliseconds() > lastupdate + (1000*SUPERNET.idlegap) )
     {
         lastupdate = milliseconds();
         if ( milliseconds() > lastdayupdate + 60000*60 )

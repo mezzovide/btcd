@@ -465,6 +465,7 @@ void SuperNET_initconf(cJSON *json)
 #endif
     SUPERNET.telepathicdelay = get_API_int(cJSON_GetObjectItem(json,"telepathicdelay"),1000);
     SUPERNET.peggy = get_API_int(cJSON_GetObjectItem(json,"peggy"),0);
+    SUPERNET.idlegap = get_API_int(cJSON_GetObjectItem(json,"idlegap"),60);
     SUPERNET.gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
     SUPERNET.numgateways = get_API_int(cJSON_GetObjectItem(json,"numgateways"),3);
     SUPERNET.UPNP = get_API_int(cJSON_GetObjectItem(json,"UPNP"),SUPERNET.UPNP);
