@@ -67,7 +67,6 @@
 #define MAX_SPLINES 64
 #define MAX_LOOKAHEAD 48
 
-#define DEFAULT_POLLGAP 1000
 #define MAX_EXCHANGES 64
 #define MAX_CURRENCIES 32
 #define PRICE_DECAY 0.9
@@ -2450,7 +2449,7 @@ void prices777_exchangeloop(void *ptr)
             if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->basketsize == 0 && prices->exchangeid == exchange->exchangeid )
             {
                 if ( isnxtae == 0 )
-                    pollflag = milliseconds() > (exchange->lastupdate + exchange->pollgap) && milliseconds() > (prices->lastupdate + 1000*SUPERNET.idlegap);
+                    pollflag = milliseconds() > (exchange->lastupdate + exchange->pollgap*1000) && milliseconds() > (prices->lastupdate + 1000*SUPERNET.idlegap);
                 else if ( strcmp(exchange->name,"unconf") == 0 || prices->pollnxtblock < prices777_NXTBLOCK || milliseconds() > prices->lastupdate + 1000*SUPERNET.idlegap )
                     pollflag = 1;
                 else continue;
@@ -2749,7 +2748,7 @@ int32_t prices777_init(char *jsonstr)
             else contract = 0;
             if ( (exchangeptr= find_exchange(0,exchange)) != 0 )
             {
-                exchangeptr->pollgap = get_API_int(cJSON_GetObjectItem(json,"pollgap"),DEFAULT_POLLGAP);
+                exchangeptr->pollgap = get_API_int(cJSON_GetObjectItem(json,"pollgap"),SUPERNET.exchangeidle);
                 extract_cJSON_str(exchangeptr->apikey,sizeof(exchangeptr->apikey),json,"key");
                 extract_cJSON_str(exchangeptr->userid,sizeof(exchangeptr->userid),json,"userid");
                 extract_cJSON_str(exchangeptr->apisecret,sizeof(exchangeptr->apisecret),json,"secret");
