@@ -1181,7 +1181,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             groupsize = prices->basket[i].groupsize;
             if ( prices777_groupbidasks(&bidsource,&asksource,&prices->groupbidasks[j * 4],prices->groupwts[j],minvol,&prices->basket[i],groupsize) != 0 )
                 break;
-            b = prices->groupbidasks[0], bv = prices->groupbidasks[1], a = prices->groupbidasks[2], av = prices->groupbidasks[3];
+            b = prices->groupbidasks[j*4 + 0], bv = prices->groupbidasks[j*4 + 1], a = prices->groupbidasks[j*4 + 2], av = prices->groupbidasks[j*4 + 3];
             if ( a > SMALLVAL && b > SMALLVAL && av > SMALLVAL && bv > SMALLVAL )
             {
                 if ( prices->groupwts[j] < 0 )
