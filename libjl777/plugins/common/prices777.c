@@ -1182,18 +1182,18 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             if ( prices777_groupbidasks(&bidsource,&asksource,&prices->groupbidasks[j * 4],prices->groupwts[j],minvol,&prices->basket[i],groupsize) != 0 )
                 break;
             b = prices->groupbidasks[j*4 + 0], bv = prices->groupbidasks[j*4 + 1], a = prices->groupbidasks[j*4 + 2], av = prices->groupbidasks[j*4 + 3];
-            printf("[%f %f %f %f]\n",b,bv,a,av);
+            // printf("[%f %f %f %f]\n",b,bv,a,av);
             if ( a > SMALLVAL && b > SMALLVAL && av > SMALLVAL && bv > SMALLVAL )
             {
                 if ( prices->groupwts[j] < 0 )
-                   bid /= b, ask /= a;
+                   bv *= (b / bid), av *= (a / ask), bid /= b, ask /= a;
                 else bid *= b, ask *= a;
                 if ( bidvol == 0. )
                     bidvol = bv;
                 else
                 {
                     if ( prices->groupwts[j] < 0 )
-                        bv *= b, bv *= bid, printf("new bv %f\n",bv);
+                        bv *= b;
                     else bv *= b, bv /= bid;
                     if ( bv < bidvol )
                         bidvol = bv;
@@ -1203,12 +1203,12 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 else
                 {
                     if ( prices->groupwts[j] < 0 )
-                        av *= a, av *= ask;
+                        av *= a;
                     else av *= a, av /= ask;
                     if ( av < askvol )
                         askvol = av;
                 }
-                //if ( Debuglevel > 2 )
+                if ( Debuglevel > 2 )
                     printf("%s wt %2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f %12.6f ask %.8f %12.6f inv %f %f\n",prices->contract,prices->groupwts[j],j,b,bv,a,av,bid,bidvol,ask,askvol,bv,av);
             }
             else
