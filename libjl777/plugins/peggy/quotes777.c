@@ -446,7 +446,7 @@ int32_t peggy_prices(struct price_resolution prices[64],double btcusd,double btc
                 }
             }
             prices[contractnum].Pval = (uint64_t)((PRICE_RESOLUTION * dprice) * ((double)peggy_mils(contractnum) / 10000.));
-            if ( Debuglevel > 2 )
+            //if ( Debuglevel > 2 )
             {
                 struct price_resolution tmp;
                 tmp = peggy_scaleprice(prices[contractnum],peggy_mils(contractnum));
@@ -842,6 +842,7 @@ struct peggy_info *peggy_lchain(struct txinds777_info *opreturns,char *path)
 {
     double startmilli; int32_t i; struct peggy_info *tmp,*PEGS = 0;
     startmilli = milliseconds();
+   // printf("about to replay\n"), getchar();
     for (i=0; i<1000000; i++)
     {
         if ( PEGS == 0 )
@@ -849,7 +850,7 @@ struct peggy_info *peggy_lchain(struct txinds777_info *opreturns,char *path)
         else if ( (tmp= peggy_replay(path,opreturns,PEGS,i,0,0,0)) != PEGS )
             break;
     }
-    printf("loaded %d in %.3f millis per opreturn\n",PEGS->numopreturns,(milliseconds() - startmilli)/PEGS->numopreturns);
+    printf("loaded %d in %.3f millis per opreturn\n",PEGS->numopreturns,(milliseconds() - startmilli)/PEGS->numopreturns);// getchar();
     return(PEGS);
 }
 
