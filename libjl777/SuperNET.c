@@ -362,7 +362,7 @@ void SuperNET_apiloop(void *ipaddr)
                     }
                     if ( retstr == 0 && (retstr= process_nn_message(sock,jsonstr)) != 0 )
                         free(retstr);
-                }
+                } else msleep(10);
             }
         }
         nn_shutdown(sock,0);
@@ -466,6 +466,7 @@ void SuperNET_initconf(cJSON *json)
     SUPERNET.telepathicdelay = get_API_int(cJSON_GetObjectItem(json,"telepathicdelay"),1000);
     SUPERNET.peggy = get_API_int(cJSON_GetObjectItem(json,"peggy"),0);
     SUPERNET.idlegap = get_API_int(cJSON_GetObjectItem(json,"idlegap"),60);
+    SUPERNET.recvtimeout = get_API_int(cJSON_GetObjectItem(json,"recvtimeout"),3);
     SUPERNET.exchangeidle = get_API_int(cJSON_GetObjectItem(json,"exchangeidle"),3);
     SUPERNET.gatewayid = get_API_int(cJSON_GetObjectItem(json,"gatewayid"),-1);
     SUPERNET.numgateways = get_API_int(cJSON_GetObjectItem(json,"numgateways"),3);
@@ -569,7 +570,7 @@ int SuperNET_start(char *fname,char *myip)
             SuperNET_initconf(json), free_json(json);
     }
     strcpy(SUPERNET.myipaddr,ipaddr);
-    init_SUPERNET_pullsock(10,1);
+    init_SUPERNET_pullsock(10,SUPERNET.recvtimeout);
     printf("SuperNET_start myip.(%s) -> ipaddr.(%s)\n",myip!=0?myip:"",ipaddr);
     language_func("SuperNET","",0,0,1,"SuperNET",jsonstr,call_system);
     if ( jsonstr != 0 )
