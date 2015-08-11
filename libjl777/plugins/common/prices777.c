@@ -1174,7 +1174,7 @@ int32_t prices777_groupbidasks(struct prices777 **bidsourcep,struct prices777 **
         //printf("%s.(%d %d) groupsize.%d highbid %.8f vol %f\n",group[highbidi].prices->exchange,group[highbidi].bidi,group[highbidi].aski,groupsize,highbid,bidvol);
         group[highbidi].bidi++;
         *bidsourcep = group[highbidi].prices;
-    } else printf("warning: no highbidi? [%f %f %f %f]\n",highbid,bidvol,lowask,askvol);
+    } //else printf("warning: no highbidi? [%f %f %f %f]\n",highbid,bidvol,lowask,askvol);
     if ( lowaski >= 0 )
     {
         //printf("%s.(%d %d) groupsize.%d lowask %.8f vol %f\n",group[lowaski].prices->exchange,group[lowaski].bidi,group[lowaski].aski,groupsize,lowask,askvol);
