@@ -917,7 +917,7 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct order
     cJSON *gen_orderbook_item(struct InstantDEX_quote *iQ,int32_t allflag,uint64_t baseid,uint64_t relid,uint64_t jumpasset);
     cJSON *json,*bids,*asks,*item,*highbid=0,*lowask=0;
     char baserel[64],assetA[64],assetB[64],NXTaddr[64],exchangestr[1024];
-    int32_t i;
+    int32_t i,n;
     if ( op == 0 )
         return(clonestr("{\"error\":\"empty orderbook\"}"));
     if ( invert == 0 )
@@ -930,26 +930,44 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct order
     asks = cJSON_CreateArray();
     if ( op->numbids != 0 || op->numasks != 0 )
     {
-        for (i=0; i<op->numbids && i<maxdepth; i++)
+        n = (invert == 0) ? op->numbids : op->numasks;
+        for (i=0; i<n && i<maxdepth; i++)
         {
             item = cJSON_CreateObject();
-            cJSON_AddItemToObject(item,"price",cJSON_CreateNumber(op->bidasks[i][0]));
-            cJSON_AddItemToObject(item,"volume",cJSON_CreateNumber(op->bidasks[i][1]));
+            if ( invert != 0 )
+            {
+                cJSON_AddItemToObject(item,"price",cJSON_CreateNumber(1. / op->bidasks[i][2 + 0]));
+                cJSON_AddItemToObject(item,"volume",cJSON_CreateNumber(op->bidasks[i][2 + 0] * op->bidasks[i][2 + 1]));
+            }
+            else
+            {
+                cJSON_AddItemToObject(item,"price",cJSON_CreateNumber(op->bidasks[i][0]));
+                cJSON_AddItemToObject(item,"volume",cJSON_CreateNumber(op->bidasks[i][1]));
+            }
             if ( allflag != 0 )
             {
-                prices777_sourcestr(exchangestr,op->bidsources[i]);
+                prices777_sourcestr(exchangestr,(invert == 0) ? op->bidsources[i] : op->asksources[i]);
                 cJSON_AddItemToObject(item,"exchange",cJSON_CreateString(exchangestr));
             }
             prices777_additem(&highbid,&lowask,bids,asks,i,item,invert);
         }
-        for (i=0; i<op->numasks && i<maxdepth; i++)
+        n = (invert != 0) ? op->numbids : op->numasks;
+        for (i=0; i<n && i<maxdepth; i++)
         {
             item = cJSON_CreateObject();
-            cJSON_AddItemToObject(item,"price",cJSON_CreateNumber(op->bidasks[i][2]));
-            cJSON_AddItemToObject(item,"volume",cJSON_CreateNumber(op->bidasks[i][3]));
+            if ( invert == 0 )
+            {
+                cJSON_AddItemToObject(item,"price",cJSON_CreateNumber(op->bidasks[i][2 + 0]));
+                cJSON_AddItemToObject(item,"volume",cJSON_CreateNumber(op->bidasks[i][2 + 1]));
+            }
+            else
+            {
+                cJSON_AddItemToObject(item,"price",cJSON_CreateNumber(1. / op->bidasks[i][0]));
+                cJSON_AddItemToObject(item,"volume",cJSON_CreateNumber(op->bidasks[i][0] * op->bidasks[i][1]));
+            }
             if ( allflag != 0 )
             {
-                prices777_sourcestr(exchangestr,op->asksources[i]);
+                prices777_sourcestr(exchangestr,(invert != 0) ? op->bidsources[i] : op->asksources[i]);
                 cJSON_AddItemToObject(item,"exchange",cJSON_CreateString(exchangestr));
             }
             prices777_additem(&highbid,&lowask,bids,asks,i,item,!invert);
@@ -1001,7 +1019,7 @@ void prices777_jsonstrs(struct prices777 *prices,struct orderbook *op)
     for (allflag=0; allflag<4; allflag++)
     {
         strs[allflag] = prices777_orderbook_jsonstr(allflag/2,SUPERNET.my64bits,op,MAX_DEPTH,allflag%2);
-        printf("strs[%d].(%s)\n",allflag,strs[allflag]);
+        //printf("strs[%d].(%s)\n",allflag,strs[allflag]);
     }
     portable_mutex_lock(&prices->mutex);
     if ( prices->op != 0 )
