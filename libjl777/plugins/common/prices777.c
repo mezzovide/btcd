@@ -1185,19 +1185,32 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             if ( a > SMALLVAL && b > SMALLVAL && av > SMALLVAL && bv > SMALLVAL )
             {
                 if ( prices->groupwts[j] < 0 )
-                    b = 1./b, a = 1./a;
-                bid *= b, ask *= a;
-                if ( prices->groupwts[j] < 0 )
-                    bv /= bid, av /= ask;
+                   bid /= b, ask /= a;
+                else bid *= b, ask *= a;
                 if ( bidvol == 0. )
                     bidvol = bv;
-                else if ( bv < bidvol )
-                    bidvol = bv;
+                else
+                {
+                    if ( prices->groupwts[j] < 0 )
+                        bv /= b;
+                    else bv *= b;
+                    bv /= bid;
+                    if ( bv < bidvol )
+                        bidvol = bv;
+                }
                 if ( askvol == 0. )
                     askvol = av;
-                else if ( av < askvol )
-                    askvol = av;
-                printf("%s wt %2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f %12.6f ask %.8f %12.6f inv %f %f\n",prices->contract,prices->groupwts[j],j,b,bv,a,av,bid,bidvol,ask,askvol,b*bv,a*av);
+                else
+                {
+                    if ( prices->groupwts[j] < 0 )
+                        av /= a;
+                    else av *= a;
+                    av /= ask;
+                    if ( av < askvol )
+                        askvol = av;
+                }
+              //  if ( Debuglevel > 2 )
+                    printf("%s wt %2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f %12.6f ask %.8f %12.6f inv %f %f\n",prices->contract,prices->groupwts[j],j,b,bv,a,av,bid,bidvol,ask,askvol,b*bv,a*av);
             }
             else
             {
