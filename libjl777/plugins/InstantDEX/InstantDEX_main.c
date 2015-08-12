@@ -149,7 +149,11 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
             get_assetname(base,baseid);
         if ( rel[0] == 0 )
             get_assetname(rel,relid);
-        sprintf(name,"%s%s/%s",s,base,rel);
+        if ( relid == NXT_ASSETID )
+            sprintf(name,"%s",base);
+        else if ( baseid == NXT_ASSETID )
+            sprintf(name,"%s%s",s,rel);
+        else sprintf(name,"%s/%s",base,rel);
     }
     else
     {
