@@ -152,6 +152,7 @@ cJSON *prices777_item(struct prices777 *prices,int32_t bidask,double price,doubl
 {
     cJSON *item;
      item = cJSON_CreateObject();
+    jaddstr(item,"half",bidask == 0 ? "bid":"ask");
     jaddnum(item,"price",price);
     jaddnum(item,"volume",volume);
     if ( wt < 0 )
