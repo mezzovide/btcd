@@ -627,8 +627,8 @@ double peggy_status(char **jsonstrp,struct peggy_info *PEGS,double *rates,uint32
         if ( opporate != 0 )
             n++;
         aprsum += (rate + opporate);
-        price = PEG->price; //peggy_lastprice(PEGS,PEG,1,PEG->genesistime,timestamp);
-        shortprice = peggy_shortprice(PEG,PEG->price); //peggy_lastprice(PEGS,PEG,-1,PEG->genesistime,timestamp);
+        price = peggy_price(PEG,(timestamp - PEG->genesistime) /  PEGGY_MINUTE);
+        shortprice = peggy_shortprice(PEG,PEG->price);
         liability.Pval = (PEG->pool.liability.num * price.Pval);
         liabilities.Pval += liability.Pval;
         covercost = peggy_covercost(&num,&pos,&neg,PEGS,PEG,price,shortprice);
@@ -640,10 +640,13 @@ double peggy_status(char **jsonstrp,struct peggy_info *PEGS,double *rates,uint32
         jaddnum(item,"pendinginterests",dstr(pos));
         jaddnum(item,"pendinginterest_fees",dstr(neg));
         
+        price = peggy_scaleprice(price,PEG->peggymils);
         jaddnum(item,"price",Pval(&price));
-        jaddnum(item,"dayprice",Pval(&PEG->dayprice));
+        price = peggy_scaleprice(PEG->dayprice,PEG->peggymils);
+        jaddnum(item,"dayprice",Pval(&price));
         jaddnum(item,"longunits",PEG->pool.liability.num);
-        jaddnum(item,"liability",Pval(&liability));
+        price = peggy_scaleprice(liability,PEG->peggymils);
+        jaddnum(item,"liability",Pval(&price));
         
         jaddnum(item,"antiprice",Pval(&shortprice));
         jaddnum(item,"shortunits",PEG->pool.liability.numoppo);

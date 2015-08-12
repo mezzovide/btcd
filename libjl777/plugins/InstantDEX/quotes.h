@@ -485,31 +485,6 @@ char *check_ordermatch(char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote
 
 int32_t match_unconfirmed(void **obooks,int32_t numbooks,char *account,uint64_t quoteid)
 {
-    /* int32_t j,k;
-     struct rambook_info *rb;
-     struct InstantDEX_quote *iQ;
-     if ( strcmp(account,INSTANTDEX_ACCT) == 0 && quoteid != 0 )
-     {
-     for (j=0; j<numbooks; j++)
-     {
-     rb = obooks[j];
-     if ( strcmp(INSTANTDEX_NAME,rb->exchange) == 0 )
-     {
-     for (k=0; k<rb->numquotes; k++)
-     {
-     if ( (iQ= rb->quotes[k]) && calc_quoteid(iQ) == quoteid )
-     {
-     if ( iQ->matched == 0 )
-     {
-     iQ->matched = 1;
-     printf("MARK MATCHED TRADE FROM UNCONFIRMED\n");
-     return(1);
-     } else return(0);
-     }
-     }
-     }
-     }
-     }*/
     return(-1);
 }
 
@@ -525,95 +500,9 @@ void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx
     }
 }
 
-int32_t update_iQ_flags(struct NXT_tx *txptrs[],int32_t maxtx,uint64_t refassetid)
-{
-    //struct rambook_info **get_allrambooks(int32_t *numbooksp);
-    uint64_t quoteid,assetid,amount,qty,priceNQT; cJSON *json,*array,*txobj,*attachment,*msgobj,*commentobj;
-    char cmd[1024],txidstr[MAX_JSON_FIELD],account[MAX_JSON_FIELD],comment[MAX_JSON_FIELD],*jsonstr; int32_t i,n,numbooks=0,type,subtype,m = 0;
-    //struct rambook_info **obooks;
-    void **obooks = 0;
-    txptrs[0] = 0;
-    //if ( (obooks= get_allrambooks(&numbooks)) == 0 )
-    //    return(0);
-    sprintf(cmd,"requestType=getUnconfirmedTransactions");
-    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
-    {
-        //printf("getUnconfirmedTransactions.(%llu %llu) (%s)\n",(long long)baseid,(long long)relid,jsonstr);
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
-        {
-            if ( (array= cJSON_GetObjectItem(json,"unconfirmedTransactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
-            {
-                for (i=0; i<n; i++)
-                {
-                    txobj = cJSON_GetArrayItem(array,i);
-                    copy_cJSON(txidstr,cJSON_GetObjectItem(txobj,"transaction"));
-                    copy_cJSON(account,cJSON_GetObjectItem(txobj,"account"));
-                    if ( account[0] == 0 )
-                        copy_cJSON(account,cJSON_GetObjectItem(txobj,"sender"));
-                    qty = amount = assetid = quoteid = 0;
-                    amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
-                    type = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"type"),-1);
-                    subtype = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"subtype"),-1);
-                    if ( (attachment= cJSON_GetObjectItem(txobj,"attachment")) != 0 )
-                    {
-                        assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
-                        comment[0] = 0;
-                        if ( (msgobj= cJSON_GetObjectItem(attachment,"message")) != 0 )
-                        {
-                            qty = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"quantityQNT"));
-                            priceNQT = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"priceNQT"));
-                            copy_cJSON(comment,msgobj);
-                            if ( comment[0] != 0 )
-                            {
-                                unstringify(comment);
-                                if ( (commentobj= cJSON_Parse(comment)) != 0 )
-                                {
-                                    quoteid = get_API_nxt64bits(cJSON_GetObjectItem(commentobj,"quoteid"));
-                                    if ( Debuglevel > 2 )
-                                        printf("acct.(%s) pending quoteid.%llu asset.%llu qty.%llu %.8f amount %.8f %d:%d tx.%s\n",account,(long long)quoteid,(long long)assetid,(long long)qty,dstr(priceNQT),dstr(amount),type,subtype,txidstr);
-                                    if ( quoteid != 0 )
-                                        match_unconfirmed(obooks,numbooks,account,quoteid);
-                                    free_json(commentobj);
-                                }
-                            }
-                        }
-                        if ( txptrs != 0 && m < maxtx && (refassetid == 0 || refassetid == assetid) )
-                        {
-                            txptrs[m] = set_NXT_tx(txobj);
-                            txptrs[m]->timestamp = calc_expiration(txptrs[m]);
-                            txptrs[m]->quoteid = quoteid;
-                            strcpy(txptrs[m]->comment,comment);
-                            m++;
-                            //printf("m.%d: assetid.%llu type.%d subtype.%d price.%llu qty.%llu time.%u vs %ld deadline.%d\n",m,(long long)txptrs[m-1]->assetidbits,txptrs[m-1]->type,txptrs[m-1]->subtype,(long long)txptrs[m-1]->priceNQT,(long long)txptrs[m-1]->U.quantityQNT,txptrs[m-1]->timestamp,time(NULL),txptrs[m-1]->deadline);
-                        }
-                    }
-                }
-            } free_json(json);
-        } free(jsonstr);
-    } free(obooks);
-    txptrs[m] = 0;
-    return(m);
-}
-
-uint32_t prices777_NXTBLOCK;
-void prices777_update_NXT(uint32_t newblocknum)
-{
-    cJSON *InstantDEX_lottostats();
-    extern cJSON *Lottostats_json;
-    static cJSON *oldjson;
-    if ( newblocknum > prices777_NXTBLOCK )
-    {
-        if ( oldjson != 0 )
-            free_json(oldjson);
-        oldjson = Lottostats_json;
-        Lottostats_json = InstantDEX_lottostats();
-        prices777_NXTBLOCK = newblocknum;
-    }
-}
-
 void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
 {
-    static uint32_t prevNXTblock; static double lastmilli;
+    /*static uint32_t prevNXTblock; static double lastmilli;
     struct InstantDEX_quote *iQ; cJSON *json,*array,*item; struct NXT_tx *txptrs[MAX_TXPTRS]; void *ptrs[2];
     int32_t i,n,numtx,NXTblock; uint64_t quoteid,baseid,relid; char *jsonstr;
     ptrs[0] = NXTACCTSECRET, ptrs[1] = txptrs;
@@ -635,9 +524,6 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
                         baseid = get_API_nxt64bits(cJSON_GetObjectItem(item,"baseid"));
                         relid = get_API_nxt64bits(cJSON_GetObjectItem(item,"relid"));
                         iQ = (struct InstantDEX_quote *)get_API_nxt64bits(cJSON_GetObjectItem(item,"iQ"));
-                        /*if ( iQ->closed != 0 || iQ->baseid != baseid || iQ->relid != relid || calc_quoteid(iQ) != quoteid )
-                         printf("error: isclosed.%d %llu/%llu != %llu/%llu: iQ.%p quoteid.%llu vs %llu\n",iQ->closed,(long long)iQ->baseid,(long long)iQ->relid,(long long)baseid,(long long)relid,iQ,(long long)calc_quoteid(iQ),(long long)quoteid);
-                         else*/
                         if ( iQ->closed == 0 && iQ->baseid == baseid && iQ->relid == relid && calc_quoteid(iQ) == quoteid )
                             update_openorder(iQ,quoteid,txptrs,numtx,NXTblock == prevNXTblock);
                     }
@@ -647,15 +533,35 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
         }
         process_pingpong_queue(&Pending_offersQ,ptrs);
         free_txptrs(txptrs,numtx);
-    }
-    if ( NXTblock != prevNXTblock )
-    {
-        void prices777_update_NXT(uint32_t);
-        prices777_update_NXT(NXTblock);
-        prevNXTblock = NXTblock, printf("New NXTblock.%d\n",NXTblock);
-    }
-    lastmilli = milliseconds();
+    }*/
 }
+
+/*
+memset(txptrs,0,sizeof(txptrs));
+if ( (numtx= update_iQ_flags(txptrs,(sizeof(txptrs)/sizeof(*txptrs))-1,0)) > 0 && (jsonstr= InstantDEX_openorders(NXTaddr)) != 0 )
+{
+    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+    {
+        if ( (array= cJSON_GetObjectItem(json,"openorders")) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+        {
+            for (i=0; i<n; i++)
+            {
+                item = cJSON_GetArrayItem(array,i);
+                if ( (quoteid= get_API_nxt64bits(cJSON_GetObjectItem(item,"quoteid"))) != 0 )
+                {
+                    baseid = get_API_nxt64bits(cJSON_GetObjectItem(item,"baseid"));
+                    relid = get_API_nxt64bits(cJSON_GetObjectItem(item,"relid"));
+                    iQ = (struct InstantDEX_quote *)get_API_nxt64bits(cJSON_GetObjectItem(item,"iQ"));
+                    if ( iQ->closed == 0 && iQ->baseid == baseid && iQ->relid == relid && calc_quoteid(iQ) == quoteid )
+                        update_openorder(iQ,quoteid,txptrs,numtx,NXTblock == prevNXTblock);
+                        }
+            }
+        }
+        free_json(json);
+    }
+    process_pingpong_queue(&Pending_offersQ,ptrs);
+    free_txptrs(txptrs,numtx);
+}*/
 
 char *placequote_str(struct InstantDEX_quote *iQ)
 {

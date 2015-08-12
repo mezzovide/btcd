@@ -182,7 +182,8 @@ struct InstantDEX_quote
 //struct prices777_nxtquote { uint64_t baseid,relid,nxt64bits,quoteid,qty,priceNQT,baseamount,relamount; uint32_t timestamp; };
 //struct prices777_nxtbooks { struct prices777_nxtquote orderbook[MAX_DEPTH][2],prevorderbook[MAX_DEPTH][2],prev2orderbook[MAX_DEPTH][2]; };
 struct prices777_basket { struct prices777 *prices; double wt; int32_t groupid,groupsize,aski,bidi; char base[64],rel[64]; };
-struct prices777_orderentry { struct prices777 *bidsource,*asksource; double bid,bidvol,ask,askvol; uint32_t bidstamp,askstamp; uint16_t bidi,aski; };
+struct prices777_order { struct prices777 *source; double price,vol,wt; uint64_t orderid; uint32_t timestamp; uint16_t ind; };
+struct prices777_orderentry { struct prices777_order bid,ask; };
 #define MAX_GROUPS 8
 
 struct prices777_basketinfo

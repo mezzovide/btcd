@@ -51,14 +51,17 @@ queue_t InstantDEXQ,TelepathyQ;
 struct InstantDEX_info INSTANTDEX;
 struct pingpong_queue Pending_offersQ;
 cJSON *Lottostats_json;
+cJSON *InstantDEX_lottostats();
 
 #include "NXT_tx.h"
 #include "quotes.h"
 #include "atomic.h"
 
+uint32_t prices777_NXTBLOCK;
 int32_t InstantDEX_idle(struct plugin_info *plugin)
 {
-    char *jsonstr,*retstr; cJSON *json;
+    static double lastmilli; static cJSON *oldjson;
+    char *jsonstr,*retstr; cJSON *json; uint32_t NXTblock; int32_t n = 0;
     if ( INSTANTDEX.readyflag == 0 )
         return(0);
     if ( (jsonstr= queue_dequeue(&InstantDEXQ,1)) != 0 )
@@ -69,11 +72,23 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
             if ( (retstr = InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
                 printf("InstantDEX.(%s)\n",retstr), free(retstr);
             free_json(json);
+            n++;
         } else printf("error parsing (%s) from InstantDEXQ\n",jsonstr);
         free_queueitem(jsonstr);
     }
-    //printf("InstantDEX_idle\n");
-    poll_pending_offers(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET);
+    if ( milliseconds() < (lastmilli + 5000) )
+        return(n);
+    NXTblock = _get_NXTheight(0);
+    if ( NXTblock != prices777_NXTBLOCK )
+    {
+        if ( oldjson != 0 )
+            free_json(oldjson);
+        oldjson = Lottostats_json;
+        Lottostats_json = InstantDEX_lottostats();
+        prices777_NXTBLOCK = NXTblock;
+        poll_pending_offers(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET);
+    }
+    lastmilli = milliseconds();
     return(0);
 }
 
