@@ -431,6 +431,7 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
         //printf("%s.(%d %d) groupsize.%d highbid %.8f vol %f\n",group[highbidi].prices->exchange,group[highbidi].bidi,group[highbidi].aski,groupsize,highbid,bidvol);
         gp->bid.ind = group[highbidi].bidi++, gp->bid.ind <<= 1;
         gp->bid.source = group[highbidi].prices;
+        gp->bid.wt = group[highbidi].wt;
         gp->bid.timestamp = group[highbidi].prices->O.timestamp;
     } //else printf("warning: no highbidi? [%f %f %f %f]\n",highbid,bidvol,lowask,askvol);
     if ( lowaski >= 0 )
@@ -438,6 +439,7 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
         //printf("%s.(%d %d) groupsize.%d lowask %.8f vol %f\n",group[lowaski].prices->exchange,group[lowaski].bidi,group[lowaski].aski,groupsize,lowask,askvol);
         gp->ask.ind = group[lowaski].aski++, gp->ask.ind <<= 1, gp->ask.ind |= 1;
         gp->ask.source = group[lowaski].prices;
+        gp->ask.wt = group[highbidi].wt;
         gp->ask.timestamp = group[lowaski].prices->O.timestamp;
     } //else printf("warning: no lowaski? [%f %f %f %f]\n",highbid,bidvol,lowask,askvol);
     if ( gp->bid.price > SMALLVAL && gp->ask.price > SMALLVAL )
