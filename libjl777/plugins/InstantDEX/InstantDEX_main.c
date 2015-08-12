@@ -39,7 +39,7 @@
 #include "../includes/portable777.h"
 #undef DEFINES_ONLY
 
-#define INSTANTDEX_LOCALAPI "allorderbooks", "openorders", "cancelorder", "tradehistory", "lottostats", "LSUM"
+#define INSTANTDEX_LOCALAPI "allorderbooks", "openorders", "cancelorder", "tradehistory", "lottostats", "LSUM", "peggyrates"
 #define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "makeoffer3", "LSUM", "orderbook"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
 char *PLUGNAME(_pubmethods)[] = { INSTANTDEX_REMOTEAPI }; // list of supported methods approved for public (Internet) access
@@ -250,6 +250,12 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = InstantDEX_tradehistory();
         else if ( strcmp(method,"lottostats") == 0 )
             retstr = jprint(Lottostats_json,0);
+        else if ( strcmp(method,"peggyrates") == 0 )
+        {
+            if ( SUPERNET.peggy != 0 )
+                retstr = peggyrates(juint(json,"timestamp"));
+            else retstr = clonestr("{\"error\":\"peggy disabled\"}");
+        }
         else if ( strcmp(method,"LSUM") == 0 )
         {
             sprintf(retbuf,"{\"result\":\"%s\",\"amount\":%d}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);

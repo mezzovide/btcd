@@ -702,6 +702,16 @@ double peggy_status(char **jsonstrp,struct peggy_info *PEGS,double *rates,uint32
     return(aprsum/100.);
 }
 
+char *peggyrates(uint32_t timestamp)
+{
+    char *jsonstr = 0; double rates[2 * PEGGY_MAXPEGS]; struct peggy_info *PEGS = opreturns_context("peggy",0);
+    if ( timestamp == 0 )
+        timestamp = (uint32_t)time(NULL);
+    if ( PEGS != 0 )
+        peggy_status(&jsonstr,PEGS,rates,timestamp);
+    return(jsonstr);
+}
+
 void peggy_test()
 {
     opreturns_init(0,(uint32_t)time(NULL),"PEGS");
