@@ -99,6 +99,28 @@ int32_t get_equivalent_assetids(uint64_t *equivids,uint64_t bits)
     return(n);
 }
 
+char *MGWassets[][3] =
+{
+    { "17554243582654188572", "BTC", "8" }, // assetid, name, decimals
+    { "4551058913252105307", "BTC", "8" },
+    { "12659653638116877017", "BTC", "8" },
+    { "11060861818140490423", "BTCD", "4" },
+    { "6918149200730574743", "BTCD", "4" },
+    { "13120372057981370228", "BITS", "6" },
+    { "2303962892272487643", "DOGE", "4" },
+    { "16344939950195952527", "DOGE", "4" },
+    { "6775076774325697454", "OPAL", "8" },
+    { "7734432159113182240", "VPN", "4" },
+    { "9037144112883608562", "VRC", "8" },
+    { "1369181773544917037", "BBR", "8" },
+    { "17353118525598940144", "DRK", "8" },
+    { "2881764795164526882", "LTC", "8" },
+    { "7117580438310874759", "BC", "4" },
+    { "275548135983837356", "VIA", "4" },
+    { "6220108297598959542", "CNMT", "0" },
+    { "7474435909229872610", "CNMT", "0" },
+};
+
 uint64_t is_MGWcoin(char *name)
 {
     int32_t i;
@@ -397,12 +419,6 @@ double calc_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount)
     if ( checkbase != baseamount || checkrel != relamount )
         printf("calc_price_volume error: (%llu/%llu) -> %f %f -> (%llu %llu)\n",(long long)baseamount,(long long)relamount,price,vol,(long long)checkbase,(long long)checkrel);//, getchar();
     return(price);
-}
-
-uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT)
-{
-    *relamountp = (qty * priceNQT);
-    return(qty * get_assetmult(assetid));
 }
 
 double check_ratios(uint64_t baseamount,uint64_t relamount,uint64_t baseamount2,uint64_t relamount2)

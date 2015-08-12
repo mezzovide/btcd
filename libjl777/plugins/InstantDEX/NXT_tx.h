@@ -339,56 +339,6 @@ uint32_t get_txhashes(char *sighash,char *fullhash,struct NXT_tx *tx)
     return(calc_expiration(tx));
 }
 
-uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t assetid,uint64_t qty,uint64_t NXTprice,char *triggerhash,char *comment,uint64_t otherNXT,uint32_t triggerheight)
-{
-    int32_t deadline = 1 + time_to_nextblock(2)/60;
-    uint64_t txid = 0;
-    char cmd[4096],secret[8192],errstr[MAX_JSON_FIELD],*jsonstr;
-    cJSON *json;
-    if ( retjsonstrp != 0 )
-        *retjsonstrp = 0;
-    if ( triggerheight != 0 )
-        deadline = DEFAULT_NXT_DEADLINE;
-    escape_code(secret,NXTACCTSECRET);
-    sprintf(cmd,"requestType=%s&secretPhrase=%s&feeNQT=%llu&deadline=%d",bidask,secret,(long long)MIN_NQTFEE,deadline);
-    sprintf(cmd+strlen(cmd),"&%s=%llu&%s=%llu",is_MS!=0?"units":"quantityQNT",(long long)qty,is_MS!=0?"currency":"asset",(long long)assetid);
-    if ( NXTprice != 0 )
-    {
-        if ( is_MS != 0 )
-            sprintf(cmd+strlen(cmd),"&rateNQT=%llu",(long long)NXTprice);
-        else sprintf(cmd+strlen(cmd),"&priceNQT=%llu",(long long)NXTprice);
-    }
-    if ( otherNXT != 0 )
-        sprintf(cmd+strlen(cmd),"&recipient=%llu",(long long)otherNXT);
-    if ( triggerhash != 0 && triggerhash[0] != 0 )
-    {
-        if ( triggerheight == 0 )
-            sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s",triggerhash);
-        else sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s&phased=true&phasingFinishHeight=%u&phasingVotingModel=4&phasingQuorum=1&phasingLinkedFullHash=%s",triggerhash,triggerheight,triggerhash);
-    }
-    if ( comment != 0 && comment[0] != 0 )
-        sprintf(cmd+strlen(cmd),"&message=%s",comment);
-    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
-    {
-        _stripwhite(jsonstr,' ');
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
-        {
-            copy_cJSON(errstr,cJSON_GetObjectItem(json,"error"));
-            if ( errstr[0] == 0 )
-                copy_cJSON(errstr,cJSON_GetObjectItem(json,"errorDescription"));
-            if ( errstr[0] != 0 )
-            {
-                printf("submit_triggered_bidask.(%s) -> (%s)\n",cmd,jsonstr);
-                if ( retjsonstrp != 0 )
-                    *retjsonstrp = clonestr(errstr);
-            }
-            else txid = get_API_nxt64bits(cJSON_GetObjectItem(json,"transaction"));
-        }
-        free(jsonstr);
-    }
-    return(txid);
-}
-
 uint64_t send_feetx(uint64_t assetbits,uint64_t fee,char *fullhash,char *comment)
 {
     char feeutx[MAX_JSON_FIELD],signedfeetx[MAX_JSON_FIELD];

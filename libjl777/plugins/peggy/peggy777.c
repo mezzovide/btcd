@@ -736,7 +736,7 @@ struct price_resolution peggy_priceconsensus(struct peggy_info *PEGS,struct pegg
         {
             if ( votes[i].pval != 0 )
             {
-                wts[i] = n + 1;
+                wts[i] = 1;//n + 1;
                 n++;
                 totalwt += wts[i];
             }
@@ -781,7 +781,7 @@ struct price_resolution peggy_priceconsensus(struct peggy_info *PEGS,struct pegg
             }
         }
         if ( k == numvotes )
-            fprintf(stderr,"%6d k%-4d %4d-> %.6f wt.%-4lld/%4lld ",votes[i].tolerance,k,i,Pval(&PEG->price),(long long)weight,(long long)totalwt);
+            fprintf(stderr,"no consensus for %s %6d k%-4d %4d-> %.6f wt.%-4lld/%4lld ",PEG->name.name,votes[i].tolerance,k,i,Pval(&PEG->price),(long long)weight,(long long)totalwt);
         if ( (day= (T.blocktimestamp - PEG->genesistime)/PEGGY_DAYTICKS) != PEG->day )
         {
             peggy_gamblers(PEGS,T,PEG->dayprice,PEG->price,bets,numbets);

@@ -832,10 +832,24 @@ uint64_t calc_decimals_mult(int32_t decimals)
     return(mult);
 }
 
-int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr)
+int32_t unstringbits(char *buf,uint64_t bits)
 {
-    int32_t decimals = -1;
-    cJSON *json;
+    int32_t i;
+    for (i=0; i<8; i++,bits>>=8)
+        if ( (buf[i]= (char)(bits & 0xff)) == 0 )
+            break;
+    buf[i] = 0;
+    return(i);
+}
+
+int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr,uint64_t assetid)
+{
+    int32_t decimals = -1; cJSON *json; char assetidstr[64];
+    if ( jsonstr == 0 )
+    {
+        expand_nxt64bits(assetidstr,assetid);
+        jsonstr = _issue_getAsset(assetidstr);
+    }
     if ( multp != 0 )
         *multp = 0;
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -847,10 +861,84 @@ int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr)
                 *multp = calc_decimals_mult(decimals);
             if ( extract_cJSON_str(buf,16,json,"name") <= 0 )
                 decimals = -1;
+            //printf("%s decimals.%d (%s)\n",assetidstr,decimals,buf);
         }
         free_json(json);
     }
+    if ( assetid != 0 )
+        free(jsonstr);
     return(decimals);
+}
+
+uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT)
+{
+    *relamountp = (qty * priceNQT);
+    return(qty * get_assetmult(assetid));
+}
+
+void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,double volume)
+{
+    double checkprice,checkvol,distA,distB,metric,bestmetric = (1. / SMALLVAL);
+    uint64_t baseamount,relamount,bestbaseamount = 0,bestrelamount = 0;
+    int32_t i,j;
+    baseamount = volume * SATOSHIDEN;
+    relamount = ((price * volume) * SATOSHIDEN);
+    //*baseamountp = baseamount, *relamountp = relamount;
+    //return;
+    for (i=-1; i<=1; i++)
+        for (j=-1; j<=1; j++)
+        {
+            checkprice = prices777_price_volume(&checkvol,baseamount+i,relamount+j);
+            distA = (checkprice - price);
+            distA *= distA;
+            distB = (checkvol - volume);
+            distB *= distB;
+            metric = sqrt(distA + distB);
+            if ( metric < bestmetric )
+            {
+                bestmetric = metric;
+                bestbaseamount = baseamount + i;
+                bestrelamount = relamount + j;
+                //printf("i.%d j.%d metric. %f\n",i,j,metric);
+            }
+        }
+    *baseamountp = bestbaseamount;
+    *relamountp = bestrelamount;
+}
+
+uint64_t calc_asset_qty(uint64_t *availp,uint64_t *priceNQTp,char *NXTaddr,int32_t checkflag,uint64_t assetid,double price,double vol)
+{
+    char assetidstr[64];
+    uint64_t ap_mult,priceNQT,quantityQNT = 0;
+    int64_t unconfirmed,balance;
+    *priceNQTp = *availp = 0;
+    if ( assetid != NXT_ASSETID )
+    {
+        expand_nxt64bits(assetidstr,assetid);
+        if ( (ap_mult= get_assetmult(assetid)) != 0 )
+        {
+            //price = (double)get_satoshi_obj(srcitem,"priceNQT") / ap_mult;
+            //vol = (double)get_satoshi_obj(srcitem,"quantityQNT") * ((double)ap_mult / SATOSHIDEN);
+            priceNQT = (price * ap_mult + (ap_mult/2)/SATOSHIDEN);
+            quantityQNT = (vol * SATOSHIDEN) / ap_mult;
+            balance = get_asset_quantity(&unconfirmed,NXTaddr,assetidstr);
+            printf("%s balance %.8f unconfirmed %.8f vs price %llu qty %llu for asset.%s | price_vol.(%f * %f) * (%lld / %llu)\n",NXTaddr,dstr(balance),dstr(unconfirmed),(long long)priceNQT,(long long)quantityQNT,assetidstr,price,vol,(long long)SATOSHIDEN,(long long)ap_mult);
+            //getchar();
+            if ( checkflag != 0 && (balance < quantityQNT || unconfirmed < quantityQNT) )
+            {
+                printf("balance %.8f < qty %.8f || unconfirmed %.8f < qty %llu\n",dstr(balance),dstr(quantityQNT),dstr(unconfirmed),(long long)quantityQNT);
+                return(0);
+            }
+            *priceNQTp = priceNQT;
+            *availp = unconfirmed;
+        } else printf("%llu null apmult\n",(long long)assetid);
+    }
+    else
+    {
+        *priceNQTp = price * SATOSHIDEN;
+        quantityQNT = vol;
+    }
+    return(quantityQNT);
 }
 
 struct assethash *Allassets;

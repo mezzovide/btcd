@@ -555,7 +555,7 @@ void SuperNET_initconf(cJSON *json)
 
 int SuperNET_start(char *fname,char *myip)
 {
-    void crypto_update0(); void crypto_update1();
+    void crypto_update();
     int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout);
     char ipaddr[256],*jsonstr = 0; cJSON *json; uint64_t i,allocsize;
     portable_OS_init();
@@ -586,8 +586,7 @@ int SuperNET_start(char *fname,char *myip)
     }
     portable_thread_create((void *)SuperNET_agentloop,myip);
     portable_thread_create((void *)SuperNET_apiloop,myip);
-    portable_thread_create((void *)crypto_update0,myip);
-    portable_thread_create((void *)crypto_update1,myip);
+    portable_thread_create((void *)crypto_update,myip);
     return(0);
 }
 
