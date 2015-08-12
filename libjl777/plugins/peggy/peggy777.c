@@ -780,7 +780,7 @@ struct price_resolution peggy_priceconsensus(struct peggy_info *PEGS,struct pegg
                 break;
             }
         }
-        if ( k == numvotes )
+        if ( 0 && k == numvotes )
             fprintf(stderr,"no consensus for %s %6d k%-4d %4d-> %.6f wt.%-4lld/%4lld ",PEG->name.name,votes[i].tolerance,k,i,Pval(&PEG->price),(long long)weight,(long long)totalwt);
         if ( (day= (T.blocktimestamp - PEG->genesistime)/PEGGY_DAYTICKS) != PEG->day )
         {
@@ -797,7 +797,8 @@ struct price_resolution peggy_priceconsensus(struct peggy_info *PEGS,struct pegg
             PEG->dayprice = dayprice;
             PEG->day = day;
             PEG->dayprices[day] = (uint32_t)dayprice.Pval;
-            printf(">>>>>>>>>>>> DAY PRICE.%d %s %.8f\n",day,PEG->name.name,Pval(&dayprice));
+            if ( Debuglevel > 2 )
+                printf(">>>>>>>>>>>> DAY PRICE.%d %s %.8f\n",day,PEG->name.name,Pval(&dayprice));
             while ( --day > 0 && PEG->dayprices[day] == 0 )
                 PEG->dayprices[day] = (uint32_t)dayprice.Pval;
         }

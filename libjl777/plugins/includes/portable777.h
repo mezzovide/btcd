@@ -200,7 +200,7 @@ struct prices777
     portable_mutex_t mutex;
     char *orderbook_jsonstrs[2][2];
     struct prices777_basketinfo O,O2; double groupwts[MAX_GROUPS + 1];
-    uint8_t changed; uint8_t **dependents; int32_t numdependents,numgroups,basketsize;
+    uint8_t changed,type; uint8_t **dependents; int32_t numdependents,numgroups,basketsize;
     struct prices777_basket basket[];
 };
 

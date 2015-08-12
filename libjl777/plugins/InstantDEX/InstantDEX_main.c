@@ -290,7 +290,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             //printf("return invert.%d allfields.%d (%s %s) vs (%s %s)  [%llu %llu] vs [%llu %llu]\n",invert,allfields,base,rel,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,(long long)baseid,(long long)relid);
             if ( strcmp(method,"orderbook") == 0 )
             {
-                if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 && prices->O.numbids > 0 && prices->O.numasks > 0 )
+                if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 )
                 {
                     char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct prices777 *prices,struct prices777_basketinfo *OB,int32_t maxdepth,int32_t allflag);
                     retstr = prices777_orderbook_jsonstr(invert,SUPERNET.my64bits,prices,&prices->O,MAX_DEPTH,allfields);
@@ -299,6 +299,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                         free(prices->orderbook_jsonstrs[invert][allfields]);
                     prices->orderbook_jsonstrs[invert][allfields] = retstr;
                     portable_mutex_unlock(&prices->mutex);
+                    if ( retstr == 0 )
+                        retstr = clonestr("{}");
                 }
             }
             else if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )

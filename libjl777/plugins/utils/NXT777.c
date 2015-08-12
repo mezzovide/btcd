@@ -320,8 +320,8 @@ char *_issue_getCurrency(char *assetidstr)
 {
     char cmd[4096];
     //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
-    sprintf(cmd,"requestType=getCurrency&asset=%s",assetidstr);
-    //printf("_cmd.(%s)\n",cmd);
+    sprintf(cmd,"requestType=getCurrency&currency=%s",assetidstr);
+    printf("_cmd.(%s)\n",cmd);
     return(issue_NXTPOST(cmd));
 }
 
@@ -844,15 +844,45 @@ int32_t unstringbits(char *buf,uint64_t bits)
 
 int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr,uint64_t assetid)
 {
-    int32_t decimals = -1; cJSON *json; char assetidstr[64];
+    int32_t type = 0,decimals = -1; cJSON *json=0; char assetidstr[64];
     if ( jsonstr == 0 )
     {
+        if ( assetid == 0 )
+            printf("_set_assetname null assetid\n");//, getchar();
         expand_nxt64bits(assetidstr,assetid);
-        jsonstr = _issue_getAsset(assetidstr);
+        type = 2;
+        if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
+        {
+            //printf("%llu (%s) -> (%s)\n",(long long)assetid,assetidstr,jsonstr);
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                if ( get_cJSON_int(json,"errorCode") != 0 )
+                {
+                    free_json(json), free(jsonstr);
+                    if ( (jsonstr= _issue_getCurrency(assetidstr)) != 0 )
+                    {
+                        //printf("(%s) -> (%s)\n",assetidstr,jsonstr);
+                        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+                        {
+                            if ( get_cJSON_int(json,"errorCode") != 0 )
+                            {
+                                printf("(%s) not asset and not currency (%s)\n",assetidstr,jsonstr);
+                                free_json(json), free(jsonstr);
+                                return(-1);
+                            }
+                            type = 5;
+                        }
+                    }
+                }
+            }
+            free(jsonstr), jsonstr = 0;
+        } else return(-1);
     }
     if ( multp != 0 )
         *multp = 0;
-    if ( (json= cJSON_Parse(jsonstr)) != 0 )
+    if ( json == 0 )
+        json = cJSON_Parse(jsonstr);
+    if ( json != 0 )
     {
         if ( get_cJSON_int(json,"errorCode") == 0 )
         {
@@ -865,9 +895,7 @@ int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr,uint64_t assetid)
         }
         free_json(json);
     }
-    if ( assetid != 0 )
-        free(jsonstr);
-    return(decimals);
+    return(type);
 }
 
 uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT)

@@ -390,7 +390,7 @@ double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
         sprintf(prices->url,"https://www.okcoin.com/api/v1/depth.do?symbol=%s_%s",prices->lbase,prices->lrel);
-    if ( strcmp(prices->rel,"USD") != 0 )
+    if ( strcmp(prices->rel,"USD") != 0 && strcmp(prices->rel,"BTC") != 0 )
     {
         fprintf(stderr,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FATAL ERROR OKCOIN.(%s) only supports USD\n",prices->url);
         printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FATAL ERROR OKCOIN.(%s) only supports USD\n",prices->url);
