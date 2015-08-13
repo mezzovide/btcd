@@ -112,12 +112,12 @@ int main(int argc, char **argv)
     offset = strlen(namebuf) - 4;
     if ( offset > 0 && strcmp(".exe",namebuf + offset) == 0 )
         namebuf[offset] = 0;
-    if ( strcmp(namebuf,"api") != 0 )
-        cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
     if ( strcmp(namebuf,"init") == 0 || strcmp(namebuf,"") == 0 || strcmp(namebuf,"index.cgi") == 0 )
     {
         // "http://178.63.60.131/init/?requestType=status&coin=VRC"
         //"http://78.47.115.250:7777/public?plugin=relay&method=busdata&servicename=MGW&serviceNXT=8119557380101451968&destplugin=MGW&submethod=status&coin=BTC"
+        if ( strcmp(namebuf,"api") != 0 )
+            cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
         cJSON_AddItemToObject(json,"plugin",cJSON_CreateString("relay"));
         cJSON_AddItemToObject(json,"method",cJSON_CreateString("busdata"));
         cJSON_AddItemToObject(json,"servicename",cJSON_CreateString("MGW"));
@@ -128,7 +128,6 @@ int main(int argc, char **argv)
     }
     if ( strcmp("nxt",namebuf) == 0 )
     {
-fprintf(stderr,"namebuf.(%s)\n",namebuf);
         if ( setnxturl(urlbuf) != 0 )
             url = urlbuf;
         else url = "http://127.0.0.1:7876/nxt";
@@ -139,6 +138,7 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
         url = "http://127.0.0.1", portflag = 1;
     else if ( strcmp("ports",namebuf) == 0 )
         url = "https://127.0.0.1", portflag = 1;
+    fprintf(stderr,"namebuf.(%s)\n",namebuf);
     if ( url != 0 )
          postbuf[0] = 0, delim = "";
     for (iter=0; iter<3; iter++)
@@ -209,6 +209,8 @@ fprintf(stderr,"url.(%s) (%s)\n",url,postbuf);
     }
     else
     {
+        if ( strcmp(namebuf,"api") != 0 )
+            cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
         process_json(json,remoteaddr,localaccess);
     }
     free_json(json);
