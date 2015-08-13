@@ -97,7 +97,7 @@ fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf);
 int main(int argc, char **argv)
 {
     void portable_OS_init();
-    CGI_varlist *varlist; const char *name; char urlbuf[512],namebuf[512],postbuf[65536],*remoteaddr,*retstr,*delim,*url = 0;
+    CGI_varlist *varlist; const char *name; char urlbuf[512],namebuf[512],postbuf[65536],*remoteaddr,*str,*retstr,*delim,*url = 0;
     int i,j,iter,localaccess=0,portflag = 0; cJSON *json; long offset; CGI_value  *value;
     portable_OS_init();
     setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
@@ -154,7 +154,26 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
                     if ( i == 0 )
                     {
                         if ( url == 0 )
+                        {
+                            if ( strcmp(namebuf,"InstantDEX") == 0 )
+                            {
+                                char *unstringify(char *str);
+                                cJSON *obj;
+                                str = calloc(strlen(value[i]));
+                                unstringify(str);
+                                if ( (obj= cJSON_Parse(str)) != 0 )
+                                {
+                                    free_json(json);
+                                    json = obj;
+                                    cJSON_AddItemToObject(obj,"agent",cJSON_CreateString("InstantDEX"));
+                                    if ( remoteaddr != 0 && remoteaddr[0] != 0 )
+                                        cJSON_AddItemToObject(json,"remoteaddr",cJSON_CreateString(remoteaddr));
+                                    free(str);
+                                    break;
+                                }
+                            }
                             cJSON_AddItemToObject(json,name,cJSON_CreateString(value[i]));
+                        }
                         else
                         {
                             if ( portflag != 0 && strncmp(name,"port",strlen("port")) == 0 )
