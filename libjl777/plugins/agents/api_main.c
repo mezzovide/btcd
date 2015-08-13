@@ -155,7 +155,7 @@ int main(int argc, char **argv)
                     {
                         if ( url == 0 )
                         {
-                            if ( strcmp(name,"stringified") == 0 )
+                            if ( strcmp(name,"stringified") == 0 || strcmp(namebuf,"stringified") == 0 )
                             {
                                 char *unstringify(char *str);
                                 cJSON *obj;
