@@ -155,7 +155,7 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
                     {
                         if ( url == 0 )
                         {
-                            if ( strcmp(namebuf,"InstantDEX") == 0 )
+                            if ( strcmp(namebuf,"stringified") == 0 )
                             {
                                 char *unstringify(char *str);
                                 cJSON *obj;
@@ -169,6 +169,7 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
                                     cJSON_AddItemToObject(obj,"agent",cJSON_CreateString("InstantDEX"));
                                     if ( remoteaddr != 0 && remoteaddr[0] != 0 )
                                         cJSON_AddItemToObject(json,"remoteaddr",cJSON_CreateString(remoteaddr));
+                                    fprintf(stderr,"unstringified (%s) -> (%s)\n",str,jprint(json,0));
                                     free(str);
                                     break;
                                 }

@@ -404,11 +404,9 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             else if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
             {
                 if ( strcmp(method,"placebid") == 0 )
-                    dir = 1;
-                else dir = -1;
-                extern queue_t InstantDEXQ;
-                queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
-                free_json(json);
+                    dir = 1 - invert*2;
+                else dir = -(1 - invert*2);
+               // InstantDEX_quote(prices,dir,jdouble(json,"price"),jdouble(json,"volume"),orderid,juint(json,"minperc"));
                 return(clonestr("{\"success\":\"InstantDEX placebid/ask queued\"}"));
             }
         }

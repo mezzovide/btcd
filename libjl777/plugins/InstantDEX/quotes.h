@@ -593,6 +593,12 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
     return(jsonstr);
 }
 
+/*{
+    extern queue_t InstantDEXQ;
+    queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
+    free_json(json);
+}*/
+
 char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {
     uint64_t baseamount,relamount,nxt64bits,baseid,relid,quoteid = 0; double price,volume,minbasevol,minrelvol; uint32_t timestamp,nonce;
