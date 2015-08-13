@@ -159,7 +159,8 @@ fprintf(stderr,"namebuf.(%s)\n",namebuf);
                             {
                                 char *unstringify(char *str);
                                 cJSON *obj;
-                                str = calloc(strlen(value[i]));
+                                str = malloc(strlen(value[i])+1);
+                                strcpy(str,value[i]);
                                 unstringify(str);
                                 if ( (obj= cJSON_Parse(str)) != 0 )
                                 {
