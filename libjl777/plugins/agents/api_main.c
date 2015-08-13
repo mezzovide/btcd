@@ -34,7 +34,7 @@ void process_json(cJSON *json,char *remoteaddr,int32_t localaccess)
     free(jsonstr);
     recvtimeout = get_API_int(cJSON_GetObjectItem(json,"timeout"),30000);
     sendtimeout = 30000;
-    randombytes(&tag,sizeof(tag));
+    randombytes((uint8_t *)&tag,sizeof(tag));
     if ( cJSON_GetObjectItem(json,"tag") == 0 )
         sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
     if ( cJSON_GetObjectItem(json,"apitag") == 0 )
