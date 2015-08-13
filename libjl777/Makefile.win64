@@ -287,11 +287,13 @@ onetime: doesntexist; \
 winpatch:
 ifeq ($(wildcard mxe),)
 	git clone http://github.com/mxe/mxe;
+	cp mxepatch/curl.mk mxe/src/curl.mk;
 	sh make_win64.sh;
 else
 	cd mxe;
 	git pull;
 	cd ..;
+	cp mxepatch/curl.mk mxe/src/curl.mk;
 	sh make_win64.sh;
 endif
 

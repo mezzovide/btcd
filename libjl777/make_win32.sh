@@ -4,12 +4,12 @@ make pkgconf MXE_TARGETS='i686-w64-mingw32.static'
 make binutils MXE_TARGETS='i686-w64-mingw32.static'
 make gcc-gmp MXE_TARGETS='i686-w64-mingw32.static'
 make gcc-isl MXE_TARGETS='i686-w64-mingw32.static'
-make gcc-cloog MXE_TARGETS='i686-w64-mingw32.static'
+#make gcc-cloog MXE_TARGETS='i686-w64-mingw32.static'
 make gcc-mpfr MXE_TARGETS='i686-w64-mingw32.static'
 make gcc-mpc MXE_TARGETS='i686-w64-mingw32.static'
 make mingw-w64 MXE_TARGETS='i686-w64-mingw32.static'
 make gcc MXE_TARGETS='i686-w64-mingw32.static'
-make gzip2 MXE_TARGETS='i686-w64-mingw32.static'
+#make gzip2 MXE_TARGETS='i686-w64-mingw32.static'
 make libiconv MXE_TARGETS='i686-w64-mingw32.static' 
 make gettext MXE_TARGETS='i686-w64-mingw32.static'
 make pcre MXE_TARGETS='i686-w64-mingw32.static'
@@ -35,7 +35,7 @@ make
 cp .libs/libnanomsg.a ../libs/libnanomsg-win32.a
 cd ../
 rm mxe/usr/i686-w64-mingw32.static/include/objidl.h
-cp mxe/objidl.h mxe/usr/i686-w64-mingw32.static/include/objidl.h
+cp mxepatch/winheaders/objidl.h mxe/usr/i686-w64-mingw32.static/include/objidl.h
 cd miniupnpc
 sh make_win.sh
 echo ">>>>>>>>>>>>>>>>>>building mman-win32"
