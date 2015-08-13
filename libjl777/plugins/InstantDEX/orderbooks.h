@@ -156,29 +156,38 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
     if ( strcmp(prices->exchange,"nxtae") == 0 || strcmp(prices->exchange,"unconf") == 0 )
         jaddstr(item,prices->type == 2 ? "asset" : "currency",prices->contract);
     else jaddstr(item,"name",prices->contract);
+    jaddstr(item,"base",prices->base), jaddstr(item,"rel",prices->rel);
     if ( orderid != 0 )
         jadd64bits(item,"orderid",orderid);
     jaddnum(item,"orderprice",price);
     jaddnum(item,"ordervolume",volume);
 }
 
-cJSON *prices777_item(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,double price,double volume,double wt,uint64_t orderid)
+cJSON *prices777_item(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,double origprice,double origvolume,double rootwt,double groupwt,double wt,uint64_t orderid)
 {
-    cJSON *item;
+    cJSON *item; double price,volume;
     item = cJSON_CreateObject();
     jaddstr(item,"basket",rootbidask == 0 ? "bid":"ask");
+    jaddnum(item,"rootwt",rootwt);
+    jaddnum(item,"groupwt",groupwt);
+    jaddnum(item,"wt",wt);
+    if ( rootwt*groupwt < 0 )
+    {
+        volume = origprice * origvolume;
+        price = 1./origprice;
+    } else price = origprice, volume = origvolume;
     jaddnum(item,"price",price);
     jaddnum(item,"volume",volume);
-    if ( wt < 0 )
+    if ( groupwt*wt < 0 )
     {
-        volume *= price;
-        price = 1./price;
-    }
+        volume = origprice * origvolume;
+        price = 1./origprice;
+    } else price = origprice, volume = origvolume;
     _prices777_item(item,group,prices,bidask,price,volume,orderid);
     return(item);
 }
 
-cJSON *prices777_tradeitem(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,int32_t slot,uint32_t timestamp,double price,double volume,double wt,uint64_t orderid)
+cJSON *prices777_tradeitem(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,int32_t slot,uint32_t timestamp,double price,double volume,double rootwt,double groupwt,double wt,uint64_t orderid)
 {
     static uint32_t match,error;
     if ( prices->O.timestamp == timestamp )
@@ -197,38 +206,35 @@ cJSON *prices777_tradeitem(int32_t rootbidask,struct prices777 *prices,int32_t g
         else if ( bidask != 0 && prices->O2.book[MAX_GROUPS][slot].ask.price == price && prices->O2.book[MAX_GROUPS][slot].ask.vol == volume )
             match++;
     } else error++, printf("mismatched tradeitem error.%d match.%d\n",error,match);
-    return(prices777_item(rootbidask,prices,group,bidask,price,volume,wt,orderid));
+    return(prices777_item(rootbidask,prices,group,bidask,price,volume,rootwt,groupwt,wt,orderid));
 }
 
-cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct prices777_order *orders[],double refwt)
+cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct prices777_order *orders[],double rootwt,double groupwt,double wt,int32_t refgroup)
 {
-    int32_t i,j,srcslot,srcbidask,err = 0; cJSON *array,*obj; struct prices777_order *suborders[MAX_GROUPS];
+    int32_t i,j,srcslot,srcbidask,err = 0; cJSON *array; struct prices777_order *suborders[MAX_GROUPS];
     struct prices777_order *order; struct prices777 *src;
     array = cJSON_CreateArray();
     for (i=0; i<prices->numgroups; i++)
     {
         order = orders[i];
+        groupwt = prices->groupwts[i];
         memset(suborders,0,sizeof(suborders));
         srcbidask = (order->slot_ba & 1); srcslot = order->slot_ba >> 1;
         if ( (src= order->source) != 0 )
         {
             if ( src->basketsize == 0 )
-                jaddi(array,prices777_tradeitem(bidask,src,i,srcbidask,srcslot,order->timestamp,order->price,order->vol,refwt*order->wt,order->id));
+                jaddi(array,prices777_tradeitem(bidask,src,refgroup*10+i,srcbidask,srcslot,order->timestamp,order->price,order->vol,rootwt,groupwt,order->wt,order->id));
             else if ( src->O.timestamp == order->timestamp )
             {
                 for (j=0; j<src->numgroups; j++)
                     suborders[j] = (srcbidask == 0) ? &src->O.book[j][srcslot].bid : &src->O.book[j][srcslot].ask;
-                obj = cJSON_CreateObject();
-                jadd(obj,"subtrades",prices777_tradesequence(src,bidask,suborders,refwt*order->wt));
-                jaddi(array,obj);
+                jaddi(array,prices777_tradesequence(src,bidask,suborders,rootwt,groupwt,order->wt,refgroup*10 + i));
             }
             else if ( src->O2.timestamp == order->timestamp )
             {
                 for (j=0; j<src->numgroups; j++)
                     suborders[j] = (srcbidask == 0) ? &src->O2.book[j][srcslot].bid : &src->O2.book[j][srcslot].ask;
-                obj = cJSON_CreateObject();
-                jadd(obj,"subtrades",prices777_tradesequence(src,bidask,suborders,refwt*order->wt));
-                jaddi(array,obj);
+                jaddi(array,prices777_tradesequence(src,bidask,suborders,rootwt,groupwt,order->wt,refgroup*10 + i));
             }
             else err =  1;
         }
@@ -255,7 +261,7 @@ void prices777_orderbook_item(struct prices777 *prices,int32_t bidask,struct pri
         {
             obj = cJSON_CreateObject();
             _prices777_item(obj,0,prices,bidask,origprice,origvolume,orderid);
-        } else obj = prices777_tradesequence(prices,bidask,suborders,1.);
+        } else obj = prices777_tradesequence(prices,bidask,suborders,invert!=0?-1:1.,1.,1.,0);
         jadd(item,"trades",obj);
     }
     jaddi(array,item);
@@ -451,6 +457,7 @@ void prices777_setorder(struct prices777_order *order,struct prices777_basket *g
     else printf("illegal coordinate.%d bidask.%d when bidi.%d aski.%d numbids.%d numasks.%d\n",coordinate,bidask,group[coordinate].bidi,group[coordinate].aski,prices->O.numbids,prices->O.numasks);
     order->source = prices;
     order->wt = group[coordinate].wt;
+    //printf("coordinate.%d wt %f\n",coordinate,order->wt);
     order->timestamp = prices->O.timestamp;
     order->id = orderid;
 }
@@ -520,7 +527,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         }
         prices->basket[i].aski = prices->basket[i].bidi = 0;
     }
-    printf("%s basketsize.%d numgroups.%d maxdepth.%d group0size.%d\n",prices->contract,prices->basketsize,prices->numgroups,maxdepth,prices->basket[0].groupsize);
+    //printf("%s basketsize.%d numgroups.%d maxdepth.%d group0size.%d\n",prices->contract,prices->basketsize,prices->numgroups,maxdepth,prices->basket[0].groupsize);
     for (slot=0; slot<maxdepth; slot++)
     {
         groupsize = prices->basket[0].groupsize;
@@ -575,14 +582,14 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             if ( slot == 0 )
                 prices->lastbid = bid;
             gp->bid.timestamp = OB.timestamp, gp->bid.price = bid, gp->bid.vol = bidvol, gp->bid.slot_ba = (OB.numbids++ << 1);
-            gp->bid.source = prices, gp->bid.wt = 1.;
+            gp->bid.source = prices, gp->bid.wt = prices->groupwts[j];
         }
         if ( ask > SMALLVAL && askvol > SMALLVAL )
         {
             if ( slot == 0 )
                 prices->lastask = ask;
             gp->ask.timestamp = OB.timestamp, gp->ask.price = ask, gp->ask.vol = askvol, gp->ask.slot_ba = (OB.numasks++ << 1) | 1;
-            gp->ask.source = prices, gp->ask.wt = 1.;
+            gp->ask.source = prices, gp->ask.wt = prices->groupwts[j];
         }
         //printf("%s slot.%d (%f %f %f %f) (%d %d)\n",prices->contract,slot,gp->bid,gp->bidvol,gp->ask,gp->askvol,OB.numbids,OB.numasks);
     }
