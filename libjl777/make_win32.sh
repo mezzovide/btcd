@@ -35,7 +35,7 @@ make
 cp .libs/libnanomsg.a ../libs/libnanomsg-win32.a
 cd ../
 rm mxe/usr/i686-w64-mingw32.static/include/objidl.h
-cp mxe/objidl.h mxe/usr/i686-w64-mingw32.static/include/objidl.h
+cp winheaders/objidl.h mxe/usr/i686-w64-mingw32.static/include/objidl.h
 cd miniupnpc
 sh make_win.sh
 echo ">>>>>>>>>>>>>>>>>>building mman-win32"
