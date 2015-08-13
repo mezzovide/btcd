@@ -10,6 +10,7 @@
 #include <io.h>
 #include <errno.h>
 #include <fcntl.h> /*  _O_BINARY */
+#include <stdlib.h>
 
 //Type Definitions
 #define in_addr_t uint32_t
