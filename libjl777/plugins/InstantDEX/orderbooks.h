@@ -512,7 +512,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         }
         prices->basket[i].aski = prices->basket[i].bidi = 0;
     }
-    //printf("%s basketsize.%d numgroups.%d maxdepth.%d group0size.%d\n",prices->contract,prices->basketsize,prices->numgroups,maxdepth,prices->basket[0].groupsize);
+    printf("%s basketsize.%d numgroups.%d maxdepth.%d group0size.%d\n",prices->contract,prices->basketsize,prices->numgroups,maxdepth,prices->basket[0].groupsize);
     for (slot=0; slot<maxdepth; slot++)
     {
         groupsize = prices->basket[0].groupsize;
