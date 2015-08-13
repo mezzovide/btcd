@@ -20,6 +20,7 @@ long _stripwhite(char *buf,int accept);
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
 #define issue_POST(url,cmdstr) bitcoind_RPC(0,"curl",url,0,0,cmdstr)
 char *os_compatible_path(char *str);
+void randombytes(unsigned char *x,long xlen);
 
 void process_json(cJSON *json,char *remoteaddr,int32_t localaccess)
 {
