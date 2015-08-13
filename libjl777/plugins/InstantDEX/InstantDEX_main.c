@@ -126,6 +126,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
 {
     uint64_t baseid,relid,assetbits = 0; char *s,*str;
     baseid = *baseidp, relid = *relidp;
+    //printf(">>>>>> name.(%s)\n",name);
     if ( strcmp(base,"5527630") == 0 || baseid == 5527630 )
         strcpy(base,"NXT");
     if ( strcmp(rel,"5527630") == 0 || relid == 5527630 )
@@ -149,11 +150,14 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
             get_assetname(base,baseid);
         if ( rel[0] == 0 )
             get_assetname(rel,relid);
-        if ( relid == NXT_ASSETID )
-            sprintf(name,"%llu",(long long)baseid);
-        else if ( baseid == NXT_ASSETID )
-            sprintf(name,"-%llu",(long long)relid);
-        else sprintf(name,"%llu/%llu",(long long)baseid,(long long)relid);
+        if ( name[0] == 0 )
+        {
+            if ( relid == NXT_ASSETID )
+                sprintf(name,"%llu",(long long)baseid);
+            else if ( baseid == NXT_ASSETID )
+                sprintf(name,"-%llu",(long long)relid);
+            else sprintf(name,"%llu/%llu",(long long)baseid,(long long)relid);
+        }
     }
     else
     {
@@ -163,6 +167,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
             if ( name[0] == 0 && baseid != 0 && relid != 0 )
             {
                 strcpy(name,base); // need to be smarter
+                strcat(name,"/");
                 strcat(name,rel);
             }
         }
@@ -182,6 +187,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
     }
     *baseidp = baseid, *relidp = relid;
     *keysizep = prices777_key(key,exchange,name,base,baseid,rel,relid);
+    //printf("<<<<<<< name.(%s)\n",name);
     return(assetbits);
 }
 
@@ -237,7 +243,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     char *InstantDEX_tradehistory();
     char *InstantDEX_cancelorder(uint64_t orderid);
     char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD];
-    cJSON *json; uint64_t orderid,baseid,relid,assetbits; int32_t invert,keysize,allfields; struct prices777 *prices;
+    cJSON *json; uint64_t orderid,baseid,relid,assetbits; uint32_t maxdepth; int32_t invert,keysize,allfields; struct prices777 *prices;
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
         // instantdex orders and orderbooks, openorders/cancelorder/tradehistory
@@ -251,6 +257,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         copy_cJSON(method,jobj(json,"method"));
         orderid = j64bits(json,"orderid");
         allfields = juint(json,"allfields");
+        if ( (maxdepth= juint(json,"maxdepth")) > MAX_DEPTH )
+            maxdepth = MAX_DEPTH;
         copy_cJSON(exchangestr,jobj(json,"exchange"));
         if ( exchangestr[0] == 0 )
         {
@@ -269,6 +277,12 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = InstantDEX_tradehistory();
         else if ( strcmp(method,"lottostats") == 0 )
             retstr = jprint(Lottostats_json,0);
+        else if ( strcmp(method,"makebasket") == 0 )
+        {
+            if ( (prices= prices777_makebasket(0,json)) != 0 )
+                retstr = clonestr("{\"result\":\"basket made\"}");
+            else retstr = clonestr("{\"error\":\"couldnt make basket\"}");
+        }
         else if ( strcmp(method,"peggyrates") == 0 )
         {
             if ( SUPERNET.peggy != 0 )
@@ -282,9 +296,9 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         }
         if ( retstr == 0 && (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 )
         {
-            if ( prices->baseid == baseid && prices->relid == relid ) //(strcmp(prices->base,base) == 0 && strcmp(prices->rel,rel) == 0) || (
+            if ( prices->baseid == baseid && prices->relid == relid )
                 invert = 0;
-            else if ( prices->baseid == relid && prices->relid == baseid ) //(strcmp(prices->base,rel) == 0 && strcmp(prices->rel,base) == 0)  || (
+            else if ( prices->baseid == relid && prices->relid == baseid )
                 invert = 1;
             else invert = 0, printf("baserel not matching (%s %s) vs (%s %s)\n",prices->base,prices->rel,base,rel);
             //printf("return invert.%d allfields.%d (%s %s) vs (%s %s)  [%llu %llu] vs [%llu %llu]\n",invert,allfields,base,rel,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,(long long)baseid,(long long)relid);
@@ -301,6 +315,31 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                     portable_mutex_unlock(&prices->mutex);
                     if ( retstr == 0 )
                         retstr = clonestr("{}");
+                }
+                if ( 0 && maxdepth != MAX_DEPTH && retstr != 0 )
+                {
+                    int32_t i; cJSON *bids,*asks,*bids2,*asks2,*clone;
+                    if ( (json= cJSON_Parse(retstr)) != 0 )
+                    {
+                        bids = jobj(json,"bids");
+                        asks = jobj(json,"asks");
+                        //printf("parsed bids.%p asks.%p\n",bids,asks);
+                        if ( bids != 0 && asks != 0 )
+                        {
+                            bids2 = cJSON_CreateObject();
+                            asks2 = cJSON_CreateObject();
+                            for (i=0; i<maxdepth; i++)
+                            {
+                                jaddi(bids2,jitem(bids,i));
+                                jaddi(asks2,jitem(asks,i));
+                            }
+                            clone = cJSON_Duplicate(json,0);
+                            printf("new.(%s) (%s)\n",jprint(bids2,0),jprint(asks2,0));
+                            jadd(clone,"bids",bids2), jadd(clone,"asks",asks2);
+                            retstr = jprint(clone,1);
+                        }
+                        free_json(json);
+                    }
                 }
             }
             else if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )

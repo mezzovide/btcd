@@ -230,7 +230,7 @@ cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct pr
         if ( src == 0 || err != 0 )
         {
             //jaddi(array,prices777_item(prices,bidask,price,volume,wt,orderid));
-            printf("prices777_tradesequence warning cant match timestamp %u (%s %s/%s)\n",order->timestamp,prices->contract,prices->base,prices->rel);
+            //printf("prices777_tradesequence warning cant match timestamp %u (%s %s/%s)\n",order->timestamp,prices->contract,prices->base,prices->rel);
         }
     }
     return(array);
@@ -332,18 +332,24 @@ void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB
 
 void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJSON *asks,int32_t maxdepth,char *pricefield,char *volfield,uint32_t reftimestamp)
 {
-    cJSON *item; int32_t i,slot,n,m,dir,bidask,numitems; uint64_t orderid; uint32_t timestamp; double price,volume,hbla = 0.;
+    cJSON *item; int32_t i,slot,n=0,m=0,dir,bidask,numitems; uint64_t orderid; uint32_t timestamp; double price,volume,hbla = 0.;
     struct prices777_basketinfo OB; struct prices777_orderentry *gp; struct prices777_order *order;
     memset(&OB,0,sizeof(OB));
     if ( reftimestamp == 0 )
         reftimestamp = (uint32_t)time(NULL);
     OB.timestamp = reftimestamp;
-    n = cJSON_GetArraySize(bids);
-    if ( maxdepth != 0 && n > maxdepth )
-        n = maxdepth;
-    m = cJSON_GetArraySize(asks);
-    if ( maxdepth != 0 && m > maxdepth )
-        m = maxdepth;
+    if ( bids != 0 )
+    {
+        n = cJSON_GetArraySize(bids);
+        if ( maxdepth != 0 && n > maxdepth )
+            n = maxdepth;
+    }
+    if ( asks != 0 )
+    {
+        m = cJSON_GetArraySize(asks);
+        if ( maxdepth != 0 && m > maxdepth )
+            m = maxdepth;
+    }
     for (i=0; i<n||i<m; i++)
     {
         gp = &OB.book[MAX_GROUPS][i];
@@ -383,8 +389,8 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
                         hbla = price;
                     else hbla = 0.5 * (hbla + price);
                 }
-                if ( Debuglevel > 2 || prices->basketsize > 0 )//|| strcmp("nxtae",prices->exchange) == 0 )
-                    printf("%d,%d: %-8s %s %5s/%-5s %13.8f vol %13.8f | invert %13.8f vol %13.8f | timestamp.%u\n",i,slot,prices->exchange,dir>0?"bid":"ask",prices->base,prices->rel,price,volume,1./price,volume*price,timestamp);
+                if ( Debuglevel > 2 || prices->basketsize > 0 || strcmp("unconf",prices->exchange) == 0 )
+                    printf("%d,%d: %-8s %s %5s/%-5s %13.8f vol %13.8f | invert %13.8f vol %13.8f | timestamp.%u\n",OB.numbids,OB.numasks,prices->exchange,dir>0?"bid":"ask",prices->base,prices->rel,price,volume,1./price,volume*price,timestamp);
             }
         }
     }
@@ -401,14 +407,16 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
 
 double prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32_t maxdepth,cJSON *json,char *resultfield,char *bidfield,char *askfield,char *pricefield,char *volfield)
 {
-    cJSON *obj = 0,*bidobj,*askobj; double hbla = 0.; int32_t numasks,numbids;
+    cJSON *obj = 0,*bidobj=0,*askobj=0; double hbla = 0.; int32_t numasks=0,numbids=0;
     if ( resultfield == 0 )
         obj = json;
     if ( maxdepth == 0 )
         maxdepth = MAX_DEPTH;
     if ( resultfield == 0 || (obj= jobj(json,resultfield)) != 0 )
     {
-        if ( (bidobj= jarray(&numbids,obj,bidfield)) != 0 && (askobj= jarray(&numasks,obj,askfield)) != 0 )
+        bidobj = jarray(&numbids,obj,bidfield);
+        askobj = jarray(&numasks,obj,askfield);
+        if ( bidobj != 0 || askobj != 0 )
             prices777_json_quotes(&hbla,prices,bidobj,askobj,maxdepth,pricefield,volfield,0);
     }
     return(hbla);
@@ -492,7 +500,8 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         {
             if ( (gap= (prices->lastupdate - feature->lastupdate)) < 0 )
             {
-                printf("you can ignore this harmless warning about unexpected time traveling feature %f vs %f or laggy feature\n",prices->lastupdate,feature->lastupdate);
+                if ( prices->lastupdate != 0 )
+                    printf("you can ignore this harmless warning about unexpected time traveling feature %f vs %f or laggy feature\n",prices->lastupdate,feature->lastupdate);
                 return(0.);
             }
         }
@@ -685,7 +694,7 @@ struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson)
         printf(">>>>> (%s/%s).%s %llu %llu\n",refbase,refrel,"basket",(long long)refbaseid,(long long)refrelid);
         InstantDEX_name(key,&keysize,"basket",refname,refbase,&refbaseid,refrel,&refrelid);
         prices777_addbundle(&valid,0,0,"basket",refbaseid,refrelid);
-        printf("<<<<< valid.%d (%s/%s).%s %llu %llu\n",valid,refbase,refrel,"basket",(long long)refbaseid,(long long)refrelid);
+        printf("<<<<< valid.%d refname.(%s) (%s/%s).%s %llu %llu\n",valid,refname,refbase,refrel,"basket",(long long)refbaseid,(long long)refrelid);
         if ( valid >= 0 )
         {
             BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(refname,refbase,refrel,refbaseid,refrelid,basket,n);
@@ -768,6 +777,7 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
                         cJSON_AddItemToArray(array,item);
                     }
                 }
+                free_json(json);
             }
             free(str);
         } else printf("cant get.(%s)\n",url);
@@ -782,79 +792,93 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
     return(hbla);
 }
 
-double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth)
+double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 {
-    double hbla = 0.;
-    return(hbla);
-}
-
-/*int32_t update_iQ_flags(struct NXT_tx *txptrs[],int32_t maxtx,uint64_t refassetid)
-{
-    uint64_t quoteid,assetid,amount,qty,priceNQT; cJSON *json,*array,*txobj,*attachment,*msgobj,*commentobj;
-    char cmd[1024],txidstr[MAX_JSON_FIELD],account[MAX_JSON_FIELD],comment[MAX_JSON_FIELD],*jsonstr; int32_t i,n,numbooks=0,type,subtype,m = 0;
-    void **obooks = 0;
-    txptrs[0] = 0;
-    sprintf(cmd,"requestType=getUnconfirmedTransactions");
-    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
+    char url[1024],account[1024],txidstr[1024],comment[1024],*str; uint32_t timestamp; int32_t type,i,subtype,n;
+    cJSON *json,*bids,*asks,*commentobj,*array,*txobj,*attachment;
+    double price,vol; uint64_t assetid,accountid,quoteid,baseamount,relamount,qty,priceNQT,amount;
+    bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
+    prices->lastbid = prices->lastask = 0.;
+    prices->O.numbids = prices->O.numasks = 0;
+    sprintf(url,"requestType=getUnconfirmedTransactions");
+    if ( (str= issue_NXTPOST(url)) != 0 )
     {
-        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        //printf("{%s}\n",str);
+        if ( (json= cJSON_Parse(str)) != 0 )
         {
-            if ( (array= cJSON_GetObjectItem(json,"unconfirmedTransactions")) != 0 && is_cJSON_Array(array) != 0 && (n= cJSON_GetArraySize(array)) > 0 )
+            if ( (array= jarray(&n,json,"unconfirmedTransactions")) != 0 )
             {
                 for (i=0; i<n; i++)
                 {
-                    txobj = cJSON_GetArrayItem(array,i);
+      //{"senderPublicKey":"45c9266036e705a9559ccbd2b2c92b28ea6363d2723e8d42433b1dfaa421066c","signature":"9d6cefff4c67f8cf4e9487122e5e6b1b65725815127063df52e9061036e78c0b49ba38dbfc12f03c158697f0af5811ce9398702c4acb008323df37dc55c1b43d","feeNQT":"100000000","type":2,"fullHash":"6a2cd914b9d4a5d8ebfaecaba94ef4e7d2b681c236a4bee56023aafcecd9b704","version":1,"phased":false,"ecBlockId":"887016880740444200","signatureHash":"ba8eee4beba8edbb6973df4243a94813239bf57b91cac744cb8d6a5d032d5257","attachment":{"quantityQNT":"50","priceNQT":"18503000003","asset":"13634675574519917918","version.BidOrderPlacement":1},"senderRS":"NXT-FJQN-8QL2-BMY3-64VLK","subtype":3,"amountNQT":"0","sender":"5245394173527769812","ecBlockHeight":495983,"deadline":1440,"transaction":"15611117574733507690","timestamp":54136768,"height":2147483647},{"senderPublicKey":"c42956d0a9abc5a2e455e69c7e65ff9a53de2b697e913b25fcb06791f127af06","signature":"ca2c3f8e32d3aa003692fef423193053c751235a25eb5b67c21aefdeb7a41d0d37bc084bd2e33461606e25f09ced02d1e061420da7e688306e76de4d4cf90ae0","feeNQT":"100000000","type":2,"fullHash":"51c04de7106a5d5a2895db05305b53dd33fa8b9935d549f765aa829a23c68a6b","version":1,"phased":false,"ecBlockId":"887016880740444200","signatureHash":"d76fce4c081adc29f7e60eba2a930ab5050dd79b6a1355fae04863dddf63730c","attachment":{"version.AskOrderPlacement":1,"quantityQNT":"11570","priceNQT":"110399999","asset":"979292558519844732"},"senderRS":"NXT-ANWW-C5BZ-SGSB-8LGZY","subtype":2,"amountNQT":"0","sender":"8033808554894054300","ecBlockHeight":495983,"deadline":1440,"transaction":"6511477257080258641","timestamp":54136767,"height":2147483647}],"requestProcessingTime":0}
+                    if ( (txobj= jitem(array,i)) == 0 )
+                        continue;
                     copy_cJSON(txidstr,cJSON_GetObjectItem(txobj,"transaction"));
                     copy_cJSON(account,cJSON_GetObjectItem(txobj,"account"));
                     if ( account[0] == 0 )
                         copy_cJSON(account,cJSON_GetObjectItem(txobj,"sender"));
-                    qty = amount = assetid = quoteid = 0;
-                    amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
+                    accountid = calc_nxt64bits(account);
                     type = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"type"),-1);
                     subtype = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"subtype"),-1);
+                    qty = amount = assetid = 0;
                     if ( (attachment= cJSON_GetObjectItem(txobj,"attachment")) != 0 )
                     {
-                        assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
+                        timestamp = get_blockutime(juint(attachment,"height"));
+                        amount = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"amountNQT"));
+                         assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
                         comment[0] = 0;
-                        if ( (msgobj= cJSON_GetObjectItem(attachment,"message")) != 0 )
+                        qty = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"quantityQNT"));
+                        priceNQT = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"priceNQT"));
+                        baseamount = (qty * prices->ap_mult), relamount = (qty * priceNQT);
+                        copy_cJSON(comment,jobj(attachment,"message"));
+                        if ( comment[0] != 0 )
                         {
-                            qty = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"quantityQNT"));
-                            priceNQT = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"priceNQT"));
-                            copy_cJSON(comment,msgobj);
-                            if ( comment[0] != 0 )
+                            unstringify(comment);
+                            if ( (commentobj= cJSON_Parse(comment)) != 0 )
                             {
-                                unstringify(comment);
-                                if ( (commentobj= cJSON_Parse(comment)) != 0 )
-                                {
-                                    quoteid = get_API_nxt64bits(cJSON_GetObjectItem(commentobj,"quoteid"));
-                                    if ( Debuglevel > 2 )
-                                        printf("acct.(%s) pending quoteid.%llu asset.%llu qty.%llu %.8f amount %.8f %d:%d tx.%s\n",account,(long long)quoteid,(long long)assetid,(long long)qty,dstr(priceNQT),dstr(amount),type,subtype,txidstr);
-                                    if ( quoteid != 0 )
-                                        match_unconfirmed(obooks,numbooks,account,quoteid);
-                                    free_json(commentobj);
-                                }
+                                quoteid = get_API_nxt64bits(cJSON_GetObjectItem(commentobj,"quoteid"));
+                                if ( 1 || Debuglevel > 2 )
+                                    printf("acct.(%s) pending quoteid.%llu asset.%llu qty.%llu %.8f amount %.8f %d:%d tx.%s\n",account,(long long)quoteid,(long long)assetid,(long long)qty,dstr(priceNQT),dstr(amount),type,subtype,txidstr);
+                                //if ( quoteid != 0 )
+                                //    match_unconfirmed(obooks,numbooks,account,quoteid);
+                                free_json(commentobj);
                             }
                         }
-                        if ( txptrs != 0 && m < maxtx && (refassetid == 0 || refassetid == assetid) )
+                        quoteid = calc_nxt64bits(txidstr);
+                        price = prices777_price_volume(&vol,baseamount,relamount);
+                        if ( prices->baseid == assetid )
                         {
-                            txptrs[m] = set_NXT_tx(txobj);
-                            txptrs[m]->timestamp = calc_expiration(txptrs[m]);
-                            txptrs[m]->quoteid = quoteid;
-                            strcpy(txptrs[m]->comment,comment);
-                            m++;
-                            //printf("m.%d: assetid.%llu type.%d subtype.%d price.%llu qty.%llu time.%u vs %ld deadline.%d\n",m,(long long)txptrs[m-1]->assetidbits,txptrs[m-1]->type,txptrs[m-1]->subtype,(long long)txptrs[m-1]->priceNQT,(long long)txptrs[m-1]->U.quantityQNT,txptrs[m-1]->timestamp,time(NULL),txptrs[m-1]->deadline);
+                            printf("unconf.%d subtype.%d %s %llu (%llu %llu) %f %f mult.%llu qty.%llu pqt.%llu baseamount.%lld relamount.%lld\n",i,subtype,txidstr,(long long)prices->baseid,(long long)assetid,(long long)NXT_ASSETID,price,vol,(long long)prices->ap_mult,(long long)qty,(long long)priceNQT,(long long)baseamount,(long long)relamount);
+                            if ( subtype == 2 )
+                            {
+                                array = bids;
+                                prices->lastbid = price;
+                            }
+                            else if ( subtype == 3 )
+                            {
+                                array = asks;
+                                prices->lastask = price;
+                            }
+                            cJSON_AddItemToArray(array,inner_json(price,vol,timestamp,quoteid,accountid,qty,priceNQT,baseamount,relamount));
                         }
                     }
                 }
-            } free_json(json);
-        } free(jsonstr);
-    } free(obooks);
-    txptrs[m] = 0;
-    return(m);
-}*/
+                free_json(json);
+            }
+            free(str);
+        } else printf("cant get.(%s)\n",url);
+    }
+    json = cJSON_CreateObject();
+    cJSON_AddItemToObject(json,"bids",bids);
+    cJSON_AddItemToObject(json,"asks",asks);
+    prices777_json_orderbook("unconf",prices,maxdepth,json,0,"bids","asks",0,0);
+    if ( Debuglevel > 2 || prices->O.numbids != 0 || prices->O.numasks != 0 )
+        printf("%s %s/%s unconf.(%s) %f %f (%d %d)\n",prices->contract,prices->base,prices->rel,jprint(json,0),prices->lastbid,prices->lastask,prices->O.numbids,prices->O.numasks);
+    free_json(json);
+    return(_pairaved(prices->lastbid,prices->lastask));
+}
 
-
-double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
+double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth)
 {
     double hbla = 0.;
     return(hbla);
