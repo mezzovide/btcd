@@ -150,7 +150,7 @@ int main(int argc, char **argv)
                 value = CGI_lookup_all(varlist,0);
                 for (i=0; value[i]!=0; i++)
                 {
-                    //fprintf(stderr,"iter.%d %s [%d] = %s\r\n",iter,name,i,value[i]);
+                fprintf(stderr,"iter.%d %s [%d] = %s\r\n",iter,name,i,value[i]);
                     if ( i == 0 )
                     {
                         if ( url == 0 )
