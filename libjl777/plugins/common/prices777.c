@@ -963,7 +963,7 @@ void prices777_exchangeloop(void *ptr)
                     //if ( Debuglevel > 2 )
                     printf("updating basket(%s) lastprice %.8f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                     prices->lastupdate = updated;
-                    if ( (prices->lastprice = prices777_basket(prices,MAX_DEPTH)) != 0. )
+                    if ( (prices->lastprice= prices777_basket(prices,MAX_DEPTH)) != 0. )
                          prices777_propagate(prices);
                     prices->changed = 0;
                 }
