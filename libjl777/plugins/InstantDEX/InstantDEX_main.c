@@ -289,6 +289,7 @@ char *InstantDEX_tradesequence(cJSON *json)
         }
         return(InstantDEX_dotrades(trades,n,juint(json,"dotrade")));
     }
+    printf("error parsing.(%s)\n",jprint(json,0));
     return(clonestr("{\"error\":\"couldnt process trades\"}"));
 }
 
@@ -299,7 +300,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     char *InstantDEX_tradehistory();
     char *InstantDEX_cancelorder(uint64_t orderid);
     char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD];
-    cJSON *json; uint64_t orderid,baseid,relid,assetbits; uint32_t maxdepth; int32_t invert,keysize,allfields; struct prices777 *prices;
+    cJSON *json; uint64_t orderid,baseid,relid,assetbits; uint32_t maxdepth; int32_t dir,invert,keysize,allfields; struct prices777 *prices;
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
         // instantdex orders and orderbooks, openorders/cancelorder/tradehistory
@@ -402,6 +403,9 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             }
             else if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
             {
+                if ( strcmp(method,"placebid") == 0 )
+                    dir = 1;
+                else dir = -1;
                 extern queue_t InstantDEXQ;
                 queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
                 free_json(json);
