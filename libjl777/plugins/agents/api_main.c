@@ -162,6 +162,7 @@ int main(int argc, char **argv)
                                 str = malloc(strlen(value[i])+1);
                                 strcpy(str,value[i]);
                                 unstringify(str);
+                                printf("(%s) -> (%s)\n",value[i],str);
                                 if ( (obj= cJSON_Parse(str)) != 0 )
                                 {
                                     free_json(json);
