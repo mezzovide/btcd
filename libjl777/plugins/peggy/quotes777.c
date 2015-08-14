@@ -676,6 +676,14 @@ struct peggy_info *peggy_genesis(int32_t lookbacks[OPRETURNS_CONTEXTS],struct pe
     return(PEGS);
 }
 
+char *peggybase(uint32_t blocktimestamp)
+{
+    int32_t nonz; struct peggy_info *PEGS = opreturns_context("peggy",0);
+    if ( PEGS != 0 )
+        return(peggy_emitprices(&nonz,PEGS,blocktimestamp,PEGS->genesis != 0 ? 0 : PEGGY_MAXLOCKDAYS));
+    return(0);
+}
+
 void peggy()
 {
     int32_t lookbacks[OPRETURNS_CONTEXTS],nonz,num,peggylen; uint32_t timestamp = (uint32_t)time(0);
