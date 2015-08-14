@@ -159,11 +159,15 @@ int main(int argc, char **argv)
                             {
                                 char *unstringify(char *str);
                                 cJSON *obj;
-                                str = malloc(strlen(value[i])+1);
-                                strcpy(str,value[i]);
-                                unstringify(str);
-                                printf("(%s) -> (%s)\n",value[i],str);
-                                if ( (obj= cJSON_Parse(str)) != 0 )
+                                if ( (obj= cJSON_Parse(name)) == 0 )
+                                {
+                                    str = malloc(strlen(value[i])+1);
+                                    strcpy(str,value[i]);
+                                    unstringify(str);
+                                    printf("unstringify (%s) -> (%s)\n",value[i],str);
+                                    obj= cJSON_Parse(str);
+                                }
+                                if ( obj != 0 )
                                 {
                                     free_json(json);
                                     json = obj;
