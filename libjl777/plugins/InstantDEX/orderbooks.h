@@ -331,6 +331,11 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct price
 void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB)
 {
     int32_t allflag; char *strs[4];
+    if ( OB->numbids == 0 && OB->numasks == 0 )
+    {
+        printf("warning: updating null orderbook ignored for %s (%s/%s)\n",prices->contract,prices->base,prices->rel);
+        return;
+    }
     for (allflag=0; allflag<4; allflag++)
     {
         strs[allflag] = prices777_orderbook_jsonstr(allflag/2,SUPERNET.my64bits,prices,OB,MAX_DEPTH,allflag%2);
