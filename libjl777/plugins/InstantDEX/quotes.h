@@ -753,7 +753,7 @@ cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t baseamount,uint64_t rela
     cJSON *json = 0; char numstr[64],base[64],rel[64],exchange[64]; double price,volume; int32_t minperc;
     minperc = (iQ->minperc != 0) ? iQ->minperc : INSTANTDEX_MINVOL;
     json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json,"askoffer",cJSON_CreateNumber(flip));
+    //cJSON_AddItemToObject(json,"askoffer",cJSON_CreateNumber(flip));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString("makeoffer3"));
     cJSON_AddItemToObject(json,"plugin",cJSON_CreateString("InstantDEX"));
     get_assetname(base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
@@ -828,7 +828,8 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
     {
         ensure_jsonitem(json,"plugin","relay");
         ensure_jsonitem(json,"destplugin","InstantDEX");
-        ensure_jsonitem(json,"method",(iQ->isask != 0) ? "ask" : "bid");
+        ensure_jsonitem(json,"method","busdata");
+        ensure_jsonitem(json,"submethod",(iQ->isask != 0) ? "ask" : "bid");
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
         free_json(json);
     } else printf("gen_InstantDEX_json returns null\n");
