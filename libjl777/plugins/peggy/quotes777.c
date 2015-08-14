@@ -676,6 +676,36 @@ struct peggy_info *peggy_genesis(int32_t lookbacks[OPRETURNS_CONTEXTS],struct pe
     return(PEGS);
 }
 
+char *peggybase(uint32_t blocknum,uint32_t blocktimestamp)
+{
+    int32_t nonz; struct peggy_info *PEGS = opreturns_context("peggy",0);
+    if ( PEGS != 0 )
+        return(peggy_emitprices(&nonz,PEGS,blocktimestamp,PEGS->genesis != 0 ? 0 : PEGGY_MAXLOCKDAYS));
+    return(0);
+}
+
+char *peggypayments(uint32_t blocknum,uint32_t blocktimestamp)
+{
+    int32_t peggy_payments(queue_t *PaymentsQ,struct opreturn_payment *payments,int32_t max,uint32_t currentblocknum,uint32_t blocknum,uint32_t blocktimestamp);
+    struct opreturn_payment payments[8192]; cJSON *json;
+    int32_t i,n; struct peggy_info *PEGS = opreturns_context("peggy",0);
+    memset(payments,0,sizeof(payments));
+    if ( PEGS != 0 && PEGS->accts != 0 && (n= peggy_payments(&PEGS->accts->PaymentsQ,payments,sizeof(payments)/sizeof(*payments),blocknum,blocknum,blocktimestamp)) > 0 )
+    {
+        json = cJSON_CreateObject();
+        for (i=0; i<n; i++)
+            jaddnum(json,payments[i].coinaddr,payments[i].value);
+        return(jprint(json,1));
+    }
+    return(clonestr("{}"));
+}
+
+int32_t peggyblock(char *jsonstr)
+{
+    printf("got peggyblock.(%s)\n",jsonstr);
+    return(0);
+}
+
 void peggy()
 {
     int32_t lookbacks[OPRETURNS_CONTEXTS],nonz,num,peggylen; uint32_t timestamp = (uint32_t)time(0);

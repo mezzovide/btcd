@@ -204,7 +204,6 @@ short Currency_contractdirs[NUM_CURRENCIES+1][NUM_CURRENCIES] =
 };
 char *Yahoo_metals[] = { "XAU", "XAG", "XPT", "XPD" };
 
-struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 
 #define dto64(x) ((int64_t)((x) * (double)SATOSHIDEN * SATOSHIDEN))
 #define dto32(x) ((int32_t)((x) * (double)SATOSHIDEN))
@@ -941,7 +940,7 @@ void prices777_exchangeloop(void *ptr)
                     prices->lastprice = (*exchange->updatefunc)(prices,MAX_DEPTH);
                     portable_mutex_unlock(&exchange->mutex);
                     updated = exchange->lastupdate = milliseconds(), prices->lastupdate = milliseconds();
-                    if ( prices->lastprice != 0. )
+                    if ( prices->lastprice != 0. && strcmp(exchange->name,"unconf") != 0 )
                     {
                         printf("%-13s %12s (%10s %10s) %022llu %022llu isnxtae.%d poll %u -> %u %.8f hbla %.8f %.8f\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,prices->pollnxtblock,prices777_NXTBLOCK,prices->lastprice,prices->lastbid,prices->lastask);
                         prices777_propagate(prices);

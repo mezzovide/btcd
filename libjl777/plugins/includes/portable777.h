@@ -182,7 +182,7 @@ struct InstantDEX_quote
 //struct prices777_nxtquote { uint64_t baseid,relid,nxt64bits,quoteid,qty,priceNQT,baseamount,relamount; uint32_t timestamp; };
 //struct prices777_nxtbooks { struct prices777_nxtquote orderbook[MAX_DEPTH][2],prevorderbook[MAX_DEPTH][2],prev2orderbook[MAX_DEPTH][2]; };
 struct prices777_basket { struct prices777 *prices; double wt; int32_t groupid,groupsize,aski,bidi; char base[64],rel[64]; };
-struct prices777_order { struct prices777 *source; double price,vol,wt,ratio; uint64_t id; uint32_t timestamp; uint16_t slot_ba; };
+struct prices777_order { struct prices777 *source; double price,vol,wt,ratio; uint64_t id,assetid; uint32_t timestamp; uint16_t slot_ba; };
 struct prices777_orderentry { struct prices777_order bid,ask; };
 #define MAX_GROUPS 8
 
@@ -220,7 +220,9 @@ struct exchange_info *find_exchange(int32_t *exchangeidp,char *exchangestr);
 struct exchange_info *exchange_find(char *exchangestr);
 void prices777_exchangeloop(void *ptr);
 char *fill_nxtae(uint64_t nxt64bits,int32_t dir,double price,double volume,uint64_t baseid,uint64_t relid);
+cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade);
 
+struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);
 struct prices777 *prices777_makebasket(char *basketstr,cJSON *basketjson);
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess);
