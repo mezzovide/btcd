@@ -169,9 +169,11 @@ int main(int argc, char **argv)
                                 }
                                 if ( obj != 0 )
                                 {
+                                    //unstringified ((null)) -> ({"stringified":{"method":"orderbook","baseid":"12071612744977229797","relid":"5527630","maxdepth":"1"},"agent":"InstantDEX"})
                                     free_json(json);
-                                    json = obj;
-                                    cJSON_AddItemToObject(obj,"agent",cJSON_CreateString("InstantDEX"));
+                                    if ( jobj(obj,"stringified") != 0 )
+                                        json = cJSON_DuplicateObject(jobj(obj,"stringified"),1), free_json(obj);
+                                    cJSON_AddItemToObject(json,"agent",cJSON_CreateString("InstantDEX"));
                                     if ( remoteaddr != 0 && remoteaddr[0] != 0 )
                                         cJSON_AddItemToObject(json,"remoteaddr",cJSON_CreateString(remoteaddr));
                                     fprintf(stderr,"unstringified (%s) -> (%s)\n",str,jprint(json,0));

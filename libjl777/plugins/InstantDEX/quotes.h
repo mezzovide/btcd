@@ -593,11 +593,13 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
     return(jsonstr);
 }
 
-/*{
-    extern queue_t InstantDEXQ;
-    queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
-    free_json(json);
-}*/
+char *InstantDEX_quote(struct prices777 *prices,int32_t dir,double price,double volume,uint64_t orderid,uint32_t minperc,uint32_t automatch,uint32_t duration)
+{
+    //extern queue_t InstantDEXQ;
+    //queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
+    //free_json(json);
+    return(clonestr("{\"error\":\"not yet\"}"));
+}
 
 char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
 {

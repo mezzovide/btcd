@@ -406,8 +406,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                 if ( strcmp(method,"placebid") == 0 )
                     dir = 1 - invert*2;
                 else dir = -(1 - invert*2);
-               // InstantDEX_quote(prices,dir,jdouble(json,"price"),jdouble(json,"volume"),orderid,juint(json,"minperc"));
-                return(clonestr("{\"success\":\"InstantDEX placebid/ask queued\"}"));
+                return(InstantDEX_quote(prices,dir,jdouble(json,"price"),jdouble(json,"volume"),orderid,juint(json,"minperc"),juint(json,"automatch"),juint(json,"duration")));
             }
         }
         if ( Debuglevel > 2 )
