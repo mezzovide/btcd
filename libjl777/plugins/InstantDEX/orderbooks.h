@@ -988,7 +988,14 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 
 double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth)
 {
-    double hbla = 0.;
+    cJSON *json; double hbla = 0.;
+    if ( (json= InstantDEX_orderbook(prices)) != 0 )
+    {
+        if ( Debuglevel > 2 )
+            printf("InstantDEX.(%s)\n",jprint(json,0));
+        prices777_json_orderbook("InstantDEX",prices,maxdepth,json,0,"bids","asks",0,0);
+        free_json(json);
+    }
     return(hbla);
 }
 
