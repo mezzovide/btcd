@@ -1204,7 +1204,7 @@ int32_t busdata_poll()
             sock = RELAYS.pfd[i].fd;
             if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             {
-                if ( Debuglevel > 2 )
+                //if ( Debuglevel > 2 )
                     printf("RECV.%d (%s)\n",sock,msg);
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
