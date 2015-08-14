@@ -39,7 +39,7 @@
 #include "../includes/portable777.h"
 #undef DEFINES_ONLY
 
-#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "openorders", "cancelorder", "tradehistory"
+#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory"
 
 #define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "makeoffer3", "respondtx"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
@@ -300,6 +300,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = InstantDEX_openorders(SUPERNET.NXTADDR);
         else if ( strcmp(method,"cancelorder") == 0 )
             retstr = InstantDEX_cancelorder(orderid);
+        else if ( strcmp(method,"orderstatus") == 0 )
+            retstr = InstantDEX_orderstatus(orderid);
         else if ( strcmp(method,"tradehistory") == 0 )
             retstr = InstantDEX_tradehistory();
         else if ( strcmp(method,"lottostats") == 0 )

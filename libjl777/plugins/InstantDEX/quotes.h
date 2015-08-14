@@ -793,6 +793,17 @@ cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t baseamount,uint64_t rela
     return(json);
 }
 
+char *InstantDEX_orderstatus(uint64_t orderid)
+{
+    cJSON *item; struct InstantDEX_quote *iQ = 0;
+    if ( (iQ= find_iQ(orderid)) != 0 )
+    {
+        if ( (item= gen_InstantDEX_json(0,iQ->baseamount,iQ->relamount,iQ->isask,iQ,iQ->baseid,iQ->relid,0)) != 0 )
+            return(jprint(item,1));
+    }
+    return(clonestr("{\"error\":\"couldnt find orderid\"}"));
+}
+
 char *InstantDEX_openorders(char *NXTaddr)
 {
     struct InstantDEX_quote *iQ,*tmp; cJSON *json,*array,*item; uint64_t nxt64bits = calc_nxt64bits(NXTaddr);

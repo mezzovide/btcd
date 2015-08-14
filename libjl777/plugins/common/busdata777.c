@@ -1173,7 +1173,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                 return(retstr);
             } else printf("Cant parse busdata_sync.(%s)\n",jsonstr);
         }
-    }
+    } else printf("error creating busdata.(%s)\n",jsonstr);
     if ( json != 0 )
         free_json(json);
     return(clonestr("{\"error\":\"error creating busdata\"}"));
