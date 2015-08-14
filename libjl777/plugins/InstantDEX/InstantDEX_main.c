@@ -39,8 +39,9 @@
 #include "../includes/portable777.h"
 #undef DEFINES_ONLY
 
-#define INSTANTDEX_LOCALAPI "allorderbooks", "openorders", "cancelorder", "tradehistory", "lottostats", "LSUM", "peggyrates", "tradesequence"
-#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "makeoffer3", "LSUM", "orderbook"
+#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "openorders", "cancelorder", "tradehistory"
+
+#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
 char *PLUGNAME(_pubmethods)[] = { INSTANTDEX_REMOTEAPI }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
@@ -139,11 +140,19 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
             s = "-", baseid = stringbits("NXT"), strcpy(base,"NXT");
         else s = "";
         if ( relid == 0 && rel[0] != 0 )
-            relid = calc_nxt64bits(rel);
+        {
+            if ( is_decimalstr(rel) != 0 )
+                relid = calc_nxt64bits(rel);
+            else relid = is_MGWcoin(rel);
+        }
         else if ( (str= is_MGWasset(relid)) != 0 )
             strcpy(rel,str);
         if ( baseid == 0 && base[0] != 0 )
-            baseid = calc_nxt64bits(base);
+        {
+            if ( is_decimalstr(base) != 0 )
+                baseid = calc_nxt64bits(base);
+            else baseid = is_MGWcoin(base);
+        }
         else if ( (str= is_MGWasset(baseid)) != 0 )
             strcpy(base,str);
         if ( base[0] == 0 )
@@ -360,8 +369,33 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             else if ( prices->baseid == relid && prices->relid == baseid )
                 invert = 1;
             else invert = 0, printf("baserel not matching (%s %s) vs (%s %s)\n",prices->base,prices->rel,base,rel);
-            printf("return invert.%d allfields.%d (%s %s) vs (%s %s)  [%llu %llu] vs [%llu %llu]\n",invert,allfields,base,rel,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,(long long)baseid,(long long)relid);
-            if ( strcmp(method,"orderbook") == 0 )
+            if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
+            {
+                if ( strcmp(method,"placebid") == 0 )
+                    dir = 1 - invert*2;
+                else dir = -(1 - invert*2);
+                return(InstantDEX_quote(prices,dir,jdouble(json,"price"),jdouble(json,"volume"),orderid,juint(json,"minperc"),juint(json,"automatch"),juint(json,"duration")));
+            }
+            else if ( strcmp(method,"disable") == 0 )
+            {
+                if ( prices != 0 )
+                {
+                    prices->disabled = 1;
+                    return(clonestr("{\"result\":\"success\"}"));
+                }
+                else return(clonestr("{\"error\":\"no prices to disable\"}"));
+            }
+            else if ( strcmp(method,"enable") == 0 )
+            {
+                if ( prices != 0 )
+                {
+                    prices->disabled = 0;
+                    return(clonestr("{\"result\":\"success\"}"));
+                }
+                else return(clonestr("{\"error\":\"no prices to enable\"}"));
+            }
+    //printf("return invert.%d allfields.%d (%s %s) vs (%s %s)  [%llu %llu] vs [%llu %llu]\n",invert,allfields,base,rel,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,(long long)baseid,(long long)relid);
+            else if ( strcmp(method,"orderbook") == 0 )
             {
                 if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 )
                 {
@@ -400,13 +434,6 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                         free_json(json);
                     }
                 }
-            }
-            else if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
-            {
-                if ( strcmp(method,"placebid") == 0 )
-                    dir = 1 - invert*2;
-                else dir = -(1 - invert*2);
-                return(InstantDEX_quote(prices,dir,jdouble(json,"price"),jdouble(json,"volume"),orderid,juint(json,"minperc"),juint(json,"automatch"),juint(json,"duration")));
             }
         }
         if ( Debuglevel > 2 )
