@@ -218,8 +218,9 @@ fprintf(stderr,"url.(%s) (%s)\n",url,postbuf);
     }
     else
     {
-        if ( strcmp(namebuf,"api") != 0 )
+        if ( jobj(json,"agent") == 0 && strcmp(namebuf,"api") != 0 )
             cJSON_AddItemToObject(json,"agent",cJSON_CreateString(namebuf));
+        fprintf(stderr,"PROCESS.(%s)\n",jprint(json,0));
         process_json(json,remoteaddr,localaccess);
     }
     free_json(json);
