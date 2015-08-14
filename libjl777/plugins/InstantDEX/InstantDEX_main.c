@@ -58,11 +58,28 @@ cJSON *InstantDEX_lottostats();
 #include "quotes.h"
 #include "atomic.h"
 
+void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t numtx,int32_t updateNXT) // from poll_pending_offers via main
+{
+    char *retstr;
+    return;
+    printf("update_openorder iQ.%llu with numtx.%d updateNXT.%d | expires in %ld\n",(long long)iQ->quoteid,numtx,updateNXT,iQ->timestamp+iQ->duration-time(NULL));
+    if ( (SUPERNET.automatch & 2) != 0 && (retstr= check_ordermatch(1,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,iQ)) != 0 )
+    {
+        printf("automatched order!\n");
+        free(retstr);
+    }
+}
+
+void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
+{
+}
+
+
 uint32_t prices777_NXTBLOCK;
 int32_t InstantDEX_idle(struct plugin_info *plugin)
 {
     static double lastmilli; static cJSON *oldjson;
-    char *jsonstr,*retstr; cJSON *json; uint32_t NXTblock; int32_t n = 0;
+    char *jsonstr,*str; cJSON *json; uint32_t NXTblock; int32_t n = 0; uint32_t nonce;
     if ( INSTANTDEX.readyflag == 0 )
         return(0);
     if ( (jsonstr= queue_dequeue(&InstantDEXQ,1)) != 0 )
@@ -70,8 +87,10 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
             printf("Got InstantDEX.(%s)\n",jsonstr);
-            if ( (retstr = InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
-                printf("InstantDEX.(%s)\n",retstr), free(retstr);
+            if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
+                free(str);
+            //if ( (retstr = InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
+            //    printf("InstantDEX.(%s)\n",retstr), free(retstr);
             free_json(json);
             n++;
         } else printf("error parsing (%s) from InstantDEXQ\n",jsonstr);
@@ -317,7 +336,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                 if ( strcmp(method,"placebid") == 0 )
                     dir = 1 - invert*2;
                 else dir = -(1 - invert*2);
-                return(InstantDEX_quote(prices,dir,jdouble(json,"price"),jdouble(json,"volume"),orderid,juint(json,"minperc"),juint(json,"automatch"),juint(json,"duration")));
+                return(InstantDEX_quote(localaccess,remoteaddr,prices,dir,jdouble(json,"price"),jdouble(json,"volume"),orderid,juint(json,"minperc"),juint(json,"automatch"),juint(json,"duration"),jstr(json,"gui")));
             }
             else if ( strcmp(method,"disable") == 0 )
             {
