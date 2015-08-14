@@ -148,6 +148,10 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         strcpy(base,"NXT");
     if ( strcmp(rel,"5527630") == 0 || relid == 5527630 )
         strcpy(rel,"NXT");
+    if ( strcmp(rel,"NXT") == 0 )
+        relid = 5527630;
+    if ( strcmp(base,"NXT") == 0 )
+        baseid = 5527630;
     if ( strcmp("nxtae",exchange) == 0 || strcmp("unconf",exchange) == 0 )
     {
         if ( strcmp(rel,"NXT") == 0 )

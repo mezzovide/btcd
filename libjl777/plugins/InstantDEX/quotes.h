@@ -138,7 +138,7 @@ uint64_t calc_quoteid(struct InstantDEX_quote *iQ)
             Q.relid = iQ->baseid, Q.relamount = iQ->baseamount;
             Q.isask = Q.minperc = 0;
         }
-        return(calc_txid((uint8_t *)((long)&Q + sizeof(Q.hh) + sizeof(Q.order) + sizeof(Q.quoteid)),sizeof(Q) - sizeof(Q.hh) - sizeof(Q.order) - sizeof(Q.quoteid)));
+        return(calc_txid((uint8_t *)((long)&Q + sizeof(Q.hh) + sizeof(Q.quoteid)),sizeof(Q) - sizeof(Q.hh) - sizeof(Q.quoteid)));
     } return(iQ->quoteid);
 }
 
