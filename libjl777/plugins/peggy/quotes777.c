@@ -710,7 +710,7 @@ void peggy()
 {
     int32_t lookbacks[OPRETURNS_CONTEXTS],nonz,num,peggylen; uint32_t timestamp = (uint32_t)time(0);
     FILE *fp; uint8_t opret[8192]; char fname[512],*opreturnstr; struct peggy_info *PEGS = opreturns_context("peggy",0);
-    if ( PEGS != 0 )
+    if ( 0 && PEGS != 0 )
     {
         opreturnstr = peggy_emitprices(&nonz,PEGS,timestamp,PEGS->genesis != 0 ? 0 : PEGGY_MAXLOCKDAYS);
         if ( opreturnstr != 0 )
@@ -813,7 +813,7 @@ void *peggy_replay(char *path,struct txinds777_info *opreturns,void *_PEGS,uint3
     int32_t lookbacks[OPRETURNS_CONTEXTS]; uint64_t allocsize,len; int32_t n,signedcount,valid=0; long offset;
     char fname[512]; uint8_t opret[8192]; struct peggy_tx Ptx; struct peggy_info *PEGS = _PEGS;
     if ( blocknum == 0 )
-        opreturnstr = PEGGY_GENESIS;
+        opreturnstr = 0;//PEGGY_GENESIS;
     if ( data == 0 )
     {
         data = opret;
