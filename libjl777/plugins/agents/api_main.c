@@ -173,6 +173,7 @@ int main(int argc, char **argv)
                                     free_json(json);
                                     if ( jobj(obj,"stringified") != 0 )
                                         json = cJSON_DuplicateObject(jobj(obj,"stringified"),1), free_json(obj);
+                                    else json = obj;
                                     cJSON_AddItemToObject(json,"agent",cJSON_CreateString("InstantDEX"));
                                     if ( remoteaddr != 0 && remoteaddr[0] != 0 )
                                         cJSON_AddItemToObject(json,"remoteaddr",cJSON_CreateString(remoteaddr));
