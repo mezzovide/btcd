@@ -890,6 +890,11 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
     return(hbla);
 }
 
+int32_t match_unconfirmed(char *account,uint64_t quoteid,cJSON *txobj)
+{
+    return(-1);
+}
+
 double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 {
     char url[1024],account[1024],txidstr[1024],comment[1024],*str; uint32_t timestamp; int32_t type,i,subtype,n;
@@ -937,8 +942,8 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                                 quoteid = get_API_nxt64bits(cJSON_GetObjectItem(commentobj,"quoteid"));
                                 if ( 1 || Debuglevel > 2 )
                                     printf("acct.(%s) pending quoteid.%llu asset.%llu qty.%llu %.8f amount %.8f %d:%d tx.%s\n",account,(long long)quoteid,(long long)assetid,(long long)qty,dstr(priceNQT),dstr(amount),type,subtype,txidstr);
-                                //if ( quoteid != 0 )
-                                //    match_unconfirmed(obooks,numbooks,account,quoteid);
+                                if ( quoteid != 0 )
+                                    match_unconfirmed(account,quoteid,txobj);
                                 free_json(commentobj);
                             }
                         }
