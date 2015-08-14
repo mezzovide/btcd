@@ -39,9 +39,9 @@
 #include "../includes/portable777.h"
 #undef DEFINES_ONLY
 
-#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "openorders", "cancelorder", "tradehistory"
+#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory"
 
-#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask"
+#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "makeoffer3", "respondtx"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
 char *PLUGNAME(_pubmethods)[] = { INSTANTDEX_REMOTEAPI }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
@@ -74,7 +74,6 @@ void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
 {
 }
 
-
 uint32_t prices777_NXTBLOCK;
 int32_t InstantDEX_idle(struct plugin_info *plugin)
 {
@@ -86,11 +85,9 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            printf("Got InstantDEX.(%s)\n",jsonstr);
+            printf("Dequeued InstantDEX.(%s)\n",jsonstr);
             if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
                 free(str);
-            //if ( (retstr = InstantDEX(jsonstr,jstr(json,"remoteaddr"),juint(json,"localaccess"))) != 0 )
-            //    printf("InstantDEX.(%s)\n",retstr), free(retstr);
             free_json(json);
             n++;
         } else printf("error parsing (%s) from InstantDEXQ\n",jsonstr);
@@ -298,9 +295,11 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         if ( strcmp(method,"allorderbooks") == 0 )
             retstr = prices777_allorderbooks();
         else if ( strcmp(method,"openorders") == 0 )
-            retstr = InstantDEX_openorders(SUPERNET.NXTADDR);
+            retstr = InstantDEX_openorders(SUPERNET.NXTADDR,juint(json,"allorders"));
         else if ( strcmp(method,"cancelorder") == 0 )
             retstr = InstantDEX_cancelorder(orderid);
+        else if ( strcmp(method,"orderstatus") == 0 )
+            retstr = InstantDEX_orderstatus(orderid);
         else if ( strcmp(method,"tradehistory") == 0 )
             retstr = InstantDEX_tradehistory();
         else if ( strcmp(method,"lottostats") == 0 )

@@ -173,7 +173,7 @@ int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,unsigned char e
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *secret);
 int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode);
 int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
-char *cancel_orderid(char *NXTaddr,uint64_t orderid);
+char *cancel_NXTorderid(char *NXTaddr,uint64_t orderid);
 
 uint64_t calc_decimals_mult(int32_t decimals);
 int32_t get_assetdecimals(uint64_t assetid);
@@ -578,7 +578,7 @@ uint64_t _get_AEquote(char *str,uint64_t orderid)
     return(nxt64bits);
 }
 
-char *cancel_orderid(char *NXTaddr,uint64_t orderid)
+char *cancel_NXTorderid(char *NXTaddr,uint64_t orderid)
 {
     uint64_t nxt64bits; char cmd[1025],secret[8192],*str = "Bid",*retstr = 0;
     if ( (nxt64bits= _get_AEquote(str,orderid)) == 0 )

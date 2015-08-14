@@ -317,7 +317,7 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
 struct InstantDEX_quote *AllQuotes;
 
 void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 0; }
-void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 1; }
+void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = 1; }
 
 int32_t iQcmp(struct InstantDEX_quote *iQA,struct InstantDEX_quote *iQB)
 {
@@ -353,6 +353,17 @@ struct InstantDEX_quote *find_iQ(uint64_t quoteid)
 {
     struct InstantDEX_quote *iQ;
     HASH_FIND(hh,AllQuotes,&quoteid,sizeof(quoteid),iQ);
+    return(iQ);
+}
+
+struct InstantDEX_quote *delete_iQ(uint64_t quoteid)
+{
+    struct InstantDEX_quote *iQ;
+    if ( (iQ= find_iQ(quoteid)) != 0 )
+    {
+        HASH_DELETE(hh,AllQuotes,iQ);
+        cancel_InstantDEX_quote(iQ);
+    }
     return(iQ);
 }
 
@@ -604,15 +615,10 @@ char *check_ordermatch(int32_t polling,char *NXTaddr,char *NXTACCTSECRET,struct 
 int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
 {
     struct InstantDEX_quote *iQ;
-    char nxtaddr[64];
     if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(NXTaddr) && iQ->baseiQ == 0 && iQ->reliQ == 0 && iQ->exchangeid == INSTANTDEX_EXCHANGEID )
     {
-        expand_nxt64bits(nxtaddr,iQ->nxt64bits);
-        if ( strcmp(NXTaddr,nxtaddr) == 0 && calc_quoteid(iQ) == quoteid )
-        {
-            cancel_InstantDEX_quote(iQ);
-            return(1);
-        }
+        delete_iQ(quoteid);
+        return(1);
     }
     return(0);
 }
@@ -620,7 +626,7 @@ int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
 char *InstantDEX_cancelorder(uint64_t quoteid)
 {
     struct InstantDEX_quote *iQ; char *retstr;
-    if ( (retstr= cancel_orderid(SUPERNET.NXTADDR,quoteid)) != 0 )
+    if ( (retstr= cancel_NXTorderid(SUPERNET.NXTADDR,quoteid)) != 0 )
     {
         if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(SUPERNET.NXTADDR) )
             cancel_InstantDEX_quote(iQ);
@@ -747,7 +753,7 @@ cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t baseamount,uint64_t rela
     cJSON *json = 0; char numstr[64],base[64],rel[64],exchange[64]; double price,volume; int32_t minperc;
     minperc = (iQ->minperc != 0) ? iQ->minperc : INSTANTDEX_MINVOL;
     json = cJSON_CreateObject();
-    cJSON_AddItemToObject(json,"askoffer",cJSON_CreateNumber(flip));
+    //cJSON_AddItemToObject(json,"askoffer",cJSON_CreateNumber(flip));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString("makeoffer3"));
     cJSON_AddItemToObject(json,"plugin",cJSON_CreateString("InstantDEX"));
     get_assetname(base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
@@ -787,13 +793,24 @@ cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t baseamount,uint64_t rela
     return(json);
 }
 
-char *InstantDEX_openorders(char *NXTaddr)
+char *InstantDEX_orderstatus(uint64_t orderid)
+{
+    cJSON *item; struct InstantDEX_quote *iQ = 0;
+    if ( (iQ= find_iQ(orderid)) != 0 )
+    {
+        if ( (item= gen_InstantDEX_json(0,iQ->baseamount,iQ->relamount,iQ->isask,iQ,iQ->baseid,iQ->relid,0)) != 0 )
+            return(jprint(item,1));
+    }
+    return(clonestr("{\"error\":\"couldnt find orderid\"}"));
+}
+
+char *InstantDEX_openorders(char *NXTaddr,int32_t allorders)
 {
     struct InstantDEX_quote *iQ,*tmp; cJSON *json,*array,*item; uint64_t nxt64bits = calc_nxt64bits(NXTaddr);
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
     HASH_ITER(hh,AllQuotes,iQ,tmp)
     {
-        if ( iQ->nxt64bits == nxt64bits )
+        if ( iQ->nxt64bits == nxt64bits && (allorders != 0 || iQ->closed == 0) )
         {
             if ( (item= gen_InstantDEX_json(0,iQ->baseamount,iQ->relamount,iQ->isask,iQ,iQ->baseid,iQ->relid,0)) != 0 )
                 jaddi(array,item);
@@ -811,7 +828,8 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
     {
         ensure_jsonitem(json,"plugin","relay");
         ensure_jsonitem(json,"destplugin","InstantDEX");
-        ensure_jsonitem(json,"method",(iQ->isask != 0) ? "ask" : "bid");
+        ensure_jsonitem(json,"method","busdata");
+        ensure_jsonitem(json,"submethod",(iQ->isask != 0) ? "ask" : "bid");
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
         free_json(json);
     } else printf("gen_InstantDEX_json returns null\n");

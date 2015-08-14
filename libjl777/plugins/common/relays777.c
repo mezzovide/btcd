@@ -404,7 +404,6 @@ char *relays_jsonstr(char *jsonstr,cJSON *argjson)
 
 void serverloop(void *_args)
 {
-    int32_t poll_daemons();
     int32_t n;
 #ifdef INSIDE_MGW
     int32_t make_MGWbus(uint16_t port,char *bindaddr,char serverips[MAX_MGWSERVERS][64],int32_t n);
@@ -413,7 +412,8 @@ void serverloop(void *_args)
     if ( SUPERNET.gatewayid >= 0 )
         MGW.all.socks.both.bus = make_MGWbus(MGW.port,SUPERNET.myipaddr,MGW.serverips,SUPERNET.numgateways+1*0);
 #endif
-    sleep(10);
+    sleep(3);
+    printf("start serverloop\n");
     while ( OS_getppid() == SUPERNET.ppid )
     {
 #ifdef INSIDE_MGW
@@ -432,6 +432,7 @@ void serverloop(void *_args)
         if ( n == 0 && SUPERNET.APISLEEP > 0 )
             msleep(SUPERNET.APISLEEP);
     }
+    printf("finished serverloop\n");
 }
 
 void calc_nonces(char *destpoint)

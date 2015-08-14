@@ -1841,6 +1841,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         // configure settings
         init_Currencymasks();
         BUNDLE.jsonstr = clonestr(jsonstr);
+        PRICES.readyflag = 1;
         //BUNDLE.kv = kv777_init("DB","prices",0);
         //printf("BUNDLE.kv.%p\n",BUNDLE.kv);
         strcpy(retbuf,"{\"result\":\"prices init\"}");

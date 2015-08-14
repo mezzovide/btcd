@@ -1054,7 +1054,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');
         tokbuf = calloc(1,strlen(str2) + 4096);
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             printf("method.(%s) created busdata.(%s) -> (%s) tlen.%d\n",method,str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
@@ -1082,7 +1082,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
     if ( strcmp(plugin,"relay") == 0 && strcmp(destplugin,"relay") == 0 && broadcastmode == 0 )
         broadcastmode = "4";
     sentflag = 0;
-    if ( Debuglevel > 2 )
+    //if ( Debuglevel > 2 )
         printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&sentflag,noncep,&datalen,jsonstr,broadcastmode,destNXTaddr)) != 0 )
     {
@@ -1111,6 +1111,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                         free_json(json);
                         return(clonestr("{\"error\":\"couldnt send to allnodes\"}"));
                     }
+                    printf("broadcast packet.(%s)\n",data);
                     sentflag = 1;
                 }
             }
@@ -1164,7 +1165,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                         printf("START receiving nonces\n");
                     }
                 }
-                if ( Debuglevel > 2 && retstr != 0 )
+                if ( Debuglevel > 1 && retstr != 0 )
                     printf("busdata nn_loadbalanced retstr.(%s) %p\n",retstr,retstr);
                 if ( data != jsonstr )
                     free(data);
@@ -1173,7 +1174,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                 return(retstr);
             } else printf("Cant parse busdata_sync.(%s)\n",jsonstr);
         }
-    }
+    } else printf("error creating busdata.(%s)\n",jsonstr);
     if ( json != 0 )
         free_json(json);
     return(clonestr("{\"error\":\"error creating busdata\"}"));
@@ -1203,7 +1204,7 @@ int32_t busdata_poll()
             sock = RELAYS.pfd[i].fd;
             if ( (len= nn_recv(sock,&msg,NN_MSG,0)) > 0 )
             {
-                if ( Debuglevel > 2 )
+                //if ( Debuglevel > 2 )
                     printf("RECV.%d (%s)\n",sock,msg);
                 n++;
                 if ( (json= cJSON_Parse(msg)) != 0 )
@@ -1240,7 +1241,7 @@ int32_t busdata_poll()
                     free_json(json);
                 }
                 nn_freemsg(msg);
-            }
+            } //else printf("sock.%d nothing\n",sock);
         }
     }
     return(n);
