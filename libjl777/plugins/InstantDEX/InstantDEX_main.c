@@ -297,7 +297,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         if ( strcmp(method,"allorderbooks") == 0 )
             retstr = prices777_allorderbooks();
         else if ( strcmp(method,"openorders") == 0 )
-            retstr = InstantDEX_openorders(SUPERNET.NXTADDR);
+            retstr = InstantDEX_openorders(SUPERNET.NXTADDR,juint(json,"allorders"));
         else if ( strcmp(method,"cancelorder") == 0 )
             retstr = InstantDEX_cancelorder(orderid);
         else if ( strcmp(method,"orderstatus") == 0 )

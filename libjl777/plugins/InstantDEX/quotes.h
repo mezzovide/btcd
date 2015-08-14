@@ -804,13 +804,13 @@ char *InstantDEX_orderstatus(uint64_t orderid)
     return(clonestr("{\"error\":\"couldnt find orderid\"}"));
 }
 
-char *InstantDEX_openorders(char *NXTaddr)
+char *InstantDEX_openorders(char *NXTaddr,int32_t allorders)
 {
     struct InstantDEX_quote *iQ,*tmp; cJSON *json,*array,*item; uint64_t nxt64bits = calc_nxt64bits(NXTaddr);
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
     HASH_ITER(hh,AllQuotes,iQ,tmp)
     {
-        if ( iQ->nxt64bits == nxt64bits )
+        if ( iQ->nxt64bits == nxt64bits && (allorders != 0 || iQ->closed == 0) )
         {
             if ( (item= gen_InstantDEX_json(0,iQ->baseamount,iQ->relamount,iQ->isask,iQ,iQ->baseid,iQ->relid,0)) != 0 )
                 jaddi(array,item);
