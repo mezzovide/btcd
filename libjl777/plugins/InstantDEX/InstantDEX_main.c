@@ -268,7 +268,7 @@ char *InstantDEX_tradesequence(cJSON *json)
             copy_cJSON(base,jobj(item,"base")), copy_cJSON(rel,jobj(item,"rel")), copy_cJSON(name,jobj(item,"name"));
             orderid = j64bits(item,"orderid"), assetid = j64bits(item,"asset"), currency = j64bits(item,"currency");
             baseid = j64bits(item,"baseid"), relid = j64bits(item,"relid");
-            orderprice = jdouble(item,"orderprice"), ordervolume = jdouble(item,"ordeervolume");
+            orderprice = jdouble(item,"orderprice"), ordervolume = jdouble(item,"ordervolume");
             if ( tradestr != 0 )
             {
                 if ( strcmp(tradestr,"buy") == 0 )
