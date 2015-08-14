@@ -50,39 +50,6 @@ uint64_t get_iQ_jumpasset(struct InstantDEX_quote *iQ)
     return(0);
 }
 
-int _decreasing_quotes(const void *a,const void *b)
-{
-#define iQ_a ((struct InstantDEX_quote *)a)
-#define iQ_b ((struct InstantDEX_quote *)b)
-    double vala,valb,volume;
-    vala = calc_price_volume(&volume,iQ_a->baseamount,iQ_a->relamount);//iQ_a->isask == 0 ? calc_price_volume(&volume,iQ_a->baseamount,iQ_a->relamount) : calc_price_volume(&volume,iQ_a->relamount,iQ_a->baseamount);
-    valb = calc_price_volume(&volume,iQ_b->baseamount,iQ_b->relamount);//iQ_b->isask == 0 ? calc_price_volume(&volume,iQ_b->baseamount,iQ_b->relamount) : calc_price_volume(&volume,iQ_b->relamount,iQ_b->baseamount);
-	if ( valb > vala )
-		return(1);
-	else if ( valb < vala )
-		return(-1);
-	return(0);
-#undef iQ_a
-#undef iQ_b
-}
-
-int _increasing_quotes(const void *a,const void *b)
-{
-#define iQ_a ((struct InstantDEX_quote *)a)
-#define iQ_b ((struct InstantDEX_quote *)b)
-    double vala,valb,volume;
-    vala = calc_price_volume(&volume,iQ_a->baseamount,iQ_a->relamount);//iQ_a->isask == 0 ? calc_price_volume(&volume,iQ_a->baseamount,iQ_a->relamount) : calc_price_volume(&volume,iQ_a->relamount,iQ_a->baseamount);
-    valb = calc_price_volume(&volume,iQ_b->baseamount,iQ_b->relamount);//iQ_b->isask == 0 ? calc_price_volume(&volume,iQ_b->baseamount,iQ_b->relamount) : calc_price_volume(&volume,iQ_b->relamount,iQ_b->baseamount);
-    // printf("(%f %f) ",vala,valb);
-	if ( valb > vala )
-		return(-1);
-	else if ( valb < vala )
-		return(1);
-	return(0);
-#undef iQ_a
-#undef iQ_b
-}
-
 int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct InstantDEX_quote *iQ,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,char *gui,int32_t duration)
 {
     uint64_t baseamount,relamount,frombase,fromrel,tobase,torel;
@@ -106,6 +73,28 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
     return(1);
 }
 #else
+
+int32_t prices777_conviQ(struct prices777_order *order,struct InstantDEX_quote *iQ)
+{
+    struct prices777 *prices; int32_t inverted;
+    memset(order,0,sizeof(*order));
+    if ( (prices= prices777_find(&inverted,iQ->baseid,iQ->relid,INSTANTDEX_NAME)) != 0 )
+    {
+        order->source = prices;
+        order->price = prices777_price_volume(&order->vol,iQ->baseamount,iQ->relamount);
+        return(0);
+    }
+    return(-1);
+}
+
+cJSON *prices777_orderjson(struct prices777_order *order)
+{
+    cJSON *item = cJSON_CreateArray();
+    jaddinum(item,order->price);
+    jaddinum(item,order->vol);
+    jaddinum(item,order->id);
+    return(item);
+}
 
 struct InstantDEX_quote *AllQuotes;
 
@@ -614,11 +603,38 @@ char *InstantDEX_openorders(char *NXTaddr,int32_t allorders)
     return(jprint(json,1));
 }
 
+int _decreasing_quotes(const void *a,const void *b)
+{
+#define order_a ((struct prices777_order *)a)
+#define order_b ((struct prices777_order *)b)
+ 	if ( order_b->price > order_a->price )
+		return(1);
+	else if ( order_b->price < order_a->price )
+		return(-1);
+	return(0);
+#undef order_a
+#undef order_b
+}
+
+int _increasing_quotes(const void *a,const void *b)
+{
+#define order_a ((struct prices777_order *)a)
+#define order_b ((struct prices777_order *)b)
+ 	if ( order_b->price > order_a->price )
+		return(-1);
+	else if ( order_b->price < order_a->price )
+		return(1);
+	return(0);
+#undef order_a
+#undef order_b
+}
+
 cJSON *InstantDEX_orderbook(struct prices777 *prices)
 {
-    struct InstantDEX_quote *iQ,*tmp; cJSON *json,*item,*bids,*asks; int32_t isask,iter,numbids,numasks; double price,volume;
+    struct InstantDEX_quote *iQ,*tmp; cJSON *json,*bids,*asks; int32_t i,isask,iter,n,m,numbids,numasks; double price,volume;
+    struct prices777_order *bidvals,*askvals,order;
     json = cJSON_CreateObject(), bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
-    for (iter=numbids=numasks=0; iter<2; iter++)
+    for (iter=numbids=numasks=n=m=0; iter<2; iter++)
     {
         HASH_ITER(hh,AllQuotes,iQ,tmp)
         {
@@ -636,19 +652,42 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
             }
             else
             {
-                
+                prices777_conviQ(&order,iQ);
+                if ( isask == 0 && n < numbids )
+                    bidvals[n++] = order;
+                else if ( isask != 0 && m < numasks )
+                    askvals[m++] = order;
             }
-         }
+        }
+        if ( iter == 0 )
+        {
+            if ( numbids > 0 )
+                bidvals = calloc(numbids,sizeof(*bidvals));
+            if ( numasks > 0 )
+                askvals = calloc(numasks,sizeof(*askvals));
+        }
     }
+    if ( numbids > 0 )
     {
-        item = cJSON_CreateArray();
-        jaddinum(item,price), jaddinum(item,volume);
-        if ( isask != 0 )
-            jaddi(asks,item);
-        else jaddi(bids,item);
+        if ( n > 0 )
+        {
+            qsort(bidvals,n,sizeof(*bidvals),_decreasing_quotes);
+            for (i=0; i<n; i++)
+                jaddi(bids,prices777_orderjson(&bidvals[i]));
+        }
+        free(bidvals);
     }
-    jadd(json,"bids",bids);
-    jadd(json,"asks",asks);
+    if ( numasks > 0 )
+    {
+        if ( m > 0 )
+        {
+            qsort(askvals,m,sizeof(*askvals),_increasing_quotes);
+            for (i=0; i<m; i++)
+                jaddi(asks,prices777_orderjson(&askvals[i]));
+        }
+        free(askvals);
+    }
+    jadd(json,"bids",bids), jadd(json,"asks",asks);
     return(json);
 }
 
