@@ -614,6 +614,44 @@ char *InstantDEX_openorders(char *NXTaddr,int32_t allorders)
     return(jprint(json,1));
 }
 
+cJSON *InstantDEX_orderbook(struct prices777 *prices)
+{
+    struct InstantDEX_quote *iQ,*tmp; cJSON *json,*item,*bids,*asks; int32_t isask,iter,numbids,numasks; double price,volume;
+    json = cJSON_CreateObject(), bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
+    for (iter=numbids=numasks=0; iter<2; iter++)
+    {
+        HASH_ITER(hh,AllQuotes,iQ,tmp)
+        {
+            isask = iQ->isask;
+            if ( iQ->baseid == prices->baseid && iQ->relid == prices->relid )
+                price = prices777_price_volume(&volume,iQ->baseamount,iQ->relamount);
+            else if ( iQ->relid == prices->baseid && iQ->baseid == prices->relid )
+                isask ^= 1, price = prices777_price_volume(&volume,iQ->relamount,iQ->baseamount);
+            else continue;
+            if ( iter == 0 )
+            {
+                if ( isask != 0 )
+                    numasks++;
+                else numbids++;
+            }
+            else
+            {
+                
+            }
+         }
+    }
+    {
+        item = cJSON_CreateArray();
+        jaddinum(item,price), jaddinum(item,volume);
+        if ( isask != 0 )
+            jaddi(asks,item);
+        else jaddi(bids,item);
+    }
+    jadd(json,"bids",bids);
+    jadd(json,"asks",asks);
+    return(json);
+}
+
 char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t baseid,uint64_t relid)
 {
     cJSON *json;
