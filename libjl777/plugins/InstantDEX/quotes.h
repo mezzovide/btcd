@@ -598,7 +598,9 @@ char *InstantDEX_quote(struct prices777 *prices,int32_t dir,double price,double 
     //extern queue_t InstantDEXQ;
     //queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
     //free_json(json);
-    return(clonestr("{\"error\":\"not yet\"}"));
+    char retbuf[1024];
+    sprintf(retbuf,"{\"result\":\"success\",\"exchange\":\"%s\",\"name\":\"%s\",\"base\":\"%s\",\"rel\":%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"trade\":\"%s\",\"price\":%.8f,\"volume\":%.8f,\"orderid\":\"%llu\",\"minperc\":%d,\"automatch\":%d,\"duration\":%d}",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,dir>0?"buy":"sell",price,volume,(long long)orderid,minperc,automatch,duration);
+    return(clonestr(retbuf));
 }
 
 char *placequote_func(char *NXTaddr,char *NXTACCTSECRET,int32_t localaccess,int32_t dir,char *sender,int32_t valid,cJSON **objs,int32_t numobjs,char *origargstr)
