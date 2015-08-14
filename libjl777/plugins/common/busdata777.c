@@ -1241,7 +1241,7 @@ int32_t busdata_poll()
                     free_json(json);
                 }
                 nn_freemsg(msg);
-            }
+            } //else printf("sock.%d nothing\n",sock);
         }
     }
     return(n);
