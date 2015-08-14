@@ -8,17 +8,24 @@
 #ifndef xcode_orderbooks_h
 #define xcode_orderbooks_h
 
-void testfoo(char *str)
+struct prices777 *prices777_find(int32_t *invertedp,uint64_t baseid,uint64_t relid,char *exchange)
 {
-    int32_t i,j;
+    int32_t i; struct prices777 *prices;
+    *invertedp = 0;
     for (i=0; i<BUNDLE.num; i++)
     {
-        if ( BUNDLE.ptrs[i]->basketsize == 0 )
-            continue;
-        for (j=0; j<BUNDLE.ptrs[i]->basketsize; j++)
-            printf("%d ",BUNDLE.ptrs[i]->basket[j].groupsize);
-        printf("(%s) groupsizes basketsize.%d\n",str,BUNDLE.ptrs[i]->basketsize);
+        if ( (prices= BUNDLE.ptrs[i]) != 0 && strcmp(prices->exchange,exchange) == 0 )
+        {
+            if ( prices->baseid == baseid && prices->relid == relid )
+                return(prices);
+            else if ( prices->relid == baseid && prices->baseid == relid )
+            {
+                *invertedp = 1;
+                return(prices);
+            }
+        }
     }
+    return(0);
 }
 
 struct prices777 *prices777_createbasket(char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,struct prices777_basket *basket,int32_t n)

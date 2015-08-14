@@ -218,6 +218,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess);
 uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT);
 uint64_t calc_asset_qty(uint64_t *availp,uint64_t *priceNQTp,char *NXTaddr,int32_t checkflag,uint64_t assetid,double price,double vol);
 cJSON *InstantDEX_orderbook(struct prices777 *prices);
+struct prices777 *prices777_find(int32_t *invertedp,uint64_t baseid,uint64_t relid,char *exchange);
 
 uint64_t calc_quoteid(struct InstantDEX_quote *iQ);
 double check_ratios(uint64_t baseamount,uint64_t relamount,uint64_t baseamount2,uint64_t relamount2);

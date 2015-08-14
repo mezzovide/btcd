@@ -407,51 +407,65 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     return(retstr);
 }
 
-
-/*char *placebid_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
+int32_t bidask_parse(struct InstantDEX_quote *iQ,int32_t dir,cJSON **objs,int32_t numobjs)
 {
-    return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,1,SUPERNET.NXTADDR,valid,objs,numobjs,origargstr));
+    // "ask", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
+    char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],name[MAX_JSON_FIELD];
+    double price,volume; int32_t automatch,n = 0; struct exchange_info *exchange;
+    memset(iQ,0,sizeof(*iQ));
+    iQ->baseid = j64bits(objs[n++],0); iQ->relid = j64bits(objs[n++],0);
+    volume = jdouble(objs[n++],0); price = jdouble(objs[n++],0);
+    iQ->timestamp = juint(objs[n++],0);
+    iQ->baseamount = j64bits(objs[n++],0);
+    iQ->relamount = j64bits(objs[n++],0);
+    copy_cJSON(gui,objs[n++]), strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
+    automatch = juint(objs[n++],0);
+    iQ->minperc = juint(objs[n++],0);
+    iQ->duration = juint(objs[n++],0);
+    copy_cJSON(exchangestr,objs[n++]);//, iQ->exchangeid = exchangeid(exchange);
+    if ( (exchange= exchange_find(exchangestr)) != 0 )
+        iQ->exchangeid = exchange->exchangeid;
+    iQ->nxt64bits = j64bits(objs[n++],0);
+    copy_cJSON(base,objs[n++]), copy_cJSON(rel,objs[n++]), copy_cJSON(name,objs[n++]);
+    iQ->isask = (dir < 0);
+    return(automatch);
 }
-
-char *placeask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
-{
-    return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,localaccess,-1,SUPERNET.NXTADDR,valid,objs,numobjs,origargstr));
-}*/
 
 char *bid_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char offerNXT[MAX_JSON_FIELD];
+    char offerNXT[MAX_JSON_FIELD],*checkstr; struct InstantDEX_quote iQ;
     copy_cJSON(offerNXT,objs[12]);
-    printf("bid_func %s vs offerNXT %s\n",SUPERNET.NXTADDR,offerNXT);
-    //if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
-    //    return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,1,sender,valid,objs,numobjs,origargstr));
-    //else
+    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
+    {
+        if ( bidask_parse(&iQ,1,objs,numobjs) >= 0 )
+        {
+            if ( (checkstr= placequote_str(&iQ)) != 0 )
+                printf("NETWORKBID.(%s) -> (%s)\n",origargstr,checkstr), free(checkstr);
+                create_iQ(&iQ);
+        }
+    } else printf("got my bid from network (%s)\n",origargstr);
     return(0);
 }
 
 char *ask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
 {
-    char offerNXT[MAX_JSON_FIELD];
+    char offerNXT[MAX_JSON_FIELD],*checkstr; struct InstantDEX_quote iQ;
     copy_cJSON(offerNXT,objs[12]);
-    printf("ask_func %s vs offerNXT %s\n",SUPERNET.NXTADDR,offerNXT);
-    //if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
-    //    return(placequote_func(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,0,-1,sender,valid,objs,numobjs,origargstr));
-    //else
+    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
+    {
+        if ( bidask_parse(&iQ,-1,objs,numobjs) >= 0 )
+        {
+            if ( (checkstr= placequote_str(&iQ)) != 0 )
+                printf("NETWORKASK.(%s) -> (%s)\n",origargstr,checkstr), free(checkstr);
+                create_iQ(&iQ);
+        }
+    } else printf("got my ask from network (%s)\n",origargstr);
     return(0);
 }
 
 char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origargstr,cJSON *origargjson)
 {
-    /*static char *allorderbooks[] = { (char *)allorderbooks_func, "allorderbooks", "", 0 };
-    static char *orderbook[] = { (char *)orderbook_func, "orderbook", "", "baseid", "relid", "allfields", "oldest", "maxdepth", "base", "rel", "gui", "showall", "exchange", "name", 0 };
-     static char *jumptrades[] = { (char *)jumptrades_func, "jumptrades", "", 0 };
-     static char *tradehistory[] = { (char *)tradehistory_func, "tradehistory", "", "timestamp", 0 };
-     static char *lottostats[] = { (char *)lottostats_func, "lottostats", "", "timestamp", 0 };
-    static char *cancelquote[] = { (char *)cancelquote_func, "cancelquote", "", "quoteid", 0 };
-    static char *openorders[] = { (char *)openorders_func, "openorders", "", 0 };
-    static char *placebid[] = { (char *)placebid_func, "placebid", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT", "base", "rel", "name", 0 };
-    static char *placeask[] = { (char *)placeask_func, "placeask", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", ",gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
-    */static char *bid[] = { (char *)bid_func, "bid", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
+    static char *bid[] = { (char *)bid_func, "bid", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
     static char *ask[] = { (char *)ask_func, "ask", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
     static char *makeoffer3[] = { (char *)makeoffer3_func, "makeoffer3", "", "baseid", "relid", "quoteid", "perc", "deprecated", "baseiQ", "reliQ", "askoffer", "price", "volume", "exchange", "baseamount", "relamount", "offerNXT", "minperc", "jumpasset",  "base", "rel", "name", 0 };
     static char *respondtx[] = { (char *)respondtx_func, "respondtx", "", "cmd", "assetid", "quantityQNT", "priceNQT", "triggerhash", "quoteid", "sig", "data", "minperc", "offerNXT", "otherassetid", "otherqty", 0 };
