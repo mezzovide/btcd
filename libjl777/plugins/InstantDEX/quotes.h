@@ -645,7 +645,7 @@ char *InstantDEX_quote(struct prices777 *prices,int32_t dir,double price,double 
         return(fill_nxtae(SUPERNET.my64bits,dir,price,volume,prices->baseid,prices->relid));
     else if ( strcmp(prices->exchange,"InstantDEX") != 0 )
         return(prices777_trade(prices->exchange,prices->base,prices->rel,dir,price,volume));
-    sprintf(retbuf,"{\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"exchange\":\"%s\",\"name\":\"%s\",\"base\":\"%s\",\"rel\":%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"method\":\"%s\",\"price\":%.8f,\"volume\":%.8f,\"orderid\":\"%llu\",\"minperc\":%d,\"automatch\":%d,\"duration\":%d}",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,dir>0?"buy":"sell",price,volume,(long long)orderid,minperc,automatch,duration);
+    sprintf(retbuf,"{\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"exchange\":\"%s\",\"name\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"method\":\"%s\",\"price\":%.8f,\"volume\":%.8f,\"orderid\":\"%llu\",\"minperc\":%d,\"automatch\":%d,\"duration\":%d}",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,dir>0?"buy":"sell",price,volume,(long long)orderid,minperc,automatch,duration);
     if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 )//&& (retstr= check_ordermatch(SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,&iQ)) != 0 )
     {
     } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
