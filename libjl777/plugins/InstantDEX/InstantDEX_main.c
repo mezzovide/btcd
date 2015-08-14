@@ -139,6 +139,14 @@ int32_t get_assetname(char *name,uint64_t assetid)
     return((int32_t)strlen(assetidstr));
 }
 
+uint64_t prices777_equiv(uint64_t assetid)
+{
+    char *str;
+    if ( (str= is_MGWasset(assetid)) != 0 )
+        return(stringbits(str));
+               return(assetid);
+}
+
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp)
 {
     uint64_t baseid,relid,assetbits = 0; char *s,*str;
@@ -152,7 +160,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         relid = 5527630;
     if ( strcmp(base,"NXT") == 0 )
         baseid = 5527630;*/
-    if ( strcmp("nxtae",exchange) == 0 || strcmp("unconf",exchange) == 0 )
+    if ( strcmp("nxtae",exchange) == 0 || strcmp("unconf",exchange) == 0 || (baseid != 0 && relid != 0) )
     {
         if ( strcmp(rel,"NXT") == 0 )
             s = "+", relid = stringbits("NXT"), strcpy(rel,"NXT");
@@ -329,11 +337,11 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         }
         if ( retstr == 0 && (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 )
         {
-            if ( prices->baseid == baseid && prices->relid == relid )
+            if ( prices->baseid == prices777_equiv(baseid) && prices->relid == prices777_equiv(relid) )
                 invert = 0;
-            else if ( prices->baseid == relid && prices->relid == baseid )
+            else if ( prices->baseid == prices777_equiv(relid) && prices->relid == prices777_equiv(baseid) )
                 invert = 1;
-            else invert = 0, printf("baserel not matching (%s %s) vs (%s %s)\n",prices->base,prices->rel,base,rel);
+            else invert = 0, printf("baserel not matching (%s %s) %llu %llu vs (%s %s) %llu %llu\n",prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,base,rel,(long long)baseid,(long long)relid);
             if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
             {
                 if ( strcmp(method,"placebid") == 0 )
@@ -401,7 +409,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                 }
             }
         }
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             printf("(%s) %p exchange.(%s) base.(%s) %llu rel.(%s) %llu | name.(%s) %llu\n",retstr!=0?retstr:"",prices,exchangestr,base,(long long)baseid,rel,(long long)relid,name,(long long)assetbits);
     }
     return(retstr);
@@ -641,7 +649,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         else if ( SUPERNET.iamrelay <= 1 )
         {
             retstr = InstantDEX_parser(forwarder,sender,valid,jsonstr,json);
-printf("InstantDEX_parser return.(%s)\n",retstr);
+            if ( retstr != 0 )
+                printf("InstantDEX_parser return.(%s)\n",retstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
         //else sprintf(retbuf,"{\"error\":\"method %s not found\"}",methodstr);
         //portable_mutex_unlock(&plugin->mutex);

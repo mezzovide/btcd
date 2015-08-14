@@ -564,7 +564,7 @@ cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t baseamount,uint64_t rela
     if ( iQ->gui[0] != 0 )
         cJSON_AddItemToObject(json,"gui",cJSON_CreateString(iQ->gui));
     cJSON_AddItemToObject(json,"minperc",cJSON_CreateNumber(minperc));
-    if ( baseamount < min_asset_amount(refbaseid) || relamount < min_asset_amount(refrelid) )
+    if ( 0 && (baseamount < min_asset_amount(refbaseid) || relamount < min_asset_amount(refrelid)) )
     {
         if ( Debuglevel > 2 )
             printf("%.8f < %.8f || rel %.8f < %.8f\n",dstr(baseamount),dstr(min_asset_amount(refbaseid)),dstr(relamount),dstr(min_asset_amount(refrelid)));
@@ -754,6 +754,7 @@ int32_t InstantDEX_setiQ(struct InstantDEX_quote *iQ,uint64_t nxt64bits,uint32_t
             return(0);
         }
     }
+    printf("refprice %f refvol %f\n",refprice,refvolume);
     create_InstantDEX_quote(iQ,timestamp,dir < 0,quoteid,0,0,baseid,baseamount,relid,relamount,nxt64bits,gui,0,0,duration);
     if ( iQ->exchangeid != INSTANTDEX_EXCHANGEID )
         iQ->minperc = 1;
