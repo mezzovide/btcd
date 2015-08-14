@@ -700,6 +700,12 @@ char *peggypayments(uint32_t blocknum,uint32_t blocktimestamp)
     return(clonestr("{}"));
 }
 
+int32_t peggyblock(char *jsonstr)
+{
+    printf("got peggyblock.(%s)\n",jsonstr);
+    return(0);
+}
+
 void peggy()
 {
     int32_t lookbacks[OPRETURNS_CONTEXTS],nonz,num,peggylen; uint32_t timestamp = (uint32_t)time(0);
