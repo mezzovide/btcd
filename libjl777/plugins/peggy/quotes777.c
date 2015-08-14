@@ -813,7 +813,7 @@ void *peggy_replay(char *path,struct txinds777_info *opreturns,void *_PEGS,uint3
     int32_t lookbacks[OPRETURNS_CONTEXTS]; uint64_t allocsize,len; int32_t n,signedcount,valid=0; long offset;
     char fname[512]; uint8_t opret[8192]; struct peggy_tx Ptx; struct peggy_info *PEGS = _PEGS;
     if ( blocknum == 0 )
-        opreturnstr = PEGGY_GENESIS;
+        opreturnstr = 0;//PEGGY_GENESIS;
     if ( data == 0 )
     {
         data = opret;
