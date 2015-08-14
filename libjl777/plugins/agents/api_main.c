@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 {
     void portable_OS_init();
     CGI_varlist *varlist; const char *name; char urlbuf[512],namebuf[512],postbuf[65536],*remoteaddr,*str=0,*retstr,*delim,*url = 0;
-    int i,j,iter,localaccess=0,portflag = 0; cJSON *json; long offset; CGI_value  *value;
+    int i,j,iter,localaccess=0,doneflag=0,portflag = 0; cJSON *json; long offset; CGI_value  *value;
     portable_OS_init();
     setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
     json = cJSON_CreateObject();
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
     {
         if ( (varlist= ((iter==0) ? CGI_get_post(0,0) : ((iter==1) ? CGI_get_query(0) : CGI_get_cookie(0)))) != 0 )
         {
-            for (name=CGI_first_name(varlist); name!=0; name=CGI_next_name(varlist))
+            for (name=CGI_first_name(varlist); name!=0&&doneflag==0; name=CGI_next_name(varlist))
             {
                 value = CGI_lookup_all(varlist,0);
                 for (i=0; value[i]!=0; i++)
@@ -180,6 +180,7 @@ int main(int argc, char **argv)
                                     fprintf(stderr,"unstringified (%s) -> (%s)\n",str!=0?str:"",jprint(json,0));
                                     if ( str != 0 )
                                         free(str);
+                                    doneflag = 1;
                                     break;
                                 }
                             }
