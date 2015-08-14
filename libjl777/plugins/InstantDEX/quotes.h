@@ -317,7 +317,7 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
 struct InstantDEX_quote *AllQuotes;
 
 void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 0; }
-void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 1; }
+void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = 1; }
 
 int32_t iQcmp(struct InstantDEX_quote *iQA,struct InstantDEX_quote *iQB)
 {
@@ -353,6 +353,17 @@ struct InstantDEX_quote *find_iQ(uint64_t quoteid)
 {
     struct InstantDEX_quote *iQ;
     HASH_FIND(hh,AllQuotes,&quoteid,sizeof(quoteid),iQ);
+    return(iQ);
+}
+
+struct InstantDEX_quote *delete_iQ(uint64_t quoteid)
+{
+    struct InstantDEX_quote *iQ;
+    if ( (iQ= find_iQ(quoteid)) != 0 )
+    {
+        HASH_DELETE(hh,AllQuotes,iQ);
+        cancel_InstantDEX_quote(iQ);
+    }
     return(iQ);
 }
 
@@ -604,15 +615,10 @@ char *check_ordermatch(int32_t polling,char *NXTaddr,char *NXTACCTSECRET,struct 
 int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
 {
     struct InstantDEX_quote *iQ;
-    char nxtaddr[64];
     if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(NXTaddr) && iQ->baseiQ == 0 && iQ->reliQ == 0 && iQ->exchangeid == INSTANTDEX_EXCHANGEID )
     {
-        expand_nxt64bits(nxtaddr,iQ->nxt64bits);
-        if ( strcmp(NXTaddr,nxtaddr) == 0 && calc_quoteid(iQ) == quoteid )
-        {
-            cancel_InstantDEX_quote(iQ);
-            return(1);
-        }
+        delete_iQ(quoteid);
+        return(1);
     }
     return(0);
 }
@@ -620,7 +626,7 @@ int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
 char *InstantDEX_cancelorder(uint64_t quoteid)
 {
     struct InstantDEX_quote *iQ; char *retstr;
-    if ( (retstr= cancel_orderid(SUPERNET.NXTADDR,quoteid)) != 0 )
+    if ( (retstr= cancel_NXTorderid(SUPERNET.NXTADDR,quoteid)) != 0 )
     {
         if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(SUPERNET.NXTADDR) )
             cancel_InstantDEX_quote(iQ);

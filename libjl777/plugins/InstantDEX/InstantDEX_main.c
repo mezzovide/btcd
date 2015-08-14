@@ -41,7 +41,7 @@
 
 #define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "openorders", "cancelorder", "tradehistory"
 
-#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask"
+#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "makeoffer3", "respondtx"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
 char *PLUGNAME(_pubmethods)[] = { INSTANTDEX_REMOTEAPI }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
@@ -73,7 +73,6 @@ void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx
 void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
 {
 }
-
 
 uint32_t prices777_NXTBLOCK;
 int32_t InstantDEX_idle(struct plugin_info *plugin)

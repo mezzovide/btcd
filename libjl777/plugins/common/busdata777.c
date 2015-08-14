@@ -1082,7 +1082,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
     if ( strcmp(plugin,"relay") == 0 && strcmp(destplugin,"relay") == 0 && broadcastmode == 0 )
         broadcastmode = "4";
     sentflag = 0;
-    if ( Debuglevel > 2 )
+    //if ( Debuglevel > 2 )
         printf("relay.%d busdata_sync.(%s) (%s)\n",SUPERNET.iamrelay,jsonstr,broadcastmode==0?"":broadcastmode);
     if ( (data= create_busdata(&sentflag,noncep,&datalen,jsonstr,broadcastmode,destNXTaddr)) != 0 )
     {
@@ -1164,7 +1164,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                         printf("START receiving nonces\n");
                     }
                 }
-                if ( Debuglevel > 2 && retstr != 0 )
+                if ( Debuglevel > 1 && retstr != 0 )
                     printf("busdata nn_loadbalanced retstr.(%s) %p\n",retstr,retstr);
                 if ( data != jsonstr )
                     free(data);
