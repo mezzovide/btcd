@@ -159,20 +159,17 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
 #define INSTANTDEX_ACCT "4383817337783094122"
 #define MAX_TXPTRS 1024
 
-struct prices777_order { struct prices777 *source; double price,vol,wt,ratio; uint64_t id,assetid; uint32_t timestamp; uint16_t slot_ba; };
-
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
-    struct prices777_order order;
     uint64_t quoteid; // must be here
-    
     uint64_t baseid,baseamount,relid,relamount,nxt64bits;
     uint32_t timestamp,duration;
     uint8_t closed:1,sent:1,matched:1,isask:1,pad2:4,minperc:7;
     char exchangeid,gui[9];
 };
 
+struct prices777_order { struct prices777 *source; double price,vol,wt,ratio; uint64_t id,assetid,quoteid; uint32_t timestamp; uint16_t slot_ba; };
 struct prices777_basket { struct prices777 *prices; double wt; int32_t groupid,groupsize,aski,bidi; char base[64],rel[64]; };
 struct prices777_orderentry { struct prices777_order bid,ask; };
 #define MAX_GROUPS 8
