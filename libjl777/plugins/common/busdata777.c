@@ -1165,7 +1165,7 @@ char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *dest
                         printf("START receiving nonces\n");
                     }
                 }
-                if ( Debuglevel > 1 && retstr != 0 )
+                if ( Debuglevel > 2 && retstr != 0 )
                     printf("busdata nn_loadbalanced retstr.(%s) %p\n",retstr,retstr);
                 if ( data != jsonstr )
                     free(data);

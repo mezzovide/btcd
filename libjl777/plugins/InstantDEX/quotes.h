@@ -898,11 +898,11 @@ char *InstantDEX_quote(int32_t localaccess,char *remoteaddr,struct prices777 *pr
     else if ( strcmp(prices->exchange,"InstantDEX") != 0 )
         return(prices777_trade(prices->exchange,prices->base,prices->rel,dir,price,volume));
     minbasevol = get_minvolume(prices->baseid), minrelvol = get_minvolume(prices->relid);
-    if ( volume < minbasevol || (volume * price) < minrelvol )
+    /*if ( volume < minbasevol || (volume * price) < minrelvol )
     {
         sprintf(buf,"{\"error\":\"not enough volume\",\"price\":%f,\"volume\":%f,\"minbasevol\":%f,\"minrelvol\":%f,\"relvol\":%f}",price,volume,minbasevol,minrelvol,price*volume);
         return(clonestr(buf));
-    }
+    }*/
     if ( (remoteaddr != 0 && remoteaddr[0] != 0) || localaccess != 0 )
     {
         if ( price > SMALLVAL && volume > SMALLVAL && dir != 0 )
