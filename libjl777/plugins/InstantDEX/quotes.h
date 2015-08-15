@@ -82,6 +82,11 @@ int32_t prices777_conviQ(struct prices777_order *order,struct InstantDEX_quote *
     {
         order->source = prices;
         order->price = prices777_price_volume(&order->vol,iQ->baseamount,iQ->relamount);
+        order->timestamp = iQ->timestamp;
+        if ( iQ->isask != 0 )
+            order->wt = -1;
+        else order->wt = 1;
+        order->id = order->quoteid = iQ->quoteid;
         return(0);
     }
     return(-1);
@@ -166,12 +171,14 @@ struct InstantDEX_quote *findquoteid(uint64_t quoteid,int32_t evenclosed)
 
 struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ)
 {
-    struct InstantDEX_quote *newiQ;
+    struct InstantDEX_quote *newiQ; struct prices777 *prices; int32_t inverted;
     if ( (newiQ= find_iQ(iQ->quoteid)) != 0 )
         return(newiQ);
     newiQ = calloc(1,sizeof(*newiQ));
     *newiQ = *iQ;
     HASH_ADD(hh,AllQuotes,quoteid,sizeof(newiQ->quoteid),newiQ);
+    if ( (prices= prices777_find(&inverted,iQ->baseid,iQ->relid,INSTANTDEX_NAME)) != 0 )
+        prices->dirty++;
     {
         struct InstantDEX_quote *checkiQ;
         if ( (checkiQ= find_iQ(iQ->quoteid)) == 0 || iQcmp(iQ,checkiQ) != 0 )//memcmp((uint8_t *)((long)checkiQ + sizeof(checkiQ->hh) + sizeof(checkiQ->quoteid)),(uint8_t *)((long)iQ + sizeof(iQ->hh) + sizeof(iQ->quoteid)),sizeof(*iQ) - sizeof(iQ->hh) - sizeof(iQ->quoteid)) != 0 )
@@ -629,10 +636,11 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
     {
         HASH_ITER(hh,AllQuotes,iQ,tmp)
         {
+            printf("iterate quote.%llu\n",(long long)iQ->quoteid);
             isask = iQ->isask;
-            if ( iQ->baseid == prices->baseid && iQ->relid == prices->relid )
+            if ( prices777_equiv(iQ->baseid) == prices777_equiv(prices->baseid) && prices777_equiv(iQ->relid) == prices777_equiv(prices->relid) )
                 price = prices777_price_volume(&volume,iQ->baseamount,iQ->relamount);
-            else if ( iQ->relid == prices->baseid && iQ->baseid == prices->relid )
+            else if ( prices777_equiv(iQ->relid) == prices777_equiv(prices->baseid) && prices777_equiv(iQ->baseid) == prices777_equiv(prices->relid) )
                 isask ^= 1, price = prices777_price_volume(&volume,iQ->relamount,iQ->baseamount);
             else continue;
             if ( iter == 0 )
@@ -644,6 +652,7 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
             else
             {
                 prices777_conviQ(&order,iQ);
+                printf("[%f %f] ",order.price,order.vol);
                 if ( isask == 0 && n < numbids )
                     bidvals[n++] = order;
                 else if ( isask != 0 && m < numasks )

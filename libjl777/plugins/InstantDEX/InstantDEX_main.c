@@ -421,7 +421,6 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
 
 int32_t bidask_parse(struct InstantDEX_quote *iQ,int32_t dir,cJSON *json,char *origargstr)
 {
-    // "ask", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
     char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],name[MAX_JSON_FIELD],key[512];
     double price,volume; int32_t keysize,automatch; struct exchange_info *exchange;
     memset(iQ,0,sizeof(*iQ));
