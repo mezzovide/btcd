@@ -315,7 +315,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = InstantDEX_tradesequence(json);
         else if ( strcmp(method,"makebasket") == 0 )
         {
-            if ( (prices= prices777_makebasket(0,json,1)) != 0 )
+            if ( (prices= prices777_makebasket(0,json,1,"basket")) != 0 )
                 retstr = clonestr("{\"result\":\"basket made\"}");
             else retstr = clonestr("{\"error\":\"couldnt make basket\"}");
         }
@@ -486,13 +486,14 @@ void init_exchanges(cJSON *json)
     find_exchange(0,INSTANTDEX_NXTAEUNCONF);
     find_exchange(0,INSTANTDEX_NXTAENAME);
     find_exchange(0,INSTANTDEX_BASKETNAME);
+    find_exchange(0,INSTANTDEX_ACTIVENAME);
     for (i=0; i<sizeof(exchanges)/sizeof(*exchanges); i++)
         find_exchange(0,exchanges[i]);
     prices777_initpair(-1,0,0,0,0,0.,0,0,0,0);
     if ( (array= jarray(&n,json,"baskets")) != 0 )
     {
         for (i=0; i<n; i++)
-            prices777_makebasket(0,jitem(array,i),1);
+            prices777_makebasket(0,jitem(array,i),1,"basket");
     }
     //prices777_makebasket("{\"name\":\"NXT/BTC\",\"base\":\"NXT\",\"rel\":\"BTC\",\"basket\":[{\"exchange\":\"bittrex\"},{\"exchange\":\"poloniex\"},{\"exchange\":\"btc38\"}]}",0);
 }

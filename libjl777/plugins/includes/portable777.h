@@ -163,6 +163,7 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
 #define INSTANTDEX_NXTAENAME "nxtae"
 #define INSTANTDEX_NXTAEUNCONF "unconf"
 #define INSTANTDEX_BASKETNAME "basket"
+#define INSTANTDEX_ACTIVENAME "active"
 #define INSTANTDEX_EXCHANGEID 0
 #define INSTANTDEX_UNCONFID 1
 #define INSTANTDEX_NXTAEID 2
@@ -224,7 +225,7 @@ char *prices777_activebooks(char *name,char *base,char *rel,uint64_t baseid,uint
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);
-struct prices777 *prices777_makebasket(char *basketstr,cJSON *basketjson,int32_t addbasket);
+struct prices777 *prices777_makebasket(char *basketstr,cJSON *basketjson,int32_t addbasket,char *typestr);
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess);
 //cJSON *prices777_InstantDEX_json(char *_base,char *_rel,int32_t depth,int32_t invert,int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset);
 uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT);
