@@ -455,7 +455,7 @@ int32_t prices777_basenum(char *base)
         for (i=0; i<sizeof(CURRENCIES)/sizeof(*CURRENCIES); i++)
             for (j=0; j<sizeof(CURRENCIES)/sizeof(*CURRENCIES); j++)
                 if ( i != j && strcmp(CURRENCIES[i],CURRENCIES[j]) == 0 )
-                    printf("duplicate.(%s)\n",CURRENCIES[i]), getchar();
+                    printf("duplicate.(%s)\n",CURRENCIES[i]);//, getchar();
     }
     for (i=0; i<sizeof(CURRENCIES)/sizeof(*CURRENCIES); i++)
         if ( strcmp(CURRENCIES[i],base) == 0 )
@@ -471,7 +471,7 @@ int32_t prices777_contractnum(char *base,char *rel)
         for (i=0; i<sizeof(CONTRACTS)/sizeof(*CONTRACTS); i++)
             for (j=0; j<sizeof(CONTRACTS)/sizeof(*CONTRACTS); j++)
                 if ( i != j && strcmp(CONTRACTS[i],CONTRACTS[j]) == 0 )
-                    printf("duplicate.(%s)\n",CONTRACTS[i]), getchar();
+                    printf("duplicate.(%s)\n",CONTRACTS[i]);//, getchar();
     }
     if ( base != 0 && base[0] != 0 && rel != 0 && rel[0] != 0 )
     {

@@ -742,7 +742,7 @@ int32_t prices777_ecbparse(char *date,double *prices,char *url,int32_t basenum)
                         count++;
                         if ( Debuglevel > 2 )
                             printf("(%02d:%02d %f) ",basenum,relnum,prices[i]);
-                    } else printf("cant find.(%s)\n",relstr), getchar();
+                    } else printf("cant find.(%s)\n",relstr);//, getchar();
                     item = item->next;
                 }
             }
