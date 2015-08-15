@@ -10,7 +10,7 @@ make gcc-mpc MXE_TARGETS='i686-w64-mingw32.static'
 make mingw-w64 MXE_TARGETS='i686-w64-mingw32.static'
 make gcc MXE_TARGETS='i686-w64-mingw32.static'
 #make gzip2 MXE_TARGETS='i686-w64-mingw32.static'
-make libiconv MXE_TARGETS='i686-w64-mingw32.static' 
+make libiconv MXE_TARGETS='i686-w64-mingw32.static'
 make gettext MXE_TARGETS='i686-w64-mingw32.static'
 make pcre MXE_TARGETS='i686-w64-mingw32.static'
 make zlib MXE_TARGETS='i686-w64-mingw32.static'
@@ -23,6 +23,8 @@ make apr-util  MXE_TARGETS='i686-w64-mingw32.static'
 make curl MXE_TARGETS='i686-w64-mingw32.static'
 make pthreads MXE_TARGETS='i686-w64-mingw32.static'
 make libwebsockets MXE_TARGETS='i686-w64-mingw32.static'
+make boost MXE_TARGETS='i686-w64-mingw32.static'
+make bdb48 MXE_TARGETS='i686-w64-mingw32.static'
 export PATH=$PWD/usr/bin:$PATH
 cp ./usr/i686-w64-mingw32.static/include/winioctl.h ./usr/i686-w64-mingw32.static/include/WinIoCtl.h
 cp ./usr/i686-w64-mingw32.static/include/windows.h ./usr/i686-w64-mingw32.static/include/Windows.h
