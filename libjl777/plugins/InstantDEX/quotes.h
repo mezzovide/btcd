@@ -790,20 +790,13 @@ char *InstantDEX_quote(int32_t localaccess,char *remoteaddr,struct prices777 *pr
                     retstr = placequote_str(&iQ,price,volume);
                     if ( Debuglevel > 2 )
                         printf("placequote.(%s) localaccess.%d\n",retstr,localaccess);
-                //}
-                //if ( (jsonstr= submitquote_str(localaccess,&iQ,prices->baseid,prices->relid)) != 0 )
-                //{
-                    printf("got submitquote_str.(%s)\n",retstr);
                     if ( localaccess != 0 )
                     {
                         if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(0,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,&iQ)) != 0 )
-                        {
-                            //free(jsonstr);
                             return(retstr);
-                        } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
+                        else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
                         create_iQ(&iQ);
                         queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(retstr));
-                        //retstr = jsonstr;
                     } else return(clonestr("{\"result\":\"updated rambook\"}"));
                 } else printf("not submitquote_str\n");
             } else return(clonestr("{\"error\":\"cant get price close enough due to limited decimals\"}"));
