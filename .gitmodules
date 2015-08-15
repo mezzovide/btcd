@@ -1,0 +1,3 @@
+[submodule "libjl777/mxe"]
+	path = libjl777/mxe
+	url = https://github.com/mxe/mxe
