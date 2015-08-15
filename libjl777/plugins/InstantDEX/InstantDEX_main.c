@@ -30,6 +30,8 @@
 #include "../includes/portable777.h"
 #undef DEFINES_ONLY
 
+static char *Supported_exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo", "quadriga" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
+
 #define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory"
 
 #define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "makeoffer3", "respondtx"
@@ -51,14 +53,14 @@ cJSON *InstantDEX_lottostats();
 
 void update_openorder(struct InstantDEX_quote *iQ,uint64_t quoteid,struct NXT_tx *txptrs[],int32_t numtx,int32_t updateNXT) // from poll_pending_offers via main
 {
-    char *retstr;
+   /* char *retstr;
     return;
     printf("update_openorder iQ.%llu with numtx.%d updateNXT.%d | expires in %ld\n",(long long)iQ->quoteid,numtx,updateNXT,iQ->timestamp+iQ->duration-time(NULL));
     if ( (SUPERNET.automatch & 2) != 0 && (retstr= check_ordermatch(1,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,iQ)) != 0 )
     {
         printf("automatched order!\n");
         free(retstr);
-    }
+    }*/
 }
 
 void poll_pending_offers(char *NXTaddr,char *NXTACCTSECRET)
@@ -278,8 +280,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     cJSON *json; uint64_t orderid,baseid,relid,assetbits; uint32_t maxdepth; int32_t dir,invert,keysize,allfields; struct prices777 *prices;
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        // instantdex orders and orderbooks, openorders/cancelorder/tradehistory
-        // placebid/ask, makeoffer3/bid/ask/respondtx verify phasing, asset/nxtae, asset/asset, asset/external, external/external
+        // makeoffer3/bid/ask/respondtx verify phasing, asset/nxtae, asset/asset, asset/external, external/external
         // autofill and automatch
         // tradehistory and other stats -> peggy integration
         baseid = j64bits(json,"baseid"), relid = j64bits(json,"relid");
@@ -421,20 +422,20 @@ int32_t bidask_parse(struct InstantDEX_quote *iQ,int32_t dir,cJSON *json,char *o
     memset(iQ,0,sizeof(*iQ));
     iQ->baseid = j64bits(json,"baseid"); iQ->relid = j64bits(json,"relid");
     volume = jdouble(json,"volume"); price = jdouble(json,"price");
-    iQ->timestamp = juint(json,"timestamp");
+    iQ->s.timestamp = juint(json,"timestamp");
     iQ->baseamount = j64bits(json,"baseamount");
     iQ->relamount = j64bits(json,"relamount");
     copy_cJSON(gui,jobj(json,"gui")), strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
     automatch = juint(json,"automatch");
-    iQ->minperc = juint(json,"minperc");
-    iQ->duration = juint(json,"duration");
+    iQ->s.minperc = juint(json,"minperc");
+    iQ->s.duration = juint(json,"duration");
     copy_cJSON(exchangestr,jobj(json,"exchange"));//, iQ->exchangeid = exchangeid(exchange);
     InstantDEX_name(key,&keysize,exchangestr,name,base,&iQ->baseid,rel,&iQ->relid);
     if ( (exchange= exchange_find(exchangestr)) != 0 )
         iQ->exchangeid = exchange->exchangeid;
-    iQ->nxt64bits = j64bits(json,"offerNXT");
+    iQ->s.offerNXT = j64bits(json,"offerNXT");
     copy_cJSON(base,jobj(json,"base")), copy_cJSON(rel,jobj(json,"rel")), copy_cJSON(name,jobj(json,"name"));
-    iQ->isask = (dir < 0);
+    iQ->s.isask = (dir < 0);
     return(0);
 }
 
@@ -480,15 +481,14 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 void init_exchanges(cJSON *json)
 {
-    static char *exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
     cJSON *array; int32_t i,n;
     find_exchange(0,INSTANTDEX_NAME);
     find_exchange(0,INSTANTDEX_NXTAEUNCONF);
     find_exchange(0,INSTANTDEX_NXTAENAME);
     find_exchange(0,INSTANTDEX_BASKETNAME);
     find_exchange(0,INSTANTDEX_ACTIVENAME);
-    for (i=0; i<sizeof(exchanges)/sizeof(*exchanges); i++)
-        find_exchange(0,exchanges[i]);
+    for (i=0; i<sizeof(Supported_exchanges)/sizeof(*Supported_exchanges); i++)
+        find_exchange(0,Supported_exchanges[i]);
     prices777_initpair(-1,0,0,0,0,0.,0,0,0,0);
     if ( (array= jarray(&n,json,"baskets")) != 0 )
     {

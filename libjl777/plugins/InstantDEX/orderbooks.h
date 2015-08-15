@@ -236,14 +236,14 @@ cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct pr
         if ( (src= order->source) != 0 )
         {
             if ( src->basketsize == 0 )
-                jaddi(array,prices777_tradeitem(bidask,src,refgroup*10+i,srcbidask,srcslot,order->timestamp,order->price,order->ratio*order->vol,rootwt,groupwt,order->wt,order->id));
-            else if ( src->O.timestamp == order->timestamp )
+                jaddi(array,prices777_tradeitem(bidask,src,refgroup*10+i,srcbidask,srcslot,order->s.timestamp,order->price,order->ratio*order->vol,rootwt,groupwt,order->wt,order->id));
+            else if ( src->O.timestamp == order->s.timestamp )
             {
                 for (j=0; j<src->numgroups; j++)
                     suborders[j] = (srcbidask == 0) ? &src->O.book[j][srcslot].bid : &src->O.book[j][srcslot].ask;
                 jaddi(array,prices777_tradesequence(src,bidask,suborders,rootwt,groupwt,order->wt,refgroup*10 + i));
             }
-            else if ( src->O2.timestamp == order->timestamp )
+            else if ( src->O2.timestamp == order->s.timestamp )
             {
                 for (j=0; j<src->numgroups; j++)
                     suborders[j] = (srcbidask == 0) ? &src->O2.book[j][srcslot].bid : &src->O2.book[j][srcslot].ask;
@@ -411,7 +411,7 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
             if ( price > SMALLVAL && volume > SMALLVAL )
             {
                 order = (bidask == 0) ? &gp->bid : &gp->ask;
-                order->price = price, order->vol = volume, order->source = prices, order->timestamp = OB.timestamp, order->wt = 1, order->id = orderid;
+                order->price = price, order->vol = volume, order->source = prices, order->s.timestamp = OB.timestamp, order->wt = 1, order->id = orderid;
                 if ( bidask == 0 )
                     order->slot_ba = (OB.numbids++ << 1);
                 else order->slot_ba = (OB.numasks++ << 1) | 1;
@@ -481,7 +481,7 @@ void prices777_setorder(struct prices777_order *order,struct prices777_basket *g
     order->source = prices;
     order->wt = group[coordinate].wt;
     //printf("coordinate.%d wt %f\n",coordinate,order->wt);
-    order->timestamp = prices->O.timestamp;
+    order->s.timestamp = prices->O.timestamp;
     order->id = orderid;
 }
 
@@ -683,14 +683,14 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         {
             if ( slot == 0 )
                 prices->lastbid = bid;
-            gp->bid.timestamp = OB.timestamp, gp->bid.price = bid, gp->bid.vol = bidvol, gp->bid.slot_ba = (OB.numbids++ << 1);
+            gp->bid.s.timestamp = OB.timestamp, gp->bid.price = bid, gp->bid.vol = bidvol, gp->bid.slot_ba = (OB.numbids++ << 1);
             gp->bid.source = prices, gp->bid.wt = prices->groupwts[j];
         }
         if ( ask > SMALLVAL && askvol > SMALLVAL )
         {
             if ( slot == 0 )
                 prices->lastask = ask;
-            gp->ask.timestamp = OB.timestamp, gp->ask.price = ask, gp->ask.vol = askvol, gp->ask.slot_ba = (OB.numasks++ << 1) | 1;
+            gp->ask.s.timestamp = OB.timestamp, gp->ask.price = ask, gp->ask.vol = askvol, gp->ask.slot_ba = (OB.numasks++ << 1) | 1;
             gp->ask.source = prices, gp->ask.wt = prices->groupwts[j];
         }
         //printf("%s slot.%d (%f %f %f %f) (%d %d)\n",prices->contract,slot,gp->bid.price,gp->bid.vol,gp->ask.price,gp->ask.vol,OB.numbids,OB.numasks);

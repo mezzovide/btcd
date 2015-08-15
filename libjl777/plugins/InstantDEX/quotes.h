@@ -9,47 +9,6 @@
 #define xcode_quotes_h
 
 #ifdef oldway
-struct normal_fields { uint64_t nxt64bits,quoteid; struct InstantDEX_quote *baseiQ,*reliQ; };
-union quotefields { struct normal_fields normal; };
-
-struct InstantDEX_quote *AllQuotes;
-
-void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 0; }
-void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 1; }
-
-uint64_t calc_quoteid(struct InstantDEX_quote *iQ)
-{
-    struct InstantDEX_quote Q;
-    if ( iQ == 0 )
-        return(0);
-    if ( iQ->quoteid == 0 )
-    {
-        Q = *iQ;
-        Q.baseiQ = (struct InstantDEX_quote *)calc_quoteid(iQ->baseiQ);
-        Q.reliQ = (struct InstantDEX_quote *)calc_quoteid(iQ->reliQ);
-        clear_InstantDEX_quoteflags(&Q);
-        if ( Q.isask != 0 )
-        {
-            Q.baseid = iQ->relid, Q.baseamount = iQ->relamount;
-            Q.relid = iQ->baseid, Q.relamount = iQ->baseamount;
-            Q.isask = Q.minperc = 0;
-        }
-        return(calc_txid((uint8_t *)((long)&Q + sizeof(Q.hh) + sizeof(Q.quoteid)),sizeof(Q) - sizeof(Q.hh) - sizeof(Q.quoteid)));
-    } return(iQ->quoteid);
-}
-
-uint64_t get_iQ_jumpasset(struct InstantDEX_quote *iQ)
-{
-    if ( iQ->baseiQ != 0 && iQ->reliQ != 0 )
-    {
-        if ( iQ->baseiQ->baseid == iQ->reliQ->baseid || iQ->baseiQ->baseid == iQ->reliQ->relid )
-            return(iQ->baseiQ->baseid);
-        else if ( iQ->baseiQ->relid == iQ->reliQ->relid || iQ->baseiQ->relid == iQ->reliQ->baseid )
-            return(iQ->baseiQ->relid);
-    }
-    return(0);
-}
-
 int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct InstantDEX_quote *iQ,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,char *gui,int32_t duration)
 {
     uint64_t baseamount,relamount,frombase,fromrel,tobase,torel;
@@ -74,6 +33,18 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
 }
 #else
 
+struct InstantDEX_quote *prices777_convorder(struct InstantDEX_quote *iQ,struct prices777 *prices,struct prices777_order *order,int32_t dir)
+{
+    uint64_t baseamount,relamount;
+    memset(iQ,0,sizeof(*iQ));
+    set_best_amounts(&baseamount,&relamount,order->price,order->vol);
+    if ( dir < 0 )
+        iQ->relid = prices->baseid, iQ->relamount = baseamount, iQ->baseid = prices->relid, iQ->baseamount = relamount;
+    else iQ->relid = prices->relid, iQ->relamount = relamount, iQ->baseid = prices->baseid, iQ->baseamount = baseamount;
+    iQ->s = order->s;
+    return(iQ);
+}
+
 int32_t prices777_conviQ(struct prices777_order *order,struct InstantDEX_quote *iQ)
 {
     struct prices777 *prices; int32_t inverted;
@@ -82,11 +53,10 @@ int32_t prices777_conviQ(struct prices777_order *order,struct InstantDEX_quote *
     {
         order->source = prices;
         order->price = prices777_price_volume(&order->vol,iQ->baseamount,iQ->relamount);
-        order->timestamp = iQ->timestamp;
-        if ( iQ->isask != 0 )
+        order->s = iQ->s;
+        if ( iQ->s.isask != 0 )
             order->wt = -1;
         else order->wt = 1;
-        order->id = order->quoteid = iQ->quoteid;
         return(0);
     }
     return(-1);
@@ -103,14 +73,14 @@ cJSON *prices777_orderjson(struct prices777_order *order)
 
 struct InstantDEX_quote *AllQuotes;
 
-void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->closed = iQ->sent = iQ->matched = 0; }
-void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->closed = 1; }
+void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->s.closed = iQ->s.sent = iQ->s.matched = 0; }
+void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->s.closed = 1; }
 
 int32_t iQcmp(struct InstantDEX_quote *iQA,struct InstantDEX_quote *iQB)
 {
-    if ( iQA->isask == iQB->isask && iQA->baseid == iQB->baseid && iQA->relid == iQB->relid && iQA->baseamount == iQB->baseamount && iQA->relamount == iQB->relamount )
+    if ( iQA->s.isask == iQB->s.isask && iQA->baseid == iQB->baseid && iQA->relid == iQB->relid && iQA->baseamount == iQB->baseamount && iQA->relamount == iQB->relamount )
         return(0);
-    else if ( iQA->isask != iQB->isask && iQA->baseid == iQB->relid && iQA->relid == iQB->baseid && iQA->baseamount == iQB->relamount && iQA->relamount == iQB->baseamount )
+    else if ( iQA->s.isask != iQB->s.isask && iQA->baseid == iQB->relid && iQA->relid == iQB->baseid && iQA->baseamount == iQB->relamount && iQA->relamount == iQB->baseamount )
         return(0);
     return(-1);
 }
@@ -120,20 +90,20 @@ uint64_t calc_quoteid(struct InstantDEX_quote *iQ)
     struct InstantDEX_quote Q;
     if ( iQ == 0 )
         return(0);
-    if ( iQ->quoteid == 0 )
+    if ( iQ->s.quoteid == 0 )
     {
         Q = *iQ;
         //Q.baseiQ = (struct InstantDEX_quote *)calc_quoteid(iQ->baseiQ);
         //Q.reliQ = (struct InstantDEX_quote *)calc_quoteid(iQ->reliQ);
         clear_InstantDEX_quoteflags(&Q);
-        if ( Q.isask != 0 )
+        if ( Q.s.isask != 0 )
         {
             Q.baseid = iQ->relid, Q.baseamount = iQ->relamount;
             Q.relid = iQ->baseid, Q.relamount = iQ->baseamount;
-            Q.isask = Q.minperc = 0;
+            Q.s.isask = Q.s.minperc = 0;
         }
-        return(calc_txid((uint8_t *)((long)&Q + sizeof(Q.hh) + sizeof(Q.quoteid)),sizeof(Q) - sizeof(Q.hh) - sizeof(Q.quoteid)));
-    } return(iQ->quoteid);
+        return(calc_txid((uint8_t *)((long)&Q + sizeof(Q.hh) + sizeof(Q.s.quoteid)),sizeof(Q) - sizeof(Q.hh) - sizeof(Q.s.quoteid)));
+    } return(iQ->s.quoteid);
 }
 
 struct InstantDEX_quote *find_iQ(uint64_t quoteid)
@@ -159,7 +129,7 @@ struct InstantDEX_quote *findquoteid(uint64_t quoteid,int32_t evenclosed)
     struct InstantDEX_quote *iQ;
     if ( (iQ= find_iQ(quoteid)) != 0 )
     {
-        if ( evenclosed != 0 || iQ->closed == 0 )
+        if ( evenclosed != 0 || iQ->s.closed == 0 )
         {
             if ( calc_quoteid(iQ) == quoteid )
                 return(iQ);
@@ -172,25 +142,25 @@ struct InstantDEX_quote *findquoteid(uint64_t quoteid,int32_t evenclosed)
 struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ)
 {
     struct InstantDEX_quote *newiQ; struct prices777 *prices; int32_t inverted;
-    if ( (newiQ= find_iQ(iQ->quoteid)) != 0 )
+    if ( (newiQ= find_iQ(iQ->s.quoteid)) != 0 )
         return(newiQ);
     newiQ = calloc(1,sizeof(*newiQ));
     *newiQ = *iQ;
-    HASH_ADD(hh,AllQuotes,quoteid,sizeof(newiQ->quoteid),newiQ);
+    HASH_ADD(hh,AllQuotes,s.quoteid,sizeof(newiQ->s.quoteid),newiQ);
     if ( (prices= prices777_find(&inverted,iQ->baseid,iQ->relid,INSTANTDEX_NAME)) != 0 )
         prices->dirty++;
     {
         struct InstantDEX_quote *checkiQ;
-        if ( (checkiQ= find_iQ(iQ->quoteid)) == 0 || iQcmp(iQ,checkiQ) != 0 )//memcmp((uint8_t *)((long)checkiQ + sizeof(checkiQ->hh) + sizeof(checkiQ->quoteid)),(uint8_t *)((long)iQ + sizeof(iQ->hh) + sizeof(iQ->quoteid)),sizeof(*iQ) - sizeof(iQ->hh) - sizeof(iQ->quoteid)) != 0 )
+        if ( (checkiQ= find_iQ(iQ->s.quoteid)) == 0 || iQcmp(iQ,checkiQ) != 0 )//memcmp((uint8_t *)((long)checkiQ + sizeof(checkiQ->hh) + sizeof(checkiQ->quoteid)),(uint8_t *)((long)iQ + sizeof(iQ->hh) + sizeof(iQ->quoteid)),sizeof(*iQ) - sizeof(iQ->hh) - sizeof(iQ->quoteid)) != 0 )
         {
             int32_t i;
-            for (i=(sizeof(iQ->hh) - sizeof(iQ->quoteid)); i<sizeof(*iQ) - sizeof(iQ->hh) - sizeof(iQ->quoteid); i++)
+            for (i=(sizeof(iQ->hh) - sizeof(iQ->s.quoteid)); i<sizeof(*iQ) - sizeof(iQ->hh) - sizeof(iQ->s.quoteid); i++)
                 printf("%02x ",((uint8_t *)iQ)[i]);
             printf("iQ\n");
-            for (i=(sizeof(checkiQ->hh) + sizeof(checkiQ->quoteid)); i<sizeof(*checkiQ) - sizeof(checkiQ->hh) - sizeof(checkiQ->quoteid); i++)
+            for (i=(sizeof(checkiQ->hh) + sizeof(checkiQ->s.quoteid)); i<sizeof(*checkiQ) - sizeof(checkiQ->hh) - sizeof(checkiQ->s.quoteid); i++)
                 printf("%02x ",((uint8_t *)checkiQ)[i]);
             printf("checkiQ\n");
-            printf("error finding iQ after adding %llu vs %llu\n",(long long)checkiQ->quoteid,(long long)iQ->quoteid);
+            printf("error finding iQ after adding %llu vs %llu\n",(long long)checkiQ->s.quoteid,(long long)iQ->s.quoteid);
         }
     }
     return(newiQ);
@@ -206,7 +176,7 @@ int32_t iQ_exchangestr(char *exchange,struct InstantDEX_quote *iQ)
         sprintf(exchange,"%s_%s",basexchg,relxchg);
     }
     else*/
-        if ( iQ->exchangeid == INSTANTDEX_NXTAEID && iQ->timestamp > time(NULL) )
+        if ( iQ->exchangeid == INSTANTDEX_NXTAEID && iQ->s.timestamp > time(NULL) )
         strcpy(exchange,INSTANTDEX_NXTAEUNCONF);
     else strcpy(exchange,exchange_str(iQ->exchangeid));
     return(0);
@@ -397,15 +367,10 @@ char *InstantDEX_tradehistory()
     return(jprint(json,1));
 }
 
-char *check_ordermatch(int32_t polling,char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *refiQ)
-{
-    return(0);
-}
-
 int32_t cancelquote(char *NXTaddr,uint64_t quoteid)
 {
     struct InstantDEX_quote *iQ;
-    if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(NXTaddr) && iQ->exchangeid == INSTANTDEX_EXCHANGEID )
+    if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->s.offerNXT == calc_nxt64bits(NXTaddr) && iQ->exchangeid == INSTANTDEX_EXCHANGEID )
     {
         delete_iQ(quoteid);
         return(1);
@@ -418,7 +383,7 @@ char *InstantDEX_cancelorder(uint64_t quoteid)
     struct InstantDEX_quote *iQ; char *retstr;
     if ( (retstr= cancel_NXTorderid(SUPERNET.NXTADDR,quoteid)) != 0 )
     {
-        if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->nxt64bits == calc_nxt64bits(SUPERNET.NXTADDR) )
+        if ( (iQ= findquoteid(quoteid,0)) != 0 && iQ->s.offerNXT == calc_nxt64bits(SUPERNET.NXTADDR) )
             cancel_InstantDEX_quote(iQ);
         return(retstr);
     }
@@ -473,7 +438,10 @@ char *InstantDEX_tradesequence(cJSON *json)
                 {
                     order = &trades[i];
                     order->source = prices;
-                    order->id = orderid, order->assetid = assetid != 0 ? assetid : currency;
+                    order->id = orderid;
+                    order->s.offerNXT = j64bits(item,"offerNXT");
+                    //if ( strcmp(exchangestr,"nxtae") == 0 || strcmp(exchangestr,"nxtae") == 0 )
+                    //    order->assetid = assetid != 0 ? assetid : currency;
                     order->wt = dir, order->price = orderprice, order->vol = ordervolume;
                 } else return(clonestr("{\"error\":\"invalid exchange or contract pair\"}"));
             } else return(clonestr("{\"error\":\"no trade specified\"}"));
@@ -508,16 +476,24 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade)
         if ( dotrade == 0 )
         {
             sprintf(buf,"{\"trade\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"price\":%.8f,\"volume\":%.8f}",order->wt > 0. ? "buy" : "sell",exchange,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,order->price,order->vol);
-            if ( strcmp(exchange,"nxtae") == 0 )
+            if ( strcmp(exchange,INSTANTDEX_NAME) == 0 )
             {
-                qty = calc_asset_qty(&avail,&priceNQT,SUPERNET.NXTADDR,0,order->assetid,order->price,order->vol);
+                // matching against nxtae orders
+            }
+            else  if ( strcmp(exchange,"nxtae") == 0 )
+            {
+                qty = calc_asset_qty(&avail,&priceNQT,SUPERNET.NXTADDR,0,prices->baseid,order->price,order->vol);
                 sprintf(buf+strlen(buf)-1,",\"priceNQT\":\"%llu\",\"quantityQNT\":\"%llu\",\"avail\":\"%llu\"}",(long long)priceNQT,(long long)qty,(long long)avail);
                 if ( qty == 0 )
                     sprintf(buf+strlen(buf)-1,",\"error\":\"insufficient balance\"}");
             }
             return(cJSON_Parse(buf));
         }
-        if ( strcmp(exchange,"nxtae") == 0 )
+        if ( strcmp(exchange,INSTANTDEX_NAME) == 0 )
+        {
+            retstr = clonestr("notyet");
+        }
+        else if ( strcmp(exchange,"nxtae") == 0 )
             retstr = fill_nxtae(SUPERNET.my64bits,order->wt,order->price,order->vol,prices->baseid,prices->relid);
         else retstr = prices777_trade(exchange,prices->base,prices->rel,order->wt,order->price,order->vol);
         if ( retstr != 0 )
@@ -532,25 +508,25 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade)
 cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t baseamount,uint64_t relamount,int32_t flip,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset)
 {
     cJSON *json = 0; char numstr[64],base[64],rel[64],exchange[64]; double price,volume; int32_t minperc;
-    minperc = (iQ->minperc != 0) ? iQ->minperc : INSTANTDEX_MINVOL;
+    minperc = (iQ->s.minperc != 0) ? iQ->s.minperc : INSTANTDEX_MINVOL;
     json = cJSON_CreateObject();
     //cJSON_AddItemToObject(json,"askoffer",cJSON_CreateNumber(flip));
     cJSON_AddItemToObject(json,"method",cJSON_CreateString("makeoffer3"));
     cJSON_AddItemToObject(json,"plugin",cJSON_CreateString("InstantDEX"));
     get_assetname(base,refbaseid), cJSON_AddItemToObject(json,"base",cJSON_CreateString(base));
     get_assetname(rel,refrelid), cJSON_AddItemToObject(json,"rel",cJSON_CreateString(rel));
-    cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->timestamp));
-    cJSON_AddItemToObject(json,"duration",cJSON_CreateNumber(iQ->duration));
-    cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->timestamp));
-    if ( iQ->matched != 0 )
+    cJSON_AddItemToObject(json,"timestamp",cJSON_CreateNumber(iQ->s.timestamp));
+    cJSON_AddItemToObject(json,"duration",cJSON_CreateNumber(iQ->s.duration));
+    cJSON_AddItemToObject(json,"age",cJSON_CreateNumber((uint32_t)time(NULL) - iQ->s.timestamp));
+    if ( iQ->s.matched != 0 )
         cJSON_AddItemToObject(json,"matched",cJSON_CreateNumber(1));
-    if ( iQ->sent != 0 )
+    if ( iQ->s.sent != 0 )
         cJSON_AddItemToObject(json,"sent",cJSON_CreateNumber(1));
-    if ( iQ->closed != 0 )
+    if ( iQ->s.closed != 0 )
         cJSON_AddItemToObject(json,"closed",cJSON_CreateNumber(1));
     iQ_exchangestr(exchange,iQ), cJSON_AddItemToObject(json,"exchange",cJSON_CreateString(exchange));
-    if ( iQ->nxt64bits != 0 )
-        sprintf(numstr,"%llu",(long long)iQ->nxt64bits), cJSON_AddItemToObject(json,"offerNXT",cJSON_CreateString(numstr)), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
+    if ( iQ->s.offerNXT != 0 )
+        sprintf(numstr,"%llu",(long long)iQ->s.offerNXT), cJSON_AddItemToObject(json,"offerNXT",cJSON_CreateString(numstr)), cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)refbaseid), cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(numstr));
     sprintf(numstr,"%llu",(long long)refrelid), cJSON_AddItemToObject(json,"relid",cJSON_CreateString(numstr));
     price = prices777_price_volume(&volume,baseamount,relamount);
@@ -579,7 +555,7 @@ char *InstantDEX_orderstatus(uint64_t orderid)
     cJSON *item; struct InstantDEX_quote *iQ = 0;
     if ( (iQ= find_iQ(orderid)) != 0 )
     {
-        if ( (item= gen_InstantDEX_json(0,iQ->baseamount,iQ->relamount,iQ->isask,iQ,iQ->baseid,iQ->relid,0)) != 0 )
+        if ( (item= gen_InstantDEX_json(0,iQ->baseamount,iQ->relamount,iQ->s.isask,iQ,iQ->baseid,iQ->relid,0)) != 0 )
             return(jprint(item,1));
     }
     return(clonestr("{\"error\":\"couldnt find orderid\"}"));
@@ -591,9 +567,9 @@ char *InstantDEX_openorders(char *NXTaddr,int32_t allorders)
     json = cJSON_CreateObject(), array = cJSON_CreateArray();
     HASH_ITER(hh,AllQuotes,iQ,tmp)
     {
-        if ( iQ->nxt64bits == nxt64bits && (allorders != 0 || iQ->closed == 0) )
+        if ( iQ->s.offerNXT == nxt64bits && (allorders != 0 || iQ->s.closed == 0) )
         {
-            if ( (item= gen_InstantDEX_json(0,iQ->baseamount,iQ->relamount,iQ->isask,iQ,iQ->baseid,iQ->relid,0)) != 0 )
+            if ( (item= gen_InstantDEX_json(0,iQ->baseamount,iQ->relamount,iQ->s.isask,iQ,iQ->baseid,iQ->relid,0)) != 0 )
                 jaddi(array,item);
         }
     }
@@ -637,7 +613,7 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
         HASH_ITER(hh,AllQuotes,iQ,tmp)
         {
             //printf("iterate quote.%llu\n",(long long)iQ->quoteid);
-            isask = iQ->isask;
+            isask = iQ->s.isask;
             if ( prices777_equiv(iQ->baseid) == prices777_equiv(prices->baseid) && prices777_equiv(iQ->relid) == prices777_equiv(prices->relid) )
                 price = prices777_price_volume(&volume,iQ->baseamount,iQ->relamount);
             else if ( prices777_equiv(iQ->relid) == prices777_equiv(prices->baseid) && prices777_equiv(iQ->baseid) == prices777_equiv(prices->relid) )
@@ -694,12 +670,12 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
 {
     cJSON *json;
     char *jsonstr = 0;
-    if ( (json= gen_InstantDEX_json(localaccess,iQ->baseamount,iQ->relamount,iQ->isask,iQ,baseid,relid,0)) != 0 )
+    if ( (json= gen_InstantDEX_json(localaccess,iQ->baseamount,iQ->relamount,iQ->s.isask,iQ,baseid,relid,0)) != 0 )
     {
         ensure_jsonitem(json,"plugin","relay");
         ensure_jsonitem(json,"destplugin","InstantDEX");
         ensure_jsonitem(json,"method","busdata");
-        ensure_jsonitem(json,"submethod",(iQ->isask != 0) ? "ask" : "bid");
+        ensure_jsonitem(json,"submethod",(iQ->s.isask != 0) ? "ask" : "bid");
         jsonstr = cJSON_Print(json), _stripwhite(jsonstr,' ');
         free_json(json);
     } else printf("gen_InstantDEX_json returns null\n");
@@ -714,7 +690,7 @@ char *placequote_str(struct InstantDEX_quote *iQ,double price,double volume)
     name[0] = base[0] = rel[0] = 0;
     baseid = iQ->baseid, relid = iQ->relid;
     InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
-    sprintf(buf,"{\"quoteid\":\"%llu\",\"base\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"rel\":\"%s\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"}",(long long)iQ->quoteid,base,(long long)iQ->baseid,(long long)iQ->baseamount,rel,(long long)iQ->relid,(long long)iQ->relamount,price,volume,(long long)iQ->nxt64bits,iQ->timestamp,iQ->isask,exchangestr,iQ->gui,(iQ->isask != 0) ? "ask" : "bid");
+    sprintf(buf,"{\"quoteid\":\"%llu\",\"base\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"rel\":\"%s\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"}",(long long)iQ->s.quoteid,base,(long long)iQ->baseid,(long long)iQ->baseamount,rel,(long long)iQ->relid,(long long)iQ->relamount,price,volume,(long long)iQ->s.offerNXT,iQ->s.timestamp,iQ->s.isask,exchangestr,iQ->gui,(iQ->s.isask != 0) ? "ask" : "bid");
     return(clonestr(buf));
 }
 
@@ -727,12 +703,12 @@ int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,i
             return(-1);
         set_best_amounts(&baseamount,&relamount,price,volume);
     }
-    iQ->timestamp = timestamp;
+    iQ->s.timestamp = timestamp;
     if ( duration <= 0 || duration > ORDERBOOK_EXPIRATION )
         duration = ORDERBOOK_EXPIRATION;
-    iQ->duration = duration;
-    iQ->isask = isask;
-    iQ->nxt64bits = nxt64bits;
+    iQ->s.duration = duration;
+    iQ->s.isask = isask;
+    iQ->s.offerNXT = nxt64bits;
     //iQ->baseiQ = baseiQ;
     //iQ->reliQ = reliQ;
     iQ->baseid = baseid, iQ->baseamount = baseamount;
@@ -740,8 +716,8 @@ int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,i
     if ( gui != 0 )
         strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
     iQ->exchangeid = INSTANTDEX_EXCHANGEID;
-    if ( (iQ->quoteid= quoteid) == 0 )
-        iQ->quoteid = calc_quoteid(iQ);
+    if ( (iQ->s.quoteid= quoteid) == 0 )
+        iQ->s.quoteid = calc_quoteid(iQ);
     return(0);
 }
 
@@ -768,20 +744,139 @@ int32_t InstantDEX_setiQ(struct InstantDEX_quote *iQ,uint64_t nxt64bits,uint32_t
     printf("refprice %f refvol %f\n",refprice,refvolume);
     create_InstantDEX_quote(iQ,timestamp,dir < 0,quoteid,0,0,baseid,baseamount,relid,relamount,nxt64bits,gui,0,0,duration);
     if ( iQ->exchangeid != INSTANTDEX_EXCHANGEID )
-        iQ->minperc = 1;
+        iQ->s.minperc = 1;
     return(0);
+}
+
+int32_t is_unfunded_order(uint64_t nxt64bits,uint64_t assetid,uint64_t amount)
+{
+    char assetidstr[64],NXTaddr[64],cmd[1024],*jsonstr;
+    int64_t ap_mult,unconfirmed,balance = 0;
+    cJSON *json;
+    expand_nxt64bits(NXTaddr,nxt64bits);
+    if ( assetid == NXT_ASSETID )
+    {
+        sprintf(cmd,"requestType=getAccount&account=%s",NXTaddr);
+        if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
+        {
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                balance = get_API_nxt64bits(cJSON_GetObjectItem(json,"balanceNQT"));
+                free_json(json);
+            }
+            free(jsonstr);
+        }
+        strcpy(assetidstr,"NXT");
+    }
+    else
+    {
+        expand_nxt64bits(assetidstr,assetid);
+        if ( (ap_mult= assetmult(assetidstr)) != 0 )
+        {
+            expand_nxt64bits(NXTaddr,nxt64bits);
+            balance = ap_mult * get_asset_quantity(&unconfirmed,NXTaddr,assetidstr);
+        }
+    }
+    if ( balance < amount )
+    {
+        printf("balance %.8f < amount %.8f for asset.%s\n",dstr(balance),dstr(amount),assetidstr);
+        return(1);
+    }
+    return(0);
+}
+
+char *check_ordermatch(int32_t pollflag,char *NXTaddr,char *NXTACCTSECRET,struct InstantDEX_quote *refiQ,struct prices777 *prices,double refprice,double refvol)
+{
+    int32_t i,besti,n=0,dir = 1; struct InstantDEX_quote *iQ,_iQ; struct prices777_order *order;
+    uint64_t assetA,amountA,assetB,amountB; char otherNXTaddr[64],exchange[64],*retstr = 0; double metric,price,vol,perc,bestmetric = 0.;
+    besti = -1;
+    if ( refiQ->s.isask != 0 )
+        dir = -1;
+    if ( dir > 0 )
+        n = prices->O.numasks;
+    else if ( dir < 0 )
+        n = prices->O.numbids;
+    if ( n > 0 )
+    {
+        for (i=0; i<n; i++)
+        {
+            order = (dir > 0) ? &prices->O.book[MAX_GROUPS][i].bid : &prices->O.book[MAX_GROUPS][i].ask;
+            if ( order->source == 0 )
+                continue;
+            iQ = prices777_convorder(&_iQ,prices,order,dir);
+            expand_nxt64bits(otherNXTaddr,iQ->s.offerNXT);
+            if ( iQ->s.closed != 0 )
+                continue;
+            if ( iQ->exchangeid == INSTANTDEX_EXCHANGEID && is_unfunded_order(iQ->s.offerNXT,dir > 0 ? iQ->baseid : iQ->relid,dir > 0 ? iQ->baseamount : iQ->relamount) != 0 )
+            {
+                iQ->s.closed = 1;
+                printf("found unfunded order!\n");
+                continue;
+            }
+            strcpy(exchange,order->source->exchange);
+            //iQ_exchangestr(exchange,iQ);
+            if ( strcmp(otherNXTaddr,NXTaddr) != 0 && iQ->s.matched == 0 && iQ->exchangeid == INSTANTDEX_NXTAEID )
+            {
+                price = order->price, vol = order->vol; //prices777_price_volume(&vol,iQ->baseamount,iQ->relamount);
+                if ( vol > (refvol * INSTANTDEX_MINVOLPERC) && refvol > (vol * iQ->s.minperc * .01) )
+                {
+                    if ( vol < refvol )
+                        metric = (vol / refvol);
+                    else metric = 1.;
+                    if ( dir > 0 && price < (refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL) )
+                        metric *= (1. + (refprice - price)/refprice);
+                    else if ( dir < 0 && price > (refprice * (1. - INSTANTDEX_PRICESLIPPAGE) - SMALLVAL) )
+                        metric *= (1. + (price - refprice)/refprice);
+                    else metric = 0.;
+                    if ( metric != 0. )
+                    {
+                        printf("matchedflag.%d exchange.(%s) %llu/%llu from (%s) | ",iQ->s.matched,exchange,(long long)iQ->baseamount,(long long)iQ->relamount,otherNXTaddr);
+                        printf("price %.8f vol %.8f | %.8f > %.8f? %.8f > %.8f?\n",price,vol,vol,(refvol * INSTANTDEX_MINVOLPERC),refvol,(vol * INSTANTDEX_MINVOLPERC));
+                        printf("price %f against %f or %f\n",price,(refprice * (1. + INSTANTDEX_PRICESLIPPAGE) + SMALLVAL),(refprice * (1. - INSTANTDEX_PRICESLIPPAGE) - SMALLVAL));
+                        printf("metric %f\n",metric);
+                    }
+                    if ( metric > bestmetric )
+                    {
+                        bestmetric = metric;
+                        besti = i;
+                    }
+                }
+            }// else printf("NXTaddr.%s: skip %s from %s\n",NXTaddr,exchange,otherNXTaddr);
+        }
+    }
+    //printf("n.%d\n",n);
+    if ( besti >= 0 )
+    {
+        order = (dir > 0) ? &prices->O.book[MAX_GROUPS][besti].bid : &prices->O.book[MAX_GROUPS][besti].ask;
+        iQ = prices777_convorder(&_iQ,prices,order,dir);
+        //iQ = &quotes[besti];
+        if ( dir < 0 )
+            assetA = refiQ->relid, amountA = iQ->relamount, assetB = refiQ->baseid, amountB = iQ->baseamount;
+        else assetB = refiQ->relid, amountB = iQ->relamount, assetA = refiQ->baseid, amountA = iQ->baseamount;
+        //price = prices777_price_volume(&vol,iQ->baseamount,iQ->relamount);
+        price = order->price, vol = order->vol;
+        strcpy(exchange,order->source->exchange);
+        //iQ_exchangestr(exchange,iQ);
+        expand_nxt64bits(otherNXTaddr,iQ->s.offerNXT);
+        perc = 100.;
+        if ( perc >= iQ->s.minperc )
+        {
+            //retstr = makeoffer3(NXTaddr,NXTACCTSECRET,price,refvol,0,perc,refiQ->baseid,refiQ->relid,iQ->quoteid,dir > 0,exchange,iQ->baseamount*refvol/vol,iQ->relamount*refvol/vol,iQ->nxt64bits,iQ->minperc);
+        }
+    } else printf("besti.%d\n",besti);
+    return(retstr);
 }
 
 char *InstantDEX_quote(int32_t localaccess,char *remoteaddr,struct prices777 *prices,int32_t dir,double price,double volume,uint64_t quoteid,uint32_t minperc,uint32_t automatch,uint32_t duration,char *gui)
 {
     extern queue_t InstantDEXQ;
-    double minbasevol,minrelvol; char buf[4096],*retstr=0; struct InstantDEX_quote iQ;
+    char buf[4096],*retstr=0; struct InstantDEX_quote iQ;
     if ( strcmp(prices->exchange,"nxtae") == 0 )
         return(fill_nxtae(SUPERNET.my64bits,dir,price,volume,prices->baseid,prices->relid));
     else if ( strcmp(prices->exchange,"InstantDEX") != 0 )
         return(prices777_trade(prices->exchange,prices->base,prices->rel,dir,price,volume));
-    minbasevol = get_minvolume(prices->baseid), minrelvol = get_minvolume(prices->relid);
-    /*if ( volume < minbasevol || (volume * price) < minrelvol )
+    /*minbasevol = get_minvolume(prices->baseid), minrelvol = get_minvolume(prices->relid);
+    if ( volume < minbasevol || (volume * price) < minrelvol )
     {
         sprintf(buf,"{\"error\":\"not enough volume\",\"price\":%f,\"volume\":%f,\"minbasevol\":%f,\"minrelvol\":%f,\"relvol\":%f}",price,volume,minbasevol,minrelvol,price*volume);
         return(clonestr(buf));
@@ -792,7 +887,7 @@ char *InstantDEX_quote(int32_t localaccess,char *remoteaddr,struct prices777 *pr
         {
             if ( InstantDEX_setiQ(&iQ,SUPERNET.my64bits,0,dir,prices->baseid,prices->relid,price,volume,0,0,gui,0,duration) == 0 )
             {
-                iQ.minperc = minperc;
+                iQ.s.minperc = minperc;
                 if ( (quoteid= calc_quoteid(&iQ)) != 0 )
                 {
                     retstr = placequote_str(&iQ,price,volume);
@@ -800,7 +895,7 @@ char *InstantDEX_quote(int32_t localaccess,char *remoteaddr,struct prices777 *pr
                         printf("placequote.(%s) localaccess.%d\n",retstr,localaccess);
                     if ( localaccess != 0 )
                     {
-                        if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(0,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,&iQ)) != 0 )
+                        if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(0,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,&iQ,prices,price,volume)) != 0 )
                             return(retstr);
                         else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
                         create_iQ(&iQ);
