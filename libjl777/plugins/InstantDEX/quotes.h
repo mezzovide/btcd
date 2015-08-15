@@ -706,7 +706,7 @@ char *placequote_str(struct InstantDEX_quote *iQ,double price,double volume)
     name[0] = base[0] = rel[0] = 0;
     baseid = iQ->baseid, relid = iQ->relid;
     InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
-    sprintf(buf,"{\"result\":\"success\",\"quoteid\":\"%llu\",\"base\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"rel\":\"%s\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"}",(long long)iQ->quoteid,base,(long long)iQ->baseid,(long long)iQ->baseamount,rel,(long long)iQ->relid,(long long)iQ->relamount,price,volume,(long long)iQ->nxt64bits,iQ->timestamp,iQ->isask,exchangestr,iQ->gui,(iQ->isask != 0) ? "ask" : "bid");
+    sprintf(buf,"{\"quoteid\":\"%llu\",\"base\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"rel\":\"%s\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"}",(long long)iQ->quoteid,base,(long long)iQ->baseid,(long long)iQ->baseamount,rel,(long long)iQ->relid,(long long)iQ->relamount,price,volume,(long long)iQ->nxt64bits,iQ->timestamp,iQ->isask,exchangestr,iQ->gui,(iQ->isask != 0) ? "ask" : "bid");
     return(clonestr(buf));
 }
 
