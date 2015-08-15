@@ -22,9 +22,8 @@ define $(PKG)_BUILD
 		--enable-cxx \
 		--disable-shared \
 		--disable-replication
-	
-	$ (MAKE)	
-#    $(MAKE) -C '$(1)' -j '$(JOBS)' install $(MXE_DISABLE_DOCS)
+		
+	$(MAKE) -C '$(1)'/build_unix
 #    ln -sf '$(PREFIX)/$(TARGET)/bin/curl-config' '$(PREFIX)/bin/$(TARGET)-curl-config'
 #
 #    '$(TARGET)-gcc' \
