@@ -93,7 +93,3 @@ libjl777/plugins/ramchain/ramchain_main copy.c
 libjl777/plugins/agents/echodemo
 
 libjl777/mxe/
-
-libjl777/plugins/cgi/
-
-libjl777/mman-win32/config.mak
