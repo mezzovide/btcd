@@ -343,7 +343,8 @@ char *nn_loadbalanced(uint8_t *data,int32_t len)
     for (i=0; i<10; i++)
         if ( (nn_socket_status(lbsock,1) & NN_POLLOUT) != 0 )
             break;
-printf("sock.%d NN_LBSEND.(%s)\n",lbsock,data);
+    if ( Debuglevel > 2 )
+        printf("sock.%d NN_LBSEND.(%s)\n",lbsock,data);
     if ( (sendlen= nn_send(lbsock,data,len,0)) == len )
     {
         for (i=0; i<10; i++)

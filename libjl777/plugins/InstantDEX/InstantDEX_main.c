@@ -125,6 +125,8 @@ int32_t prices777_key(char *key,char *exchange,char *name,char *base,uint64_t ba
 int32_t get_assetname(char *name,uint64_t assetid)
 {
     char assetidstr[64],*jsonstr; cJSON *json;
+    if ( is_native_crypto(name,assetid) != 0 )
+        return((int32_t)strlen(name));
     expand_nxt64bits(assetidstr,assetid);
     name[0] = 0;
     if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
@@ -139,20 +141,24 @@ int32_t get_assetname(char *name,uint64_t assetid)
     return((int32_t)strlen(assetidstr));
 }
 
+uint64_t prices777_equiv(uint64_t assetid)
+{
+    char *str;
+    if ( (str= is_MGWasset(assetid)) != 0 )
+        return(stringbits(str));
+               return(assetid);
+}
+
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp)
 {
     uint64_t baseid,relid,assetbits = 0; char *s,*str;
     baseid = *baseidp, relid = *relidp;
-    //printf(">>>>>> name.(%s)\n",name);
+//printf(">>>>>> name.(%s) (%s/%s) %llu/%llu\n",name,base,rel,(long long)baseid,(long long)relid);
     if ( strcmp(base,"5527630") == 0 || baseid == 5527630 )
         strcpy(base,"NXT");
     if ( strcmp(rel,"5527630") == 0 || relid == 5527630 )
         strcpy(rel,"NXT");
-    /*if ( strcmp(rel,"NXT") == 0 )
-        relid = 5527630;
-    if ( strcmp(base,"NXT") == 0 )
-        baseid = 5527630;*/
-    if ( strcmp("nxtae",exchange) == 0 || strcmp("unconf",exchange) == 0 )
+    if ( strcmp("nxtae",exchange) == 0 || strcmp("unconf",exchange) == 0 || (baseid != 0 && relid != 0) )
     {
         if ( strcmp(rel,"NXT") == 0 )
             s = "+", relid = stringbits("NXT"), strcpy(rel,"NXT");
@@ -176,9 +182,15 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         else if ( (str= is_MGWasset(baseid)) != 0 )
             strcpy(base,str);
         if ( base[0] == 0 )
+        {
             get_assetname(base,baseid);
+            printf("mapped %llu -> (%s)\n",(long long)baseid,base);
+        }
         if ( rel[0] == 0 )
+        {
             get_assetname(rel,relid);
+            printf("mapped %llu -> (%s)\n",(long long)relid,rel);
+        }
         if ( name[0] == 0 )
         {
             if ( relid == NXT_ASSETID )
@@ -216,7 +228,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
     }
     *baseidp = baseid, *relidp = relid;
     *keysizep = prices777_key(key,exchange,name,base,baseid,rel,relid);
-    //printf("<<<<<<< name.(%s)\n",name);
+// printf("<<<<<<< name.(%s) (%s/%s) %llu/%llu\n",name,base,rel,(long long)baseid,(long long)relid);
     return(assetbits);
 }
 
@@ -329,11 +341,11 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         }
         if ( retstr == 0 && (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 )
         {
-            if ( prices->baseid == baseid && prices->relid == relid )
+            if ( prices->baseid == prices777_equiv(baseid) && prices->relid == prices777_equiv(relid) )
                 invert = 0;
-            else if ( prices->baseid == relid && prices->relid == baseid )
+            else if ( prices->baseid == prices777_equiv(relid) && prices->relid == prices777_equiv(baseid) )
                 invert = 1;
-            else invert = 0, printf("baserel not matching (%s %s) vs (%s %s)\n",prices->base,prices->rel,base,rel);
+            else invert = 0, printf("baserel not matching (%s %s) %llu %llu vs (%s %s) %llu %llu\n",prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,base,rel,(long long)baseid,(long long)relid);
             if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
             {
                 if ( strcmp(method,"placebid") == 0 )
@@ -401,150 +413,66 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                 }
             }
         }
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             printf("(%s) %p exchange.(%s) base.(%s) %llu rel.(%s) %llu | name.(%s) %llu\n",retstr!=0?retstr:"",prices,exchangestr,base,(long long)baseid,rel,(long long)relid,name,(long long)assetbits);
     }
     return(retstr);
 }
 
-int32_t bidask_parse(struct InstantDEX_quote *iQ,int32_t dir,cJSON **objs,int32_t numobjs)
+int32_t bidask_parse(struct InstantDEX_quote *iQ,int32_t dir,cJSON *json,char *origargstr)
 {
-    // "ask", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
-    char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],name[MAX_JSON_FIELD];
-    double price,volume; int32_t automatch,n = 0; struct exchange_info *exchange;
+    char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],name[MAX_JSON_FIELD],key[512];
+    double price,volume; int32_t keysize,automatch; struct exchange_info *exchange;
     memset(iQ,0,sizeof(*iQ));
-    iQ->baseid = j64bits(objs[n++],0); iQ->relid = j64bits(objs[n++],0);
-    volume = jdouble(objs[n++],0); price = jdouble(objs[n++],0);
-    iQ->timestamp = juint(objs[n++],0);
-    iQ->baseamount = j64bits(objs[n++],0);
-    iQ->relamount = j64bits(objs[n++],0);
-    copy_cJSON(gui,objs[n++]), strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
-    automatch = juint(objs[n++],0);
-    iQ->minperc = juint(objs[n++],0);
-    iQ->duration = juint(objs[n++],0);
-    copy_cJSON(exchangestr,objs[n++]);//, iQ->exchangeid = exchangeid(exchange);
+    iQ->baseid = j64bits(json,"baseid"); iQ->relid = j64bits(json,"relid");
+    volume = jdouble(json,"volume"); price = jdouble(json,"price");
+    iQ->timestamp = juint(json,"timestamp");
+    iQ->baseamount = j64bits(json,"baseamount");
+    iQ->relamount = j64bits(json,"relamount");
+    copy_cJSON(gui,jobj(json,"gui")), strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
+    automatch = juint(json,"automatch");
+    iQ->minperc = juint(json,"minperc");
+    iQ->duration = juint(json,"duration");
+    copy_cJSON(exchangestr,jobj(json,"exchange"));//, iQ->exchangeid = exchangeid(exchange);
+    InstantDEX_name(key,&keysize,exchangestr,name,base,&iQ->baseid,rel,&iQ->relid);
     if ( (exchange= exchange_find(exchangestr)) != 0 )
         iQ->exchangeid = exchange->exchangeid;
-    iQ->nxt64bits = j64bits(objs[n++],0);
-    copy_cJSON(base,objs[n++]), copy_cJSON(rel,objs[n++]), copy_cJSON(name,objs[n++]);
+    iQ->nxt64bits = j64bits(json,"offerNXT");
+    copy_cJSON(base,jobj(json,"base")), copy_cJSON(rel,jobj(json,"rel")), copy_cJSON(name,jobj(json,"name"));
     iQ->isask = (dir < 0);
-    return(automatch);
+    return(0);
 }
 
-char *bid_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
+char *bid_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,char *origargstr)
 {
     char offerNXT[MAX_JSON_FIELD],*checkstr; struct InstantDEX_quote iQ;
-    copy_cJSON(offerNXT,objs[12]);
+    copy_cJSON(offerNXT,jobj(json,"offerNXT"));
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
-        if ( bidask_parse(&iQ,1,objs,numobjs) >= 0 )
+        if ( bidask_parse(&iQ,1,json,origargstr) >= 0 )
         {
-            if ( (checkstr= placequote_str(&iQ)) != 0 )
+            if ( (checkstr= placequote_str(&iQ,jdouble(json,"price"),jdouble(json,"volume"))) != 0 )
                 printf("NETWORKBID.(%s) -> (%s)\n",origargstr,checkstr), free(checkstr);
-                create_iQ(&iQ);
+            create_iQ(&iQ);
         }
     } else printf("got my bid from network (%s)\n",origargstr);
     return(0);
 }
 
-char *ask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32_t numobjs,char *origargstr)
+char *ask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,char *origargstr)
 {
     char offerNXT[MAX_JSON_FIELD],*checkstr; struct InstantDEX_quote iQ;
-    copy_cJSON(offerNXT,objs[12]);
+    copy_cJSON(offerNXT,jobj(json,"offerNXT"));
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
-        if ( bidask_parse(&iQ,-1,objs,numobjs) >= 0 )
+        if ( bidask_parse(&iQ,-1,json,origargstr) >= 0 )
         {
-            if ( (checkstr= placequote_str(&iQ)) != 0 )
+            if ( (checkstr= placequote_str(&iQ,jdouble(json,"price"),jdouble(json,"volume"))) != 0 )
                 printf("NETWORKASK.(%s) -> (%s)\n",origargstr,checkstr), free(checkstr);
-                create_iQ(&iQ);
+            create_iQ(&iQ);
         }
     } else printf("got my ask from network (%s)\n",origargstr);
     return(0);
-}
-
-char *InstantDEX_parser(char *forwarder,char *sender,int32_t valid,char *origargstr,cJSON *origargjson)
-{
-    static char *bid[] = { (char *)bid_func, "bid", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
-    static char *ask[] = { (char *)ask_func, "ask", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
-    static char *makeoffer3[] = { (char *)makeoffer3_func, "makeoffer3", "", "baseid", "relid", "quoteid", "perc", "deprecated", "baseiQ", "reliQ", "askoffer", "price", "volume", "exchange", "baseamount", "relamount", "offerNXT", "minperc", "jumpasset",  "base", "rel", "name", 0 };
-    static char *respondtx[] = { (char *)respondtx_func, "respondtx", "", "cmd", "assetid", "quantityQNT", "priceNQT", "triggerhash", "quoteid", "sig", "data", "minperc", "offerNXT", "otherassetid", "otherqty", 0 };
-     static char **commands[] = { respondtx, makeoffer3, bid, ask };
-    int32_t i,j,localaccess = 0;
-    cJSON *argjson,*obj,*nxtobj,*secretobj,*objs[64];
-    char NXTaddr[MAX_JSON_FIELD],NXTACCTSECRET[MAX_JSON_FIELD],command[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD],**cmdinfo,*argstr,*retstr=0;
-    memset(objs,0,sizeof(objs));
-    command[0] = 0;
-    valid = 1;
-    memset(NXTaddr,0,sizeof(NXTaddr));
-    if ( is_cJSON_Array(origargjson) != 0 )
-    {
-        argjson = cJSON_GetArrayItem(origargjson,0);
-        argstr = cJSON_Print(argjson), _stripwhite(argstr,' ');
-    } else argjson = origargjson, argstr = origargstr;
-    NXTACCTSECRET[0] = 0;
-    if ( argjson != 0 )
-    {
-        if ( (obj= cJSON_GetObjectItem(argjson,"requestType")) == 0 )
-            obj = cJSON_GetObjectItem(argjson,"method");
-        nxtobj = cJSON_GetObjectItem(argjson,"NXT");
-        secretobj = cJSON_GetObjectItem(argjson,"secret");
-        copy_cJSON(NXTaddr,nxtobj);
-        copy_cJSON(offerNXT,cJSON_GetObjectItem(argjson,"offerNXT"));
-        if ( NXTaddr[0] == 0 && offerNXT[0] == 0 )
-        {
-            safecopy(NXTaddr,SUPERNET.NXTADDR,64);
-            safecopy(offerNXT,SUPERNET.NXTADDR,64);
-            safecopy(sender,SUPERNET.NXTADDR,64);
-            ensure_jsonitem(argjson,"NXT",NXTaddr);
-            ensure_jsonitem(argjson,"offerNXT",offerNXT);
-        }
-        else if ( offerNXT[0] == 0 && strcmp(NXTaddr,SUPERNET.NXTADDR) == 0 )
-        {
-            strcpy(offerNXT,SUPERNET.NXTADDR);
-            strcpy(sender,SUPERNET.NXTADDR);
-            ensure_jsonitem(argjson,"offerNXT",offerNXT);
-        }
-        else strcpy(sender,offerNXT);
-        if ( strcmp(offerNXT,SUPERNET.NXTADDR) == 0 )
-            localaccess = 1;
-        if ( localaccess != 0 && strcmp(NXTaddr,SUPERNET.NXTADDR) != 0 )
-        {
-            strcpy(NXTaddr,SUPERNET.NXTADDR);
-            ensure_jsonitem(argjson,"NXT",NXTaddr);
-            //printf("subsititute NXT.%s\n",NXTaddr);
-        }
-printf("localaccess.%d myaddr.(%s) NXT.(%s) offerNXT.(%s)\n",localaccess,SUPERNET.NXTADDR,NXTaddr,offerNXT);
-        copy_cJSON(command,obj);
-        copy_cJSON(NXTACCTSECRET,secretobj);
-        if ( NXTACCTSECRET[0] == 0 )
-        {
-            if ( localaccess != 0 || strcmp(command,"findnode") != 0 )
-            {
-                safecopy(NXTACCTSECRET,SUPERNET.NXTACCTSECRET,sizeof(NXTACCTSECRET));
-                strcpy(NXTaddr,SUPERNET.NXTADDR);
-             }
-        }
-//printf("(%s) argstr.(%s) command.(%s) NXT.(%s) valid.%d\n",cJSON_Print(argjson),argstr,command,NXTaddr,valid);
-        //fprintf(stderr,"SuperNET_json_commands sender.(%s) valid.%d | size.%d | command.(%s) orig.(%s)\n",sender,valid,(int32_t)(sizeof(commands)/sizeof(*commands)),command,origargstr);
-        for (i=0; i<(int32_t)(sizeof(commands)/sizeof(*commands)); i++)
-        {
-            cmdinfo = commands[i];
-            if ( strcmp(cmdinfo[1],command) == 0 )
-            {
-                //printf("needvalid.(%c) valid.%d %d of %d: cmd.(%s) vs command.(%s)\n",cmdinfo[2][0],valid,i,(int32_t)(sizeof(commands)/sizeof(*commands)),cmdinfo[1],command);
-                if ( cmdinfo[2][0] != 0 && valid <= 0 )
-                    return(0);
-                for (j=3; cmdinfo[j]!=0&&j<3+(int32_t)(sizeof(objs)/sizeof(*objs)); j++)
-                    objs[j-3] = cJSON_GetObjectItem(argjson,cmdinfo[j]);
-                retstr = (*(json_handler)cmdinfo[0])(localaccess,valid,sender,objs,j-3,argstr);
-                break;
-            }
-        }
-    } else printf("not JSON to parse?\n");
-    if ( argstr != origargstr )
-        free(argstr);
-    return(retstr);
 }
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
@@ -590,7 +518,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     char *resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
    // if ( Debuglevel > 2 )
-        fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+        fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s) initflag.%d\n",plugin->name,jsonstr,initflag);
     if ( initflag > 0 )
     {
         // configure settings
@@ -614,7 +542,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             printf("(%s) has not method\n",jsonstr);
             return(0);
         }
-        //portable_mutex_lock(&plugin->mutex);
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
             plugin->registered = 1;
@@ -640,11 +567,12 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( SUPERNET.iamrelay <= 1 )
         {
-            retstr = InstantDEX_parser(forwarder,sender,valid,jsonstr,json);
-printf("InstantDEX_parser return.(%s)\n",retstr);
+            printf("method.%s\n",methodstr);
+            if ( strcmp(methodstr,"bid") == 0 )
+                retstr = bid_func(0,1,sender,json,jsonstr);
+            else if ( strcmp(methodstr,"ask") == 0 )
+                retstr = ask_func(0,1,sender,json,jsonstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
-        //else sprintf(retbuf,"{\"error\":\"method %s not found\"}",methodstr);
-        //portable_mutex_unlock(&plugin->mutex);
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));
 }

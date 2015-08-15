@@ -991,6 +991,11 @@ struct assethash *create_asset(uint64_t assetid,struct assethash *ap)
 int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
 {
     cJSON *json; char name[64],*jsonstr; uint64_t assetid; int32_t ap_type = -1; struct assethash *ap,A;
+    if ( is_native_crypto(name,calc_nxt64bits(assetidstr)) > 0 )
+    {
+        *numdecimalsp = 8;
+        return(0);
+    }
     if ( (assetid= calc_nxt64bits(assetidstr)) == NXT_ASSETID )
     {
         *numdecimalsp = 8;

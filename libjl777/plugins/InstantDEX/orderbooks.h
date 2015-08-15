@@ -963,7 +963,8 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                         price = prices777_price_volume(&vol,baseamount,relamount);
                         if ( prices->baseid == assetid )
                         {
-                            printf("unconf.%d subtype.%d %s %llu (%llu %llu) %f %f mult.%llu qty.%llu pqt.%llu baseamount.%lld relamount.%lld\n",i,subtype,txidstr,(long long)prices->baseid,(long long)assetid,(long long)NXT_ASSETID,price,vol,(long long)prices->ap_mult,(long long)qty,(long long)priceNQT,(long long)baseamount,(long long)relamount);
+                            if ( Debuglevel > 2 )
+                                printf("unconf.%d subtype.%d %s %llu (%llu %llu) %f %f mult.%llu qty.%llu pqt.%llu baseamount.%lld relamount.%lld\n",i,subtype,txidstr,(long long)prices->baseid,(long long)assetid,(long long)NXT_ASSETID,price,vol,(long long)prices->ap_mult,(long long)qty,(long long)priceNQT,(long long)baseamount,(long long)relamount);
                             if ( subtype == 2 )
                             {
                                 array = bids;
@@ -987,7 +988,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
     cJSON_AddItemToObject(json,"bids",bids);
     cJSON_AddItemToObject(json,"asks",asks);
     prices777_json_orderbook("unconf",prices,maxdepth,json,0,"bids","asks",0,0);
-    if ( Debuglevel > 2 || prices->O.numbids != 0 || prices->O.numasks != 0 )
+    if ( Debuglevel > 2 )//|| prices->O.numbids != 0 || prices->O.numasks != 0 )
         printf("%s %s/%s unconf.(%s) %f %f (%d %d)\n",prices->contract,prices->base,prices->rel,jprint(json,0),prices->lastbid,prices->lastask,prices->O.numbids,prices->O.numasks);
     free_json(json);
     return(_pairaved(prices->lastbid,prices->lastask));

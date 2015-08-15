@@ -929,7 +929,9 @@ void prices777_exchangeloop(void *ptr)
         {
             if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->basketsize == 0 && prices->exchangeid == exchange->exchangeid )
             {
-                if ( isnxtae == 0 )
+                if ( prices->exchangeid == INSTANTDEX_EXCHANGEID && prices->dirty != 0 )
+                    pollflag = 1;
+                else if ( isnxtae == 0 )
                     pollflag = milliseconds() > (exchange->lastupdate + exchange->pollgap*1000) && milliseconds() > (prices->lastupdate + 1000*SUPERNET.idlegap);
                 else if ( strcmp(exchange->name,"unconf") == 0 || prices->pollnxtblock < prices777_NXTBLOCK || milliseconds() > prices->lastupdate + 1000*SUPERNET.idlegap )
                     pollflag = 1;
@@ -946,6 +948,7 @@ void prices777_exchangeloop(void *ptr)
                         prices777_propagate(prices);
                     }
                     prices->pollnxtblock = prices777_NXTBLOCK;
+                    prices->dirty = 0;
                     n++;
                 }
             }
