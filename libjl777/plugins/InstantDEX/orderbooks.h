@@ -28,10 +28,10 @@ struct prices777 *prices777_find(int32_t *invertedp,uint64_t baseid,uint64_t rel
     return(0);
 }
 
-struct prices777 *prices777_createbasket(int32_t addbasket,char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,struct prices777_basket *basket,int32_t n)
+struct prices777 *prices777_createbasket(int32_t addbasket,char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,struct prices777_basket *basket,int32_t n,char *typestr)
 {
     int32_t i,j,m,iter,max = 0; double firstwt,wtsum; struct prices777 *prices,*feature;
-    prices = prices777_initpair(1,0,"basket",base,rel,0.,name,baseid,relid,n);
+    prices = prices777_initpair(1,0,typestr,base,rel,0.,name,baseid,relid,n);
     for (iter=0; iter<2; iter++)
     {
         for (i=0; i<n; i++)
@@ -747,7 +747,7 @@ struct prices777 *prices777_addbundle(int32_t *validp,int32_t loadprices,struct 
     return(0);
 }
 
-struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson,int32_t addbasket)
+struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson,int32_t addbasket,char *typestr)
 {
     //{"name":"NXT/BTC","base":"NXT","rel":"BTC","basket":[{"exchange":"poloniex"},{"exchange":"btc38"}]}
     int32_t i,n,keysize,groupid,valid; char refname[64],refbase[64],refrel[64],name[64],base[64],rel[64],exchangestr[64],key[8192];
@@ -808,16 +808,16 @@ struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson,int32_
                 return(0);
             }
         }
-        printf(">>>>> (%s/%s).%s %llu %llu\n",refbase,refrel,"basket",(long long)refbaseid,(long long)refrelid);
-        InstantDEX_name(key,&keysize,"basket",refname,refbase,&refbaseid,refrel,&refrelid);
+        printf(">>>>> (%s/%s).%s %llu %llu\n",refbase,refrel,typestr,(long long)refbaseid,(long long)refrelid);
+        InstantDEX_name(key,&keysize,typestr,refname,refbase,&refbaseid,refrel,&refrelid);
         if ( addbasket != 0 )
         {
-            prices777_addbundle(&valid,0,0,"basket",refbaseid,refrelid);
-            printf("<<<<< valid.%d refname.(%s) (%s/%s).%s %llu %llu\n",valid,refname,refbase,refrel,"basket",(long long)refbaseid,(long long)refrelid);
+            prices777_addbundle(&valid,0,0,typestr,refbaseid,refrelid);
+            printf("<<<<< valid.%d refname.(%s) (%s/%s).%s %llu %llu\n",valid,refname,refbase,refrel,typestr,(long long)refbaseid,(long long)refrelid);
         } else valid = 0;
         if ( valid >= 0 )
         {
-            if ( (prices = prices777_createbasket(addbasket,refname,refbase,refrel,refbaseid,refrelid,basket,n)) != 0 )
+            if ( (prices = prices777_createbasket(addbasket,refname,refbase,refrel,refbaseid,refrelid,basket,n,typestr)) != 0 )
             {
                 if ( addbasket != 0 )
                     BUNDLE.ptrs[BUNDLE.num++] = prices;
@@ -1026,7 +1026,7 @@ char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,ui
     cJSON *basketjson,*array,*item,*item2; struct prices777 *active;
     uint64_t mgwbase,mgwrel; int32_t inverted,exchangeid; char numstr[64],base[64],rel[64],*retstr = 0;
     strcpy(base,_base), strcpy(rel,_rel);
-    if ( (active= prices777_find(&inverted,baseid,relid,"basket")) == 0 )
+    if ( (active= prices777_find(&inverted,baseid,relid,(tradeable != 0) ? "active" : "basket")) == 0 )
     {
         basketjson = cJSON_CreateObject(), array = cJSON_CreateArray();
         jaddstr(basketjson,"name",name), jaddstr(basketjson,"base",base), jaddstr(basketjson,"rel",rel);
@@ -1062,7 +1062,7 @@ char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,ui
             }
         }
         jadd(basketjson,"basket",array);
-        if ( (active= prices777_makebasket(0,basketjson,1)) != 0 )
+        if ( (active= prices777_makebasket(0,basketjson,1,(tradeable != 0) ? "active" : "basket")) != 0 )
         {
             prices777_basket(active,maxdepth);
             retstr = prices777_orderbook_jsonstr(0,SUPERNET.my64bits,active,&active->O,maxdepth,allflag);

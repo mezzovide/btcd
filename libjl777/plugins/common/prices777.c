@@ -899,7 +899,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                             if ( valid >= 0 )
                             {
                                 _set_assetname(&mult,name,0,refbaseid), strcat(name,"/"), _set_assetname(&mult,name+strlen(name),0,refrelid);
-                                BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(1,name,_base,_rel,refbaseid,refrelid,basket,2);
+                                BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(1,name,_base,_rel,refbaseid,refrelid,basket,2,"basket");
                                 //prices->lastprice = prices777_basket(prices,MAX_DEPTH);
                                 printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                                 printf("B total polling.%d added.(%s) (%s/%s) {%s && %s}\n",BUNDLE.num,prices->contract,_base,_rel,firstprices->contract,basket[1].prices->contract);
