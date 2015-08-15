@@ -522,15 +522,6 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade)
     return(json);
 }
 
-char *placequote_str(struct InstantDEX_quote *iQ)
-{
-    char iQstr[1024],exchangestr[64],buf[MAX_JSON_FIELD];
-    init_hexbytes_noT(iQstr,(uint8_t *)iQ,sizeof(*iQ));
-    iQ_exchangestr(exchangestr,iQ);
-    sprintf(buf,"{\"result\":\"success\",\"quoteid\":\"%llu\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\",\"iQdata\":\"%s\"}",(long long)iQ->quoteid,(long long)iQ->baseid,(long long)iQ->baseamount,(long long)iQ->relid,(long long)iQ->relamount,(long long)iQ->nxt64bits,iQ->timestamp,iQ->isask,exchangestr,iQ->gui,iQstr);
-    return(clonestr(buf));
-}
-
 cJSON *gen_InstantDEX_json(int32_t localaccess,uint64_t baseamount,uint64_t relamount,int32_t flip,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset)
 {
     cJSON *json = 0; char numstr[64],base[64],rel[64],exchange[64]; double price,volume; int32_t minperc;
@@ -707,6 +698,18 @@ char *submitquote_str(int32_t localaccess,struct InstantDEX_quote *iQ,uint64_t b
     return(jsonstr);
 }
 
+char *placequote_str(struct InstantDEX_quote *iQ,double price,double volume)
+{
+    char iQstr[1024],exchangestr[64],name[64],base[64],rel[64],buf[MAX_JSON_FIELD],key[512]; int32_t keysize; uint64_t baseid,relid;
+    init_hexbytes_noT(iQstr,(uint8_t *)iQ,sizeof(*iQ));
+    iQ_exchangestr(exchangestr,iQ);
+    name[0] = base[0] = rel[0] = 0;
+    baseid = iQ->baseid, relid = iQ->relid;
+    InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
+    sprintf(buf,"{\"result\":\"success\",\"quoteid\":\"%llu\",\"base\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"rel\":\"%s\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"}",(long long)iQ->quoteid,base,(long long)iQ->baseid,(long long)iQ->baseamount,rel,(long long)iQ->relid,(long long)iQ->relamount,price,volume,(long long)iQ->nxt64bits,iQ->timestamp,iQ->isask,exchangestr,iQ->gui,(iQ->isask != 0) ? "ask" : "bid");
+    return(clonestr(buf));
+}
+
 int32_t create_InstantDEX_quote(struct InstantDEX_quote *iQ,uint32_t timestamp,int32_t isask,uint64_t quoteid,double price,double volume,uint64_t baseid,uint64_t baseamount,uint64_t relid,uint64_t relamount,uint64_t nxt64bits,char *gui,struct InstantDEX_quote *baseiQ,struct InstantDEX_quote *reliQ,int32_t duration)
 {
     memset(iQ,0,sizeof(*iQ));
@@ -764,7 +767,7 @@ int32_t InstantDEX_setiQ(struct InstantDEX_quote *iQ,uint64_t nxt64bits,uint32_t
 char *InstantDEX_quote(int32_t localaccess,char *remoteaddr,struct prices777 *prices,int32_t dir,double price,double volume,uint64_t quoteid,uint32_t minperc,uint32_t automatch,uint32_t duration,char *gui)
 {
     extern queue_t InstantDEXQ;
-    double minbasevol,minrelvol; char buf[4096],*retstr=0,*jsonstr; struct InstantDEX_quote iQ;
+    double minbasevol,minrelvol; char buf[4096],*retstr=0; struct InstantDEX_quote iQ;
     if ( strcmp(prices->exchange,"nxtae") == 0 )
         return(fill_nxtae(SUPERNET.my64bits,dir,price,volume,prices->baseid,prices->relid));
     else if ( strcmp(prices->exchange,"InstantDEX") != 0 )
@@ -784,23 +787,23 @@ char *InstantDEX_quote(int32_t localaccess,char *remoteaddr,struct prices777 *pr
                 iQ.minperc = minperc;
                 if ( (quoteid= calc_quoteid(&iQ)) != 0 )
                 {
-                    retstr = placequote_str(&iQ);
+                    retstr = placequote_str(&iQ,price,volume);
                     if ( Debuglevel > 2 )
                         printf("placequote.(%s) localaccess.%d\n",retstr,localaccess);
-                }
-                if ( (jsonstr= submitquote_str(localaccess,&iQ,prices->baseid,prices->relid)) != 0 )
-                {
-                    printf("got submitquote_str.(%s)\n",jsonstr);
+                //}
+                //if ( (jsonstr= submitquote_str(localaccess,&iQ,prices->baseid,prices->relid)) != 0 )
+                //{
+                    printf("got submitquote_str.(%s)\n",retstr);
                     if ( localaccess != 0 )
                     {
                         if ( automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= check_ordermatch(0,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET,&iQ)) != 0 )
                         {
-                            free(jsonstr);
+                            //free(jsonstr);
                             return(retstr);
                         } else printf("skip automatch.%d %d\n",automatch,SUPERNET.automatch);
                         create_iQ(&iQ);
-                        queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(jsonstr));
-                        retstr = jsonstr;
+                        queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(retstr));
+                        //retstr = jsonstr;
                     } else return(clonestr("{\"result\":\"updated rambook\"}"));
                 } else printf("not submitquote_str\n");
             } else return(clonestr("{\"error\":\"cant get price close enough due to limited decimals\"}"));

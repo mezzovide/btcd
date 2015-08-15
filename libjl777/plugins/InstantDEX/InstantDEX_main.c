@@ -125,6 +125,8 @@ int32_t prices777_key(char *key,char *exchange,char *name,char *base,uint64_t ba
 int32_t get_assetname(char *name,uint64_t assetid)
 {
     char assetidstr[64],*jsonstr; cJSON *json;
+    if ( is_native_crypto(name,assetid) != 0 )
+        return((int32_t)strlen(name));
     expand_nxt64bits(assetidstr,assetid);
     name[0] = 0;
     if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
@@ -151,15 +153,11 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
 {
     uint64_t baseid,relid,assetbits = 0; char *s,*str;
     baseid = *baseidp, relid = *relidp;
-    //printf(">>>>>> name.(%s)\n",name);
+printf(">>>>>> name.(%s) (%s/%s) %llu/%llu\n",name,base,rel,(long long)baseid,(long long)relid);
     if ( strcmp(base,"5527630") == 0 || baseid == 5527630 )
         strcpy(base,"NXT");
     if ( strcmp(rel,"5527630") == 0 || relid == 5527630 )
         strcpy(rel,"NXT");
-    /*if ( strcmp(rel,"NXT") == 0 )
-        relid = 5527630;
-    if ( strcmp(base,"NXT") == 0 )
-        baseid = 5527630;*/
     if ( strcmp("nxtae",exchange) == 0 || strcmp("unconf",exchange) == 0 || (baseid != 0 && relid != 0) )
     {
         if ( strcmp(rel,"NXT") == 0 )
@@ -184,9 +182,15 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         else if ( (str= is_MGWasset(baseid)) != 0 )
             strcpy(base,str);
         if ( base[0] == 0 )
+        {
             get_assetname(base,baseid);
+            printf("mapped %llu -> (%s)\n",(long long)baseid,base);
+        }
         if ( rel[0] == 0 )
+        {
             get_assetname(rel,relid);
+            printf("mapped %llu -> (%s)\n",(long long)relid,rel);
+        }
         if ( name[0] == 0 )
         {
             if ( relid == NXT_ASSETID )
@@ -224,7 +228,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
     }
     *baseidp = baseid, *relidp = relid;
     *keysizep = prices777_key(key,exchange,name,base,baseid,rel,relid);
-    //printf("<<<<<<< name.(%s)\n",name);
+    printf("<<<<<<< name.(%s) (%s/%s) %llu/%llu\n",name,base,rel,(long long)baseid,(long long)relid);
     return(assetbits);
 }
 
@@ -418,8 +422,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
 int32_t bidask_parse(struct InstantDEX_quote *iQ,int32_t dir,cJSON **objs,int32_t numobjs)
 {
     // "ask", "", "baseid", "relid", "volume", "price", "timestamp", "baseamount", "relamount", "gui", "automatch", "minperc", "duration", "exchange", "offerNXT",  "base", "rel", "name", 0 };
-    char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],name[MAX_JSON_FIELD];
-    double price,volume; int32_t automatch,n = 0; struct exchange_info *exchange;
+    char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],name[MAX_JSON_FIELD],key[512];
+    double price,volume; int32_t keysize,automatch,n = 0; struct exchange_info *exchange;
     memset(iQ,0,sizeof(*iQ));
     iQ->baseid = j64bits(objs[n++],0); iQ->relid = j64bits(objs[n++],0);
     volume = jdouble(objs[n++],0); price = jdouble(objs[n++],0);
@@ -431,6 +435,7 @@ int32_t bidask_parse(struct InstantDEX_quote *iQ,int32_t dir,cJSON **objs,int32_
     iQ->minperc = juint(objs[n++],0);
     iQ->duration = juint(objs[n++],0);
     copy_cJSON(exchangestr,objs[n++]);//, iQ->exchangeid = exchangeid(exchange);
+    InstantDEX_name(key,&keysize,exchangestr,name,base,&iQ->baseid,rel,&iQ->relid);
     if ( (exchange= exchange_find(exchangestr)) != 0 )
         iQ->exchangeid = exchange->exchangeid;
     iQ->nxt64bits = j64bits(objs[n++],0);
@@ -447,7 +452,7 @@ char *bid_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32
     {
         if ( bidask_parse(&iQ,1,objs,numobjs) >= 0 )
         {
-            if ( (checkstr= placequote_str(&iQ)) != 0 )
+            if ( (checkstr= placequote_str(&iQ,jdouble(objs[3],0),jdouble(objs[2],0))) != 0 )
                 printf("NETWORKBID.(%s) -> (%s)\n",origargstr,checkstr), free(checkstr);
                 create_iQ(&iQ);
         }
@@ -463,7 +468,7 @@ char *ask_func(int32_t localaccess,int32_t valid,char *sender,cJSON **objs,int32
     {
         if ( bidask_parse(&iQ,-1,objs,numobjs) >= 0 )
         {
-            if ( (checkstr= placequote_str(&iQ)) != 0 )
+            if ( (checkstr= placequote_str(&iQ,jdouble(objs[3],0),jdouble(objs[2],0))) != 0 )
                 printf("NETWORKASK.(%s) -> (%s)\n",origargstr,checkstr), free(checkstr);
                 create_iQ(&iQ);
         }
