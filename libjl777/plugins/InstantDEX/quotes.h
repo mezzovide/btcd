@@ -636,7 +636,7 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
     {
         HASH_ITER(hh,AllQuotes,iQ,tmp)
         {
-            printf("iterate quote.%llu\n",(long long)iQ->quoteid);
+            //printf("iterate quote.%llu\n",(long long)iQ->quoteid);
             isask = iQ->isask;
             if ( prices777_equiv(iQ->baseid) == prices777_equiv(prices->baseid) && prices777_equiv(iQ->relid) == prices777_equiv(prices->relid) )
                 price = prices777_price_volume(&volume,iQ->baseamount,iQ->relamount);
@@ -652,7 +652,6 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
             else
             {
                 prices777_conviQ(&order,iQ);
-                printf("[%f %f] ",order.price,order.vol);
                 if ( isask == 0 && n < numbids )
                     bidvals[n++] = order;
                 else if ( isask != 0 && m < numasks )

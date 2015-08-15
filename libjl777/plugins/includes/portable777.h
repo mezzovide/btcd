@@ -159,6 +159,15 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
 #define INSTANTDEX_ACCT "4383817337783094122"
 #define MAX_TXPTRS 1024
 
+#define INSTANTDEX_NAME "InstantDEX"
+#define INSTANTDEX_NXTAENAME "nxtae"
+#define INSTANTDEX_NXTAEUNCONF "unconf"
+#define INSTANTDEX_BASKETNAME "basket"
+#define INSTANTDEX_EXCHANGEID 0
+#define INSTANTDEX_UNCONFID 1
+#define INSTANTDEX_NXTAEID 2
+#define MAX_EXCHANGES 64
+
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
@@ -195,7 +204,7 @@ struct prices777
 struct exchange_info
 {
     double (*updatefunc)(struct prices777 *prices,int32_t maxdepth);
-    int32_t (*supports)(int32_t exchangeid,uint64_t *assetids,int32_t n,uint64_t baseid,uint64_t relid);
+    int32_t (*supports)(char *base,char *rel);
     uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
     char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD];
     uint32_t num,exchangeid,pollgap,refcount,polling; uint64_t nxt64bits; double lastupdate;
@@ -210,10 +219,12 @@ void prices777_exchangeloop(void *ptr);
 char *fill_nxtae(uint64_t nxt64bits,int32_t dir,double price,double volume,uint64_t baseid,uint64_t relid);
 cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade);
 uint64_t prices777_equiv(uint64_t assetid);
+void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB);
+char *prices777_activebooks(char *name,char *base,char *rel,uint64_t baseid,uint64_t relid,int32_t maxdepth,int32_t allflag,int32_t tradeable);
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);
-struct prices777 *prices777_makebasket(char *basketstr,cJSON *basketjson);
+struct prices777 *prices777_makebasket(char *basketstr,cJSON *basketjson,int32_t addbasket);
 char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess);
 //cJSON *prices777_InstantDEX_json(char *_base,char *_rel,int32_t depth,int32_t invert,int32_t localaccess,uint64_t *baseamountp,uint64_t *relamountp,struct InstantDEX_quote *iQ,uint64_t refbaseid,uint64_t refrelid,uint64_t jumpasset);
 uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT);
