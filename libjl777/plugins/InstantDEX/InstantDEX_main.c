@@ -24,15 +24,6 @@
 #define INSTANTDEX_ACCT "4383817337783094122"
 #define INSTANTDEX_FEE ((long)(2.5 * SATOSHIDEN))
 
-#define INSTANTDEX_NAME "InstantDEX"
-#define INSTANTDEX_NXTAENAME "nxtae"
-#define INSTANTDEX_NXTAEUNCONF "unconf"
-#define INSTANTDEX_BASKETNAME "basket"
-#define INSTANTDEX_EXCHANGEID 0
-#define INSTANTDEX_UNCONFID 1
-#define INSTANTDEX_NXTAEID 2
-#define MAX_EXCHANGES 64
-
 #define DEFINES_ONLY
 #include "../agents/plugin777.c"
 #include "../utils/NXT777.c"
@@ -85,7 +76,7 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            printf("Dequeued InstantDEX.(%s)\n",jsonstr);
+            //printf("Dequeued InstantDEX.(%s)\n",jsonstr);
             if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
                 free(str);
             free_json(json);
@@ -184,12 +175,12 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         if ( base[0] == 0 )
         {
             get_assetname(base,baseid);
-            printf("mapped %llu -> (%s)\n",(long long)baseid,base);
+            //printf("mapped %llu -> (%s)\n",(long long)baseid,base);
         }
         if ( rel[0] == 0 )
         {
             get_assetname(rel,relid);
-            printf("mapped %llu -> (%s)\n",(long long)relid,rel);
+            //printf("mapped %llu -> (%s)\n",(long long)relid,rel);
         }
         if ( name[0] == 0 )
         {
@@ -298,7 +289,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         copy_cJSON(method,jobj(json,"method"));
         orderid = j64bits(json,"orderid");
         allfields = juint(json,"allfields");
-        if ( (maxdepth= juint(json,"maxdepth")) > MAX_DEPTH )
+        if ( (maxdepth= juint(json,"maxdepth")) <= 0 )
             maxdepth = MAX_DEPTH;
         copy_cJSON(exchangestr,jobj(json,"exchange"));
         if ( exchangestr[0] == 0 )
@@ -324,7 +315,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = InstantDEX_tradesequence(json);
         else if ( strcmp(method,"makebasket") == 0 )
         {
-            if ( (prices= prices777_makebasket(0,json)) != 0 )
+            if ( (prices= prices777_makebasket(0,json,1)) != 0 )
                 retstr = clonestr("{\"result\":\"basket made\"}");
             else retstr = clonestr("{\"error\":\"couldnt make basket\"}");
         }
@@ -339,11 +330,13 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             sprintf(retbuf,"{\"result\":\"%s\",\"amount\":%d}",(rand() & 1) ? "BUY" : "SELL",(rand() % 100) * 100000);
             retstr = clonestr(retbuf);
         }
+        if ( strcmp(exchangestr,"active") == 0 && strcmp(method,"orderbook") == 0 )
+            retstr = prices777_activebooks(name,base,rel,baseid,relid,maxdepth,allfields,juint(json,"tradeable"));
         if ( retstr == 0 && (prices= prices777_poll(exchangestr,name,base,baseid,rel,relid)) != 0 )
         {
-            if ( prices->baseid == prices777_equiv(baseid) && prices->relid == prices777_equiv(relid) )
+            if ( prices777_equiv(prices->baseid) == prices777_equiv(baseid) && prices777_equiv(prices->relid) == prices777_equiv(relid) )
                 invert = 0;
-            else if ( prices->baseid == prices777_equiv(relid) && prices->relid == prices777_equiv(baseid) )
+            else if ( prices777_equiv(prices->baseid) == prices777_equiv(relid) && prices777_equiv(prices->relid) == prices777_equiv(baseid) )
                 invert = 1;
             else invert = 0, printf("baserel not matching (%s %s) %llu %llu vs (%s %s) %llu %llu\n",prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,base,rel,(long long)baseid,(long long)relid);
             if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
@@ -386,6 +379,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
                     if ( retstr == 0 )
                         retstr = clonestr("{}");
                 }
+                if ( retstr != 0 )
+                    retstr = clonestr(retstr);
                 if ( 0 && maxdepth != MAX_DEPTH && retstr != 0 )
                 {
                     int32_t i; cJSON *bids,*asks,*bids2,*asks2,*clone;
@@ -493,10 +488,11 @@ void init_exchanges(cJSON *json)
     find_exchange(0,INSTANTDEX_BASKETNAME);
     for (i=0; i<sizeof(exchanges)/sizeof(*exchanges); i++)
         find_exchange(0,exchanges[i]);
+    prices777_initpair(-1,0,0,0,0,0.,0,0,0,0);
     if ( (array= jarray(&n,json,"baskets")) != 0 )
     {
         for (i=0; i<n; i++)
-            prices777_makebasket(0,jitem(array,i));
+            prices777_makebasket(0,jitem(array,i),1);
     }
     //prices777_makebasket("{\"name\":\"NXT/BTC\",\"base\":\"NXT\",\"rel\":\"BTC\",\"basket\":[{\"exchange\":\"bittrex\"},{\"exchange\":\"poloniex\"},{\"exchange\":\"btc38\"}]}",0);
 }
@@ -567,7 +563,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( SUPERNET.iamrelay <= 1 )
         {
-            printf("method.%s\n",methodstr);
             if ( strcmp(methodstr,"bid") == 0 )
                 retstr = bid_func(0,1,sender,json,jsonstr);
             else if ( strcmp(methodstr,"ask") == 0 )
