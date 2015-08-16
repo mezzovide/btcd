@@ -65,7 +65,10 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
         {
             //printf("Dequeued InstantDEX.(%s)\n",jsonstr);
             if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
+            {
+                printf("busdata.(%s)\n",str);
                 free(str);
+            }
             free_json(json);
             n++;
         } else printf("error parsing (%s) from InstantDEXQ\n",jsonstr);
@@ -327,6 +330,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         // autofill and automatch
         // tradehistory and other stats -> peggy integration
         bidask_parse(exchangestr,name,base,rel,gui,&iQ,json,jsonstr);
+        if ( iQ.s.offerNXT == 0 )
+            iQ.s.offerNXT = SUPERNET.my64bits;
         copy_cJSON(method,jobj(json,"method"));
         if ( (sequenceid= j64bits(json,"orderid")) == 0 )
             sequenceid = j64bits(json,"sequenceid");
@@ -436,6 +441,7 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
     char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD];
     struct InstantDEX_quote iQ;
     copy_cJSON(offerNXT,jobj(json,"offerNXT"));
+    //printf("got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
         if ( bidask_parse(exchangestr,name,base,rel,gui,&iQ,json,origargstr) == 0 )

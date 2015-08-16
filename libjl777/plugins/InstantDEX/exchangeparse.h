@@ -49,24 +49,6 @@ char *is_MGWasset(uint64_t assetid)
     return(0);
 }
 
-int32_t is_native_crypto(char *name,uint64_t bits)
-{
-    int32_t i,n;
-    if ( (n= (int32_t)strlen(name)) > 0 || (n= unstringbits(name,bits)) <= 5 )
-    {
-        for (i=0; i<n; i++)
-        {
-            if ( (name[i] >= '0' && name[i] <= '9') || (name[i] >= 'A' && name[i] <= 'Z') )// || (name[i] >= '0' && name[i] <= '9') )
-                continue;
-            //printf("(%s) is not native crypto\n",name);
-            return(0);
-        }
-        //printf("(%s) is native crypto\n",name);
-        return(1);
-    }
-    return(0);
-}
-
 cJSON *exchanges_json()
 {
     struct exchange_info *exchange; int32_t exchangeid,n = 0; char api[4]; cJSON *item,*array = cJSON_CreateArray();
@@ -356,9 +338,9 @@ double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
 
 int32_t huobi_supports(char *base,char *rel)
 {
-    if ( strcmp(rel,"BTC") == 0 || strcmp(rel,"CNY") == 0 )
+    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"CNY") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"CNY") == 0) )
         return(1);
-    else if ( strcmp(base,"BTC") == 0 || strcmp(base,"CNY") == 0 )
+    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"CNY") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"CNY") == 0) )
         return(-1);
     else return(0);
 }
