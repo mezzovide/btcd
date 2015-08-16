@@ -1050,16 +1050,18 @@ char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,ui
         }
         for (exchangeid=4; exchangeid<MAX_EXCHANGES; exchangeid++)
         {
+            strcpy(base,_base), strcpy(rel,_rel);
             if ( Exchanges[exchangeid].name[0] == 0 )
                 break;
-            printf("%s exchangeid.%d ptr.%p (%s/%s)\n",Exchanges[exchangeid].name,exchangeid,Exchanges[exchangeid].supports,base,rel);
             if ( Exchanges[exchangeid].supports != 0 && (inverted= (*Exchanges[exchangeid].supports)(base,rel)) != 0 && (tradeable == 0 ||Exchanges[exchangeid].apikey[0] != 0) )
             {
+                printf("inverted.%d ",inverted);
                 item = cJSON_CreateObject(), jaddstr(item,"exchange",Exchanges[exchangeid].name);
                 if ( inverted < 0 )
-                    jaddnum(item,"wt",-1);
+                    jaddnum(item,"wt",-1), jaddstr(item,"base",rel), jaddstr(item,"rel",base);
                 jaddi(array,item);
             }
+            printf("%s exchangeid.%d ptr.%p (%s/%s)\n",Exchanges[exchangeid].name,exchangeid,Exchanges[exchangeid].supports,base,rel);
         }
         jadd(basketjson,"basket",array);
         if ( (active= prices777_makebasket(0,basketjson,1,(tradeable != 0) ? "active" : "basket")) != 0 )
