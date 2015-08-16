@@ -39,13 +39,17 @@ uint64_t is_MGWcoin(char *name)
     return(0);
 }
 
-char *is_MGWasset(uint64_t assetid)
+char *is_MGWasset(uint64_t *multp,uint64_t assetid)
 {
     int32_t i; char assetidstr[64];
     expand_nxt64bits(assetidstr,assetid);
     for (i=0; i<(int32_t)(sizeof(MGWassets)/sizeof(*MGWassets)); i++)
         if ( strcmp(MGWassets[i][0],assetidstr) == 0 )
+        {
+            if ( multp != 0 )
+                *multp = calc_decimals_mult(atoi(MGWassets[i][2]));
             return(MGWassets[i][1]);
+        }
     return(0);
 }
 

@@ -139,7 +139,7 @@ struct prices777 *prices777_poll(char *exchangestr,char *name,char *base,uint64_
 int32_t is_native_crypto(char *name,uint64_t bits);
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp);
 uint64_t is_MGWcoin(char *name);
-char *is_MGWasset(uint64_t);
+char *is_MGWasset(uint64_t *multp,uint64_t assetid);
 int32_t unstringbits(char *buf,uint64_t bits);
 int32_t get_assetname(char *name,uint64_t assetid);
 

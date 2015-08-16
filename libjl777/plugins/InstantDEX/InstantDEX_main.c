@@ -125,9 +125,9 @@ int32_t get_assetname(char *name,uint64_t assetid)
 uint64_t prices777_equiv(uint64_t assetid)
 {
     char *str;
-    if ( (str= is_MGWasset(assetid)) != 0 )
+    if ( (str= is_MGWasset(0,assetid)) != 0 )
         return(stringbits(str));
-               return(assetid);
+    return(assetid);
 }
 
 uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,char *base,uint64_t *baseidp,char *rel,uint64_t *relidp)
@@ -152,7 +152,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
                 relid = calc_nxt64bits(rel);
             else relid = is_MGWcoin(rel);
         }
-        else if ( (str= is_MGWasset(relid)) != 0 )
+        else if ( (str= is_MGWasset(0,relid)) != 0 )
             strcpy(rel,str);
         if ( baseid == 0 && base[0] != 0 )
         {
@@ -160,7 +160,7 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
                 baseid = calc_nxt64bits(base);
             else baseid = is_MGWcoin(base);
         }
-        else if ( (str= is_MGWasset(baseid)) != 0 )
+        else if ( (str= is_MGWasset(0,baseid)) != 0 )
             strcpy(base,str);
         if ( base[0] == 0 )
         {
@@ -298,8 +298,10 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
     }
     if ( iQ->s.price > SMALLVAL && iQ->s.vol > SMALLVAL )
     {
-        _set_assetname(&basemult,buf,0,iQ->baseid);
-        _set_assetname(&relmult,buf,0,iQ->relid);
+        buf[0] = 0, _set_assetname(&basemult,buf,0,iQ->baseid);
+        printf("baseid.%llu -> %s mult.%llu\n",(long long)iQ->baseid,buf,(long long)basemult);
+        buf[0] = 0, _set_assetname(&relmult,buf,0,iQ->relid);
+        printf("relid.%llu -> %s mult.%llu\n",(long long)iQ->relid,buf,(long long)relmult);
         //basemult = get_assetmult(iQ->baseid), relmult = get_assetmult(iQ->relid);
         baseamount = (iQ->baseamount + basemult/2) / basemult, baseamount *= basemult;
         relamount = (iQ->relamount + relmult/2) / relmult, relamount *= relmult;

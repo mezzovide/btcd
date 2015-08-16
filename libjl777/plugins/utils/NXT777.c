@@ -863,13 +863,13 @@ int32_t is_native_crypto(char *name,uint64_t bits)
 int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr,uint64_t assetid)
 {
     int32_t type = 0,decimals = -1; cJSON *json=0; char assetidstr[64];
+    *multp = 1;
     if ( assetid != 0 )
     {
-        if ( is_native_crypto(buf,assetid) != 0 )
-        {
-            *multp = 1;
+        if ( is_MGWasset(multp,assetid) != 0 )
             return(0);
-        }
+        if ( is_native_crypto(buf,assetid) != 0 )
+            return(0);
     }
     if ( jsonstr == 0 )
     {
