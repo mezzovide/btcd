@@ -1070,8 +1070,8 @@ char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,ui
         printf("BASKET.(%s)\n",jprint(basketjson,1));
         //free_json(basketjson);
     }
-    else if ( (retstr= active->orderbook_jsonstrs[0][allflag]) == 0 )
-        retstr = prices777_orderbook_jsonstr(0,SUPERNET.my64bits,active,&active->O,maxdepth,allflag);
+    else if ( (retstr= active->orderbook_jsonstrs[inverted][allflag]) == 0 )
+        retstr = prices777_orderbook_jsonstr(inverted,SUPERNET.my64bits,active,&active->O,maxdepth,allflag);
     if ( retstr != 0 )
         retstr = clonestr(retstr);
     return(retstr);

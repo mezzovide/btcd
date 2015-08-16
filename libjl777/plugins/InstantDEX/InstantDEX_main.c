@@ -257,7 +257,7 @@ cJSON *InstantDEX_lottostats()
 
 int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui,struct InstantDEX_quote *iQ,cJSON *json,char *origargstr)
 {
-    uint64_t basemult,relmult,baseamount,relamount; double price,volume; int32_t exchangeid,keysize; char key[1024];
+    uint64_t basemult,relmult,baseamount,relamount; double price,volume; int32_t exchangeid,keysize; char key[1024],buf[64];
     memset(iQ,0,sizeof(*iQ));
     iQ->baseid = j64bits(json,"baseid"); iQ->relid = j64bits(json,"relid");
     iQ->baseamount = j64bits(json,"baseamount"), iQ->relamount = j64bits(json,"relamount");
@@ -286,9 +286,18 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
             return(-1);
         set_best_amounts(&iQ->baseamount,&iQ->relamount,iQ->s.price,iQ->s.vol);
     }
+    if ( iQ->s.quoteid == 0 )
+        iQ->s.quoteid = calc_quoteid(iQ);
+    else if ( iQ->s.quoteid != calc_quoteid(iQ) )
+    {
+        printf("bidask_parse quoteid.%llu != calc.%llu\n",(long long)iQ->s.quoteid,(long long)calc_quoteid(iQ));
+        return(-1);
+    }
     if ( iQ->s.price > SMALLVAL && iQ->s.vol > SMALLVAL )
     {
-        basemult = get_assetmult(iQ->baseid), relmult = get_assetmult(iQ->relid);
+        _set_assetname(&basemult,buf,0,iQ->baseid);
+        _set_assetname(&relmult,buf,0,iQ->relid);
+        //basemult = get_assetmult(iQ->baseid), relmult = get_assetmult(iQ->relid);
         baseamount = (iQ->baseamount + basemult/2) / basemult, baseamount *= basemult;
         relamount = (iQ->relamount + relmult/2) / relmult, relamount *= relmult;
         if ( iQ->s.price != 0. && iQ->s.vol != 0 )
@@ -300,13 +309,6 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
                 return(-1);
             }
         }
-    }
-    if ( iQ->s.quoteid == 0 )
-        iQ->s.quoteid = calc_quoteid(iQ);
-    else if ( iQ->s.quoteid != calc_quoteid(iQ) )
-    {
-        printf("bidask_parse quoteid.%llu != calc.%llu\n",(long long)iQ->s.quoteid,(long long)calc_quoteid(iQ));
-        return(-1);
     }
     return(0);
 }
