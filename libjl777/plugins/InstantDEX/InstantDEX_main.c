@@ -63,7 +63,7 @@ int32_t InstantDEX_idle(struct plugin_info *plugin)
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            //printf("Dequeued InstantDEX.(%s)\n",jsonstr);
+            printf("Dequeued InstantDEX.(%s)\n",jsonstr);
             if ( (str= busdata_sync(&nonce,jsonstr,"allnodes",0)) != 0 )
             {
                 printf("busdata.(%s)\n",str);
