@@ -466,7 +466,7 @@ char *set_combohalf(struct pendingpair *pt,struct InstantDEX_quote *iQ,struct pe
     pt->relamount = offer->ratio * iQ->relamount;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"relamount"));
     pt->quoteid = iQ->s.quoteid;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"quoteid"));
     pt->offerNXT = iQ->s.offerNXT;//get_API_nxt64bits(cJSON_GetObjectItem(obj,"offerNXT"));
-    iQ_exchangestr(pt->exchange,iQ);
+    strcpy(pt->exchange,exchange_str(iQ->exchangeid));
     //copy_cJSON(pt->exchange,cJSON_GetObjectItem(obj,"exchange"));
     pt->nxt64bits = offer->nxt64bits, pt->baseid = baseid, pt->relid = relid, pt->ratio = offer->ratio;
     pt->price = prices777_price_volume(&pt->volume,pt->baseamount,pt->relamount);

@@ -206,17 +206,17 @@ cJSON *prices777_tradeitem(int32_t rootbidask,struct prices777 *prices,int32_t g
     if ( prices->O.timestamp == timestamp )
     {
         //printf("tradeitem.(%s %f %f)\n",prices->exchange,price,volume);
-        if ( bidask == 0 && prices->O.book[MAX_GROUPS][slot].bid.price == price && prices->O.book[MAX_GROUPS][slot].bid.vol == volume )
+        if ( bidask == 0 && prices->O.book[MAX_GROUPS][slot].bid.s.price == price && prices->O.book[MAX_GROUPS][slot].bid.s.vol == volume )
             match++;
-        else if ( bidask != 0 && prices->O.book[MAX_GROUPS][slot].ask.price == price && prices->O.book[MAX_GROUPS][slot].ask.vol == volume )
+        else if ( bidask != 0 && prices->O.book[MAX_GROUPS][slot].ask.s.price == price && prices->O.book[MAX_GROUPS][slot].ask.s.vol == volume )
             match++;
     }
     else if ( prices->O2.timestamp == timestamp )
     {
         //printf("2tradeitem.(%s %f %f)\n",prices->exchange,price,volume);
-        if ( bidask == 0 && prices->O2.book[MAX_GROUPS][slot].bid.price == price && prices->O2.book[MAX_GROUPS][slot].bid.vol == volume )
+        if ( bidask == 0 && prices->O2.book[MAX_GROUPS][slot].bid.s.price == price && prices->O2.book[MAX_GROUPS][slot].bid.s.vol == volume )
             match++;
-        else if ( bidask != 0 && prices->O2.book[MAX_GROUPS][slot].ask.price == price && prices->O2.book[MAX_GROUPS][slot].ask.vol == volume )
+        else if ( bidask != 0 && prices->O2.book[MAX_GROUPS][slot].ask.s.price == price && prices->O2.book[MAX_GROUPS][slot].ask.s.vol == volume )
             match++;
     } else error++, printf("mismatched tradeitem error.%d match.%d\n",error,match);
     return(prices777_item(rootbidask,prices,group,bidask,price,volume,rootwt,groupwt,wt,orderid));
@@ -236,7 +236,7 @@ cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct pr
         if ( (src= order->source) != 0 )
         {
             if ( src->basketsize == 0 )
-                jaddi(array,prices777_tradeitem(bidask,src,refgroup*10+i,srcbidask,srcslot,order->s.timestamp,order->price,order->ratio*order->vol,rootwt,groupwt,order->wt,order->id));
+                jaddi(array,prices777_tradeitem(bidask,src,refgroup*10+i,srcbidask,srcslot,order->s.timestamp,order->s.price,order->ratio*order->s.vol,rootwt,groupwt,order->wt,order->id));
             else if ( src->O.timestamp == order->s.timestamp )
             {
                 for (j=0; j<src->numgroups; j++)
@@ -301,13 +301,13 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct price
         {
             for (i=0; i<prices->numgroups; i++)
                 suborders[i] = &OB->book[i][slot].bid;
-            prices777_orderbook_item(prices,0,suborders,(invert==0) ? bids : asks,invert,allflag,gp->bid.price,gp->bid.vol,gp->bid.id);
+            prices777_orderbook_item(prices,0,suborders,(invert==0) ? bids : asks,invert,allflag,gp->bid.s.price,gp->bid.s.vol,gp->bid.id);
         }
         if ( slot < OB->numasks )
         {
             for (i=0; i<prices->numgroups; i++)
                 suborders[i] = &OB->book[i][slot].ask;
-            prices777_orderbook_item(prices,1,suborders,(invert==0) ? asks : bids,invert,allflag,gp->ask.price,gp->ask.vol,gp->ask.id);
+            prices777_orderbook_item(prices,1,suborders,(invert==0) ? asks : bids,invert,allflag,gp->ask.s.price,gp->ask.s.vol,gp->ask.id);
         }
     }
     expand_nxt64bits(NXTaddr,nxt64bits);
@@ -411,7 +411,7 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
             if ( price > SMALLVAL && volume > SMALLVAL )
             {
                 order = (bidask == 0) ? &gp->bid : &gp->ask;
-                order->price = price, order->vol = volume, order->source = prices, order->s.timestamp = OB.timestamp, order->wt = 1, order->id = orderid;
+                order->s.price = price, order->s.vol = volume, order->source = prices, order->s.timestamp = OB.timestamp, order->wt = 1, order->id = orderid;
                 if ( bidask == 0 )
                     order->slot_ba = (OB.numbids++ << 1);
                 else order->slot_ba = (OB.numasks++ << 1) | 1;
@@ -499,14 +499,14 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
                 polarity = -1.;
             else polarity = 1.;
             order = &feature->O.book[MAX_GROUPS][group[i].bidi].bid;
-            if ( group[i].bidi < feature->O.numbids && (vol= order->vol) > minvol && (price= order->price) > SMALLVAL )
+            if ( group[i].bidi < feature->O.numbids && (vol= order->s.vol) > minvol && (price= order->s.price) > SMALLVAL )
             {
                 if ( polarity < 0. )
                     vol *= price, price = (1. / price);
                 prices777_hbla(&bidorderid,&askorderid,&lowaski,&highbidi,&highbid,&bidvol,&lowask,&askvol,-polarity * groupwt,i,0,price,vol,order->id);
             }
             order = &feature->O.book[MAX_GROUPS][group[i].aski].ask;
-            if ( group[i].aski < feature->O.numasks && (vol= order->vol) > minvol && (price= order->price) > SMALLVAL )
+            if ( group[i].aski < feature->O.numasks && (vol= order->s.vol) > minvol && (price= order->s.price) > SMALLVAL )
             {
                 if ( polarity < 0. )
                     vol *= price, price = (1. / price);
@@ -515,12 +515,12 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
         } else printf("null feature.%p\n",feature);
     }
     //printf("groupsize.%d highbidi.%d lowaski.%d\n",groupsize,highbidi,lowaski);
-    gp->bid.price = highbid, gp->bid.vol = bidvol, gp->ask.price = lowask, gp->ask.vol = askvol;
+    gp->bid.s.price = highbid, gp->bid.s.vol = bidvol, gp->ask.s.price = lowask, gp->ask.s.vol = askvol;
     if ( highbidi >= 0 )
         prices777_setorder(&gp->bid,group,highbidi,bidorderid);
     if ( lowaski >= 0 )
         prices777_setorder(&gp->ask,group,lowaski,askorderid);
-    if ( gp->bid.price > SMALLVAL && gp->ask.price > SMALLVAL )
+    if ( gp->bid.s.price > SMALLVAL && gp->ask.s.price > SMALLVAL )
         return(0);
     return(-1);
 }
@@ -627,7 +627,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             //printf("j%d slot.%d %s numgroups.%d groupsize.%d %p\n",j,slot,prices->contract,prices->numgroups,groupsize,&prices->basket[0].groupsize);
             if ( prices777_groupbidasks(gp,prices->groupwts[j],minvol,&prices->basket[i],groupsize) != 0 )
                 break;
-            if ( bid > SMALLVAL && (b= gp->bid.price) > SMALLVAL && (bv= gp->bid.vol) > SMALLVAL )
+            if ( bid > SMALLVAL && (b= gp->bid.s.price) > SMALLVAL && (bv= gp->bid.s.vol) > SMALLVAL )
             {
                 if ( prices->groupwts[j] < 0 )
                     bid /= b;
@@ -636,7 +636,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 prices777_volcalc(basevols,baseids,gp->bid.source->relid,b*bv);
                 //printf("bid %f b %f bv %f %s %s %f\n",bid,b,bv,gp->bid.source->base,gp->bid.source->rel,bv*b);
             } else bid = 0.;
-            if ( ask > SMALLVAL && (a= gp->ask.price) > SMALLVAL && (av= gp->ask.vol) > SMALLVAL )
+            if ( ask > SMALLVAL && (a= gp->ask.s.price) > SMALLVAL && (av= gp->ask.s.vol) > SMALLVAL )
             {
                 if ( prices->groupwts[j] < 0 )
                     ask /= a;
@@ -656,17 +656,17 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 //printf("null source slot.%d j.%d\n",slot,j);
                 break;
             }
-            baseratio = prices777_volratio(basevols,baseids,gp->bid.source->baseid,gp->bid.vol);
-            relratio = prices777_volratio(basevols,baseids,gp->bid.source->relid,gp->bid.vol * gp->bid.price);
+            baseratio = prices777_volratio(basevols,baseids,gp->bid.source->baseid,gp->bid.s.vol);
+            relratio = prices777_volratio(basevols,baseids,gp->bid.source->relid,gp->bid.s.vol * gp->bid.s.price);
             gp->bid.ratio = (baseratio < relratio) ? baseratio : relratio;
             if ( j == 0 )
-                bidvol = (gp->bid.ratio * gp->bid.vol);
+                bidvol = (gp->bid.ratio * gp->bid.s.vol);
             //printf("(%f %f) (%f %f) bid%d bidratio %f bidvol %f ",gp->bid.vol,baseratio,gp->bid.vol * gp->bid.price,relratio,j,gp->bid.ratio,bidvol);
-            baseratio = prices777_volratio(relvols,baseids,gp->ask.source->baseid,gp->ask.vol);
-            relratio = prices777_volratio(relvols,baseids,gp->ask.source->relid,gp->ask.vol * gp->ask.price);
+            baseratio = prices777_volratio(relvols,baseids,gp->ask.source->baseid,gp->ask.s.vol);
+            relratio = prices777_volratio(relvols,baseids,gp->ask.source->relid,gp->ask.s.vol * gp->ask.s.price);
             gp->ask.ratio = (baseratio < relratio) ? baseratio : relratio;
             if ( j == 0 )
-                askvol = (gp->ask.ratio * gp->ask.vol);
+                askvol = (gp->ask.ratio * gp->ask.s.vol);
             //printf("(%f %f) (%f %f) ask%d askratio %f askvol %f\n",gp->ask.vol,baseratio,gp->ask.vol * gp->ask.price,relratio,j,gp->ask.ratio,askvol);
         }
         if ( j != prices->numgroups )
@@ -683,14 +683,14 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         {
             if ( slot == 0 )
                 prices->lastbid = bid;
-            gp->bid.s.timestamp = OB.timestamp, gp->bid.price = bid, gp->bid.vol = bidvol, gp->bid.slot_ba = (OB.numbids++ << 1);
+            gp->bid.s.timestamp = OB.timestamp, gp->bid.s.price = bid, gp->bid.s.vol = bidvol, gp->bid.slot_ba = (OB.numbids++ << 1);
             gp->bid.source = prices, gp->bid.wt = prices->groupwts[j];
         }
         if ( ask > SMALLVAL && askvol > SMALLVAL )
         {
             if ( slot == 0 )
                 prices->lastask = ask;
-            gp->ask.s.timestamp = OB.timestamp, gp->ask.price = ask, gp->ask.vol = askvol, gp->ask.slot_ba = (OB.numasks++ << 1) | 1;
+            gp->ask.s.timestamp = OB.timestamp, gp->ask.s.price = ask, gp->ask.s.vol = askvol, gp->ask.slot_ba = (OB.numasks++ << 1) | 1;
             gp->ask.source = prices, gp->ask.wt = prices->groupwts[j];
         }
         //printf("%s slot.%d (%f %f %f %f) (%d %d)\n",prices->contract,slot,gp->bid.price,gp->bid.vol,gp->ask.price,gp->ask.vol,OB.numbids,OB.numasks);
@@ -1052,7 +1052,7 @@ char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,ui
         {
             if ( Exchanges[exchangeid].name[0] == 0 )
                 break;
-            printf("exchangeid.%d ptr.%p (%s/%s)\n",exchangeid,Exchanges[exchangeid].supports,base,rel);
+            printf("%s exchangeid.%d ptr.%p (%s/%s)\n",Exchanges[exchangeid].name,exchangeid,Exchanges[exchangeid].supports,base,rel);
             if ( Exchanges[exchangeid].supports != 0 && (inverted= (*Exchanges[exchangeid].supports)(base,rel)) != 0 && (tradeable == 0 ||Exchanges[exchangeid].apikey[0] != 0) )
             {
                 item = cJSON_CreateObject(), jaddstr(item,"exchange",Exchanges[exchangeid].name);
