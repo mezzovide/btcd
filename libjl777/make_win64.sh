@@ -1,5 +1,8 @@
 echo ">>>>>>>>>>>>>>>>>>Building mxe. This may take a while."
 cd mxe
+cd src
+patch -N -s --reject-file=- < ../../mxepatch/curl.mk.patch
+cd ..
 make pkgconf MXE_TARGETS='x86_64-w64-mingw32.static'
 make binutils MXE_TARGETS='x86_64-w64-mingw32.static'
 make gcc-gmp MXE_TARGETS='x86_64-w64-mingw32.static'
