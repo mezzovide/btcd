@@ -666,7 +666,7 @@ char *busdata(char *tokenstr,char *forwarder,char *sender,int32_t valid,char *ke
             if ( (retstr= busdata_addpending(destNXT,sender,key,timestamp,json,forwarder,origjson)) == 0 )
                 nn_syncbus(origjson);
             free_json(json);
-        } else printf("couldnt decode.(%s)\n",msg);
+        } else printf("couldnt decode.(%s) len.%ld\n",msg,strlen((char *)msg));
     }
     if ( Debuglevel > 2 )
         printf("busdata.(%s) valid.%d -> (%s)\n",msg,valid,retstr!=0?retstr:"");
@@ -677,7 +677,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
 {
     char pubkey[256],hexstr[65],sha[65],datastr[8192],fforwarder[512],fsender[512]; int32_t valid,fvalid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0; forwarder[0] = sender[0] = 0;
-    printf("busdata_validate.(%s)\n",msg);
+    //printf("busdata_validate.(%s)\n",msg);
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
@@ -879,7 +879,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
                 if ( retstr == 0 )
                     retstr = busdata(tokenstr,forwarder,sender,valid,key,timestamp,databuf,datalen,json);
             }
- //printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
+//printf("valid.%d forwarder.(%s) sender.(%s) src.%-24s key.(%s) datalen.%d\n",valid,forwarder,sender,src,key,datalen);
         }
         else if ( RELAYS.pubglobal >= 0 && SUPERNET.iamrelay != 0 && argjson != 0 && tokenobj != 0 && (broadcaststr= cJSON_str(cJSON_GetObjectItem(tokenobj,"broadcast"))) != 0 && strcmp(broadcaststr,"allnodes") == 0 && cJSON_GetObjectItem(argjson,"stop") == 0 )
         {

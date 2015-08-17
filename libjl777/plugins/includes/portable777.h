@@ -170,6 +170,7 @@ void set_best_amounts(int64_t *baseamountp,int64_t *relamountp,double price,doub
 #define MAX_EXCHANGES 64
 
 struct pending_trade { struct queueitem DL; struct prices777 *prices; double price,volume; int32_t dir; };
+struct NXTtx { uint64_t txid; char fullhash[MAX_JSON_FIELD],utxbytes[MAX_JSON_FIELD],txbytes[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD]; };
 
 struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits,baseid,relid; int64_t baseamount,relamount; uint32_t timestamp; uint16_t duration,isask:1,closed:1,sent:1,matched:1,pending:1,automatch:3,minperc:7; };
 struct InstantDEX_quote
@@ -211,6 +212,8 @@ struct exchange_info
     uint32_t num,exchangeid,pollgap,refcount,polling; uint64_t nxt64bits; double lastupdate;
     portable_mutex_t mutex;
 };
+
+uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,char *comment,int32_t deadline,char *triggerhash,uint32_t triggerheight);
 
 struct exchange_info *get_exchange(int32_t exchangeid);
 char *exchange_str(int32_t exchangeid);

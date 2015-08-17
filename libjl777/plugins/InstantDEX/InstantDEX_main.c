@@ -480,18 +480,54 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
     return(0);
 }
 
-char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,char *origargstr)
+char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
 {
-    char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD];
-    struct InstantDEX_quote iQ;
-    copy_cJSON(offerNXT,jobj(json,"offerNXT"));
+    char offerNXT[MAX_JSON_FIELD],calchash[256],*triggerhash,*utx,*sighash,*jsonstr,*parsed,*fullhash,*cmpstr;
+    cJSON *json,*triggerjson; uint64_t otherbits,otherqty,quoteid; struct InstantDEX_quote *iQ;
+    copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
     //printf("got (%s)\n",origargstr);
-    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
+    if ( 1 ) //strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
-        if ( bidask_parse(exchangestr,name,base,rel,gui,&iQ,json,origargstr) == 0 )
-            return(InstantDEX_placebidask(sender,j64bits(json,"orderid"),exchangestr,name,base,rel,&iQ));
-        else printf("error with incoming bidask\n");
-    } else fprintf(stderr,"got my bidask from network (%s)\n",origargstr);
+        quoteid = j64bits(origjson,"quoteid");
+        if ( (iQ= find_iQ(quoteid)) == 0 )
+            return(clonestr("{\"error\":\"cant find quoteid\"}"));
+        otherbits = j64bits(origjson,"otherbits");
+        otherqty = j64bits(origjson,"otherqty");
+        triggerhash = jstr(origjson,"triggerhash");
+        fullhash = jstr(origjson,"fullhash");
+        utx = jstr(origjson,"utx");
+        sighash = jstr(origjson,"sighash");
+        if ( (jsonstr= issue_calculateFullHash(utx,sighash)) != 0 )
+        {
+            //printf("utx.(%s) sighash.(%s) -> (%s)\n",utx,sighash,jsonstr);
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            {
+                copy_cJSON(calchash,jobj(json,"fullHash"));
+                if ( strcmp(calchash,fullhash) == 0 )
+                {
+                    if ( (parsed= issue_parseTransaction(utx)) != 0 )
+                    {
+                        _stripwhite(parsed,' ');
+                        printf("iQ (%llu/%llu) otherbits.%llu qty %llu PARSED OFFER.(%s) triggerhash.(%s) (%s) offer sender.%s\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)otherbits,(long long)otherqty,parsed,fullhash,calchash,sender);
+                        if ( (triggerjson= cJSON_Parse(parsed)) != 0 )
+                        {
+                            if ( (cmpstr= jstr(triggerjson,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 )
+                            {
+                                // verify tx valid
+                                struct NXTtx fee,responsetx; int32_t triggerheight = 0;
+                                gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,0,INSTANTDEX_TRIGGERDEADLINE,triggerhash,0);
+                                gen_NXTtx(&responsetx,calc_nxt64bits(offerNXT),otherbits,otherqty,0,INSTANTDEX_TRIGGERDEADLINE,triggerhash,triggerheight);
+                                printf("fee.(%s) responsetx.(%s)\n",fee.txbytes,responsetx.txbytes);
+                            }
+                            free_json(triggerjson);
+                        }
+                    }
+                } else printf("mismatch (%s) != (%s)\n",calchash,fullhash);
+                free_json(json);
+            }
+            free(jsonstr);
+        } else printf("calchash.(%s)\n",jsonstr);
+    } else fprintf(stderr,"got my swap from network (%s)\n",origargstr);
     return(0);
 }
 

@@ -255,8 +255,6 @@ int32_t is_unfunded_order(uint64_t nxt64bits,uint64_t assetid,uint64_t amount)
     return(0);
 }
 
-struct NXTtx { uint64_t txid; char fullhash[MAX_JSON_FIELD],utxbytes[MAX_JSON_FIELD],txbytes[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD]; };
-
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,char *comment,int32_t deadline,char *triggerhash,uint32_t triggerheight)
 {
     char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],*retstr; cJSON *json;
@@ -326,7 +324,7 @@ void InstantDEX_swapstr(char *swapstr,struct prices777_order *order,char *trigge
         if ( triggerhash == 0 || triggerhash[0] == 0 )
             triggerhash = fee.fullhash;
         gen_NXTtx(&sendtx,order->s.offerNXT,assetidbits,qty,0,INSTANTDEX_TRIGGERDEADLINE,fee.fullhash,triggerheight);
-        sprintf(swapstr,",\"triggerhash\":\"%s\",\"feeutx\":\"%s\",\"utx\":\"%s\",\"sighash\":\"%s\",\"otherbits\":\"%llu\",\"otherqty\":\"%llu\"}",fee.fullhash,fee.utxbytes,sendtx.utxbytes,sendtx.sighash,(long long)otherassetbits,(long long)otherqty);
+        sprintf(swapstr,",\"triggerhash\":\"%s\",\"fullhash\":\"%s\",\"utx\":\"%s\",\"sighash\":\"%s\",\"otherbits\":\"%llu\",\"otherqty\":\"%llu\"}",fee.fullhash,sendtx.fullhash,sendtx.utxbytes,sendtx.sighash,(long long)otherassetbits,(long long)otherqty);
     }
 }
 
@@ -339,14 +337,14 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade)
         swapbuf[0] = 0;
         if ( strcmp(exchange,INSTANTDEX_NAME) == 0 )
         {
-            sprintf(swapbuf,"{\"offerNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"baseqty\":\"%lld\",\"relqty\":\"%lld\"}",SUPERNET.NXTADDR,order->wt > 0. ? "buy" : (order->wt < 0. ? "sell" : "swap"),exchange,prices->base,prices->rel,(long long)order->s.baseid,(long long)order->s.relid,(long long)order->s.baseamount,(long long)order->s.relamount);
+            sprintf(swapbuf,"{\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"baseqty\":\"%lld\",\"relqty\":\"%lld\"}",(long long)order->s.quoteid,SUPERNET.NXTADDR,order->wt > 0. ? "buy" : (order->wt < 0. ? "sell" : "swap"),exchange,prices->base,prices->rel,(long long)order->s.baseid,(long long)order->s.relid,(long long)order->s.baseamount,(long long)order->s.relamount);
             if ( order->s.price > SMALLVAL )
                 sprintf(swapbuf + strlen(swapbuf) - 1,",\"price\":%.8f,\"volume\":%.8f}",order->s.price,order->s.vol);
             if ( order->wt == 0. )
             {
                 InstantDEX_swapstr(swapstr,order,0,0);
                 strcpy(swapbuf+strlen(swapbuf)-1,swapstr);
-                //printf("swapstr.(%s) [%s]\n",swapstr,buf);
+                printf("swapbuf.(%s)\n",swapbuf);
             }
         }
         if ( dotrade == 0 )
