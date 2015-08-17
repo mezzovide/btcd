@@ -4119,6 +4119,7 @@ extern "C" char *peggypayments(uint32_t blocknum,uint32_t blocktimestamp);
 void init_jl777(char *myip)
 {
     static char ipaddr[64];
+    char *str;
     strcpy(ipaddr,myip);
     fprintf(stderr,"starting SuperNET %p.(%s)\n",ipaddr,ipaddr);
     if ( (str= peggybase(100,100000)) != 0 )
