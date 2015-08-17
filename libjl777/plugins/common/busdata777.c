@@ -135,7 +135,7 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
 
 int32_t issue_decodeToken(char *sender,int32_t *validp,char *key,uint8_t encoded[NXT_TOKEN_LEN])
 {
-    char cmd[4096],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr;
+    char cmd[8192],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr;
     cJSON *nxtobj,*validobj,*json;
     *validp = -1;
     sender[0] = 0;
@@ -167,7 +167,7 @@ int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenize
 {
     cJSON *array=0,*firstitem=0,*tokenobj,*obj; uint32_t nonce; int64_t timeval,diff = 0; int32_t valid,leverage,retcode = -13;
     char buf[MAX_JSON_FIELD],serviceNXT[MAX_JSON_FIELD],sender[MAX_JSON_FIELD],broadcaststr[MAX_JSON_FIELD],*broadcastmode,*firstjsontxt = 0;
-    uint8_t encoded[4096];
+    uint8_t encoded[8192];
     array = cJSON_Parse(tokenizedtxt);
     NXTaddr[0] = pubkey[0] = forwarder[0] = 0;
     if ( array == 0 )
@@ -677,7 +677,7 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
 {
     char pubkey[256],hexstr[65],sha[65],datastr[8192],fforwarder[512],fsender[512]; int32_t valid,fvalid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0; forwarder[0] = sender[0] = 0;
-    //printf("busdata_validate.(%s)\n",msg);
+    printf("busdata_validate.(%s)\n",msg);
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
@@ -700,13 +700,12 @@ int32_t busdata_validate(char *forwarder,char *sender,uint32_t *timestamp,uint8_
                 decode_hex(databuf,(int32_t)(strlen(datastr)+1)>>1,datastr);
             else databuf[0] = 0;
             *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
-            calc_sha256(hexstr,hash.bytes,databuf,*datalenp);
+            calc_sha256(hexstr,hash.bytes,databuf,*datalenp<1000?*datalenp:1000);
             if ( strcmp(hexstr,sha) == 0 )
             {
                 *datalenp = privatemessage_decrypt(databuf,*datalenp,datastr);
                 return(1);
-            }
-            else printf("hash mismatch %s vs %s\n",hexstr,sha);
+            } else printf("hash mismatch %s vs %s\n",hexstr,sha);
         }
         else
         {
@@ -1053,7 +1052,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         tmp = malloc((datalen << 1) + 1);
         init_hexbytes_noT(tmp,(void *)str,datalen);
         cJSON_AddItemToObject(datajson,"data",cJSON_CreateString(tmp));
-        calc_sha256(hexstr,hash.bytes,(uint8_t *)str,datalen);
+        calc_sha256(hexstr,hash.bytes,(uint8_t *)str,datalen<1000?datalen:1000);
         cJSON_AddItemToObject(datajson,"n",cJSON_CreateNumber(datalen));
         cJSON_AddItemToObject(datajson,"H",cJSON_CreateString(hexstr));
         str2 = cJSON_Print(datajson), _stripwhite(str2,' ');

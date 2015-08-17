@@ -671,13 +671,23 @@ int main(int argc,const char *argv[])
                 language_func((char *)argv[i],"",0,0,1,(char *)argv[i],jsonstr,call_system);
     }
    // sleep(60);
-
+    uint32_t nonce;
+    char *str,*teststr = "{\"offerNXT\":\"423766016895692955\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"InstantDEX\",\"base\":\"LTC\",\"rel\":\"NXT\",\"baseid\":\"2881764795164526882\",\"relid\":\"5527630\",\"baseqty\":\"-10000\",\"relqty\":\"10720000000\",\"price\":107.20000000,\"volume\":1,\"triggerhash\":\"ee8b7883b97bea5886aff9566c9d0c852552841c36bf51db0a7ac31ace150a1e\",\"feeutx\":\"0010468f3f033c004e5bbad625df3d536fa90b1e6a28c3f5a56e1fcbe34132391c8d3fd7f671cb196a8bc26aa472d63c80b2e60e0000000000e1f5050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000479e07005d012936208afb94\",\"utx\":\"0211468f3f033c004e5bbad625df3d536fa90b1e6a28c3f5a56e1fcbe34132391c8d3fd7f671cb199b30f378f284e105000000000000000000e1f50500000000ee8b7883b97bea5886aff9566c9d0c852552841c36bf51db0a7ac31ace150a1e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000479e07005d012936208afb94012209021ed015fe271027000000000000\",\"sighash\":\"2c6be7ac6e01ba0e7288fd9a28b05a2942cc76cfa627a7384f942e66d46c4e00\",\"otherbits\":\"5527630\",\"otherqty\":\"10720000000\"}]}";
+    if ( (str= busdata_sync(&nonce,clonestr(teststr),"allnodes",0)) != 0 )
+    {
+        printf("retstr.(%s)\n",str);
+        getchar();
+    }
     while ( 1 )
     {
-        char line[1024];
+        char line[32768];
         line[0] = 0;
+
         if ( getline777(line,sizeof(line)-1) > 0 )
+        {
+            printf("getline777.(%s)\n",line);
             process_userinput(line);
+        }
     }
     return(0);
 }

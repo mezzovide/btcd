@@ -149,7 +149,7 @@ char *dumpprivkey(char *coinstr,char *serverport,char *userpass,char *coinaddr);
 uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
 uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits);
 uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
-void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,double volume);
+void set_best_amounts(int64_t *baseamountp,int64_t *relamountp,double price,double volume);
 
 #define MAX_DEPTH 25
 #define MINUTES_FIFO (1024)
@@ -171,12 +171,11 @@ void set_best_amounts(uint64_t *baseamountp,uint64_t *relamountp,double price,do
 
 struct pending_trade { struct queueitem DL; struct prices777 *prices; double price,volume; int32_t dir; };
 
-struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits; uint32_t timestamp; uint16_t duration,isask:1,closed:1,sent:1,matched:1,pending:1,automatch:3,minperc:7; };
+struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits,baseid,relid; int64_t baseamount,relamount; uint32_t timestamp; uint16_t duration,isask:1,closed:1,sent:1,matched:1,pending:1,automatch:3,minperc:7; };
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
     struct InstantDEX_shared s; // must be here
-    uint64_t baseid,baseamount,relid,relamount;
     char exchangeid,gui[9];
 };
 
