@@ -880,7 +880,8 @@ struct peggy_info *peggy_lchain(struct txinds777_info *opreturns,char *path)
         else if ( (tmp= peggy_replay(path,opreturns,PEGS,i,0,0,0)) != PEGS )
             break;
     }
-    printf("loaded %d in %.3f millis per opreturn\n",PEGS->numopreturns,(milliseconds() - startmilli)/PEGS->numopreturns);// getchar();
+    if ( PEGS != 0 )
+        printf("loaded %d in %.3f millis per opreturn\n",PEGS->numopreturns,(milliseconds() - startmilli)/PEGS->numopreturns);// getchar();
     return(PEGS);
 }
 
