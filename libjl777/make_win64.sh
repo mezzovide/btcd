@@ -1,5 +1,10 @@
 echo ">>>>>>>>>>>>>>>>>>Building mxe. This may take a while."
+cp -n mxepatch/bdb48.mk mxe/src/bdb48.mk
+cp -n mxepatch/nanomsg.mk mxe/src/nanomsg.mk
+cp -n mxepatch/nanomsg-1.patch mxe/src/nanomsg-1.patch
+cp -n mxepatch/nanomsg-2.patch mxe/src/nanomsg-2.patch
 cd mxe
+patch -N -s --reject-file=- < ../../mxepatch/mxe.patch
 cd src
 patch -N -s --reject-file=- < ../../mxepatch/curl.mk.patch
 cd ..
@@ -26,6 +31,9 @@ make apr-util  MXE_TARGETS='x86_64-w64-mingw32.static'
 make curl MXE_TARGETS='x86_64-w64-mingw32.static'
 make pthreads MXE_TARGETS='x86_64-w64-mingw32.static'
 make libwebsockets MXE_TARGETS='x86_64-w64-mingw32.static'
+make boost MXE_TARGETS='i686-w64-mingw32.static'
+make bdb48 MXE_TARGETS='i686-w64-mingw32.static'
+make nanomsg MXE_TARGETS='i686-w64-mingw32.static'
 export PATH=$PWD/usr/bin:$PATH
 cp ./usr/x86_64-w64-mingw32.static/include/winioctl.h ./usr/x86_64-w64-mingw32.static/include/WinIoCtl.h
 cp ./usr/x86_64-w64-mingw32.static/include/windows.h ./usr/x86_64-w64-mingw32.static/include/Windows.h
