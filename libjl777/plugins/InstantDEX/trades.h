@@ -496,7 +496,7 @@ void free_pending(struct pending_trade *pend)
     free(pend);
 }
 
-void pending_completed(uint64_t orderid,uint64_t quoteid)
+/*void pending_completed(uint64_t orderid,uint64_t quoteid)
 {
     int32_t iter; struct pending_trade *pend;
     for (iter=0; iter<2; iter++)
@@ -510,6 +510,30 @@ void pending_completed(uint64_t orderid,uint64_t quoteid)
             } else queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
         }
     }
+}*/
+
+int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quoteid)
+{
+    int32_t errcode,errcode2; char *txstr,*txstr2; int32_t iter; struct pending_trade *pend;
+    for (iter=0; iter<2; iter++)
+    {
+        while ( (pend= queue_dequeue(&Pending_offersQ.pingpong[iter],0)) != 0 )
+        {
+            if ( issue_broadcastTransaction(&errcode2,&txstr2,pend->txbytes,SUPERNET.NXTACCTSECRET) == pend->txid && errcode2 == 0 )
+            {
+                if ( issue_broadcastTransaction(&errcode,&txstr,pend->triggertx,SUPERNET.NXTACCTSECRET) == pend->triggertxid && errcode == 0 )
+                {
+                    iQ->s.matched = 1;
+                    iQ->s.closed = 1;
+                    printf("COMPLETED %llu/%llu %d %f %f\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume);
+                    free_pending(pend);
+                    return(1);
+                }
+            }
+            queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
+        }
+    }
+    return(-1);
 }
 
 int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
@@ -526,8 +550,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
             {
                 iQ->s.feepaid = 1;
                 printf("FEE DETECTED\n");
-                if ( iQ->s.responded != 0 && iQ->s.feepaid == 0 )
-                    iQ->s.closed = 1, pending_completed(orderid,quoteid);
+                complete_swap(iQ,orderid,quoteid);
             }
             else
             {
@@ -546,8 +569,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
                 {
                     iQ->s.responded = 1;
                     printf("RESPONSE DETECTED\n");
-                    if ( iQ->s.responded != 0 && iQ->s.feepaid == 0 )
-                        iQ->s.closed = 1, pending_completed(orderid,quoteid);
+                    complete_swap(iQ,orderid,quoteid);
                 } else printf("mismatched response\n");
             }
         }
@@ -565,31 +587,14 @@ int offer_checkitem(struct pending_trade *pend,cJSON *item)
 
 char *offer_statemachine(struct pending_trade *pend)
 {
-    int32_t i,n,errcode,errcode2,pending = 0; char *txstr,*txstr2; cJSON *array,*item; struct InstantDEX_quote *iQ;
+    int32_t i,n,pending = 0; cJSON *array,*item;
     if ( pend->type == 'R' )
     {
         // wait for alice tx
     }
     else if ( pend->type == 'T' )
     {
-       if ( (iQ= find_iQ(pend->quoteid)) != 0 && iQ->s.responded != 0  && iQ->s.feepaid != 0 )
-       {
-           if ( iQ->s.matched == 0 )
-           {
-               if ( issue_broadcastTransaction(&errcode2,&txstr2,pend->txbytes,SUPERNET.NXTACCTSECRET) == pend->txid && errcode2 == 0 )
-               {
-                   if ( issue_broadcastTransaction(&errcode,&txstr,pend->triggertx,SUPERNET.NXTACCTSECRET) == pend->triggertxid && errcode == 0 )
-                   {
-                       iQ->s.matched = 1;
-                       printf("quoteid.%llu matched\n",(long long)pend->quoteid);
-                   }
-               }
-           }
-           else
-           {
-               // if pend->txid and triggertxid confirmed along with response txids mark as closed
-           }
-       }
+        // already handled in unconf
     }
     else if ( pend->type == 'S' )
     {
