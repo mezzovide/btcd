@@ -48,7 +48,7 @@ int curve25519_donna(uint8_t *, const uint8_t *, const uint8_t *);
 #define issue_NXTPOST(cmdstr) bitcoind_RPC(0,"curl",SUPERNET.NXTAPIURL,0,0,cmdstr)
 #define fetch_URL(url) bitcoind_RPC(0,"fetch",url,0,0,0)
 
-#define INSTANTDEX_TRIGGERDEADLINE 60
+#define INSTANTDEX_TRIGGERDEADLINE 120
 
 #define NXT_ASSETID ('N' + ((uint64_t)'X'<<8) + ((uint64_t)'T'<<16))    // 5527630
 #define BTC_ASSETID ('B' + ((uint64_t)'T'<<8) + ((uint64_t)'C'<<16))    // 4412482

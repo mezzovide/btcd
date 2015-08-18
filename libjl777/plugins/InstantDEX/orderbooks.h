@@ -190,7 +190,10 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     if ( extract_cJSON_str(timestamp,sizeof(timestamp),json,"timestamp") > 0 ) n++;
     if ( extract_cJSON_str(transaction,sizeof(transaction),json,"transaction") > 0 ) n++;
     if ( calc_nxt64bits(recipient) != destNXTbits )
+    {
+        printf("recipient.%s != %llu\n",recipient,(long long)destNXTbits);
         return(-2);
+    }
     typeval = atoi(type), subtypeval = atoi(subtype);
     if ( refasset == NXT_ASSETID )
     {
@@ -203,7 +206,10 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     else
     {
         if ( typeval != 2 || subtypeval != 1 )
+        {
+            printf("refasset.%llu qty %lld\n",(long long)refasset,(long long)qty);
             return(-11);
+        }
         price = quantity = assetidbits = 0;
         attachmentobj = cJSON_GetObjectItem(json,"attachment");
         if ( attachmentobj != 0 )
@@ -222,49 +228,51 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
         if ( assetidbits != refasset )
             return(-12);
         if ( qty != quantity )
+        {
+            printf("qty.%llu != %llu\n",(long long)qty,(long long)quantity);
             return(-13);
+        }
         return(0);
     }
     return(-1);
 }
 
-int32_t InstantDEX_verify(struct InstantDEX_quote *iQ,uint64_t assetidbits,uint64_t sendqty,cJSON *txobj)
+int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendqty,cJSON *txobj,uint64_t recvasset,uint64_t recvqty)
 {
-    uint64_t quantity,recvasset,recvqty;
+    int32_t err;
     // verify recipient, amounts in txobj
-    if ( iQ->s.isask == 0 )
-        recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount;
-    else recvasset = iQ->s.relid, recvqty = iQ->s.relamount;
-    if ( verify_NXTtx(txobj,recvasset,recvqty,SUPERNET.my64bits) != 0 )
+     if ( (err= verify_NXTtx(txobj,recvasset,recvqty,destNXTaddr)) != 0 )
     {
-        printf("InstantDEX_verify tx mismatch\n");
+        printf("InstantDEX_verify tx mismatch %d (%llu %lld) -> (%llu %lld)\n",err,(long long)sendasset,(long long)sendqty,(long long)recvasset,(long long)recvqty);
         return(-1);
     }
-    if ( iQ->s.offerNXT == SUPERNET.my64bits )
+    return(0);
+    /*if ( iQ->s.offerNXT == SUPERNET.my64bits )
     {
+        printf("%llu/%llu qty %lld/%lld\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)iQ->s.baseamount,(long long)iQ->s.relamount);
         if ( iQ->s.isask == 0 )
         {
-            if ( assetidbits == iQ->s.relbits )
+            quantity = iQ->s.relamount;
+            if ( sendasset == iQ->s.relid )
             {
                 //printf("baseid.%llu basemult.%llu -> %llu\n",(long long)prices->baseid,(long long)prices->basemult,(long long)baseqty);
-                quantity = iQ->s.relamount / get_assetmult(assetidbits);
                 if ( sendqty == quantity )
                     return(0);
-                else printf("InstantDEX_verify bid mismatch: qty.%llu vs %llu\n",(long long)quantity,sendqty);
-            } else printf("InstantDEX_verify bid mismatch: relbits.%llu vs %llu\n",(long long)iQ->s.relbits,assetidbits);
+                else printf("InstantDEX_verify bid mismatch: qty.%llu vs %llu\n",(long long)quantity,(long long)sendqty);
+            } else printf("InstantDEX_verify bid mismatch: relbits.%llu vs %llu | qty.%llu vs %llu\n",(long long)iQ->s.relid,(long long)sendasset,(long long)sendqty,(long long)quantity);
         }
         else
         {
-            if ( assetidbits == iQ->s.basebits )
+            if ( sendasset == iQ->s.baseid )
             {
-                quantity = iQ->s.baseamount / get_assetmult(assetidbits);
+                quantity = iQ->s.baseamount;// / get_assetmult(sendasset);
                 if ( sendqty == quantity )
                     return(0);
-                else printf("InstantDEX_verify bid mismatch: qty.%llu vs %llu\n",(long long)quantity,sendqty);
-            } else printf("InstantDEX_verify ask mismatch: basebits.%llu vs %llu\n",(long long)iQ->s.basebits,assetidbits);
+                else printf("InstantDEX_verify bid mismatch: qty.%llu vs %llu\n",(long long)quantity,(long long)sendqty);
+            } else printf("InstantDEX_verify ask mismatch: basebits.%llu vs %llu\n",(long long)iQ->s.baseid,(long long)sendasset);
         }
     } else printf("InstantDEX_verify offerNXT mismatch: %llu vs %llu\n",(long long)iQ->s.offerNXT,(long long)SUPERNET.my64bits);
-    return(-1);
+    return(-1);*/
 }
 
 void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t bidask,double price,double volume,uint64_t orderid,uint64_t quoteid)

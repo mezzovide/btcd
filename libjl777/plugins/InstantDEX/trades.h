@@ -213,7 +213,7 @@ int32_t substr128(char *dest,char *src)
 
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight)
 {
-    char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; cJSON *json;
+    char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; cJSON *json; uint64_t phasecost = 0;
     expand_nxt64bits(destNXTaddr,dest64bits);
     memset(tx,0,sizeof(*tx));
     if ( phaselink!= 0 && phaselink[0] != 0 && finishheight <= _get_NXTheight(0) )
@@ -221,6 +221,8 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
         printf("finish height.%u must be in the future.%u\n",finishheight,_get_NXTheight(0));
         return(0);
     }
+    if ( phaselink != 0 )
+        phasecost = MIN_NQTFEE;
     cmd[0] = 0;
     if ( assetidbits == NXT_ASSETID )
         sprintf(cmd,"requestType=sendMoney&amountNQT=%lld",(long long)qty);
@@ -246,15 +248,15 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
     if ( cmd[0] != 0 )
     {
         escape_code(secret,SUPERNET.NXTACCTSECRET);
-        sprintf(cmd+strlen(cmd),"&deadline=%u&feeNQT=%lld&secretPhrase=%s&recipient=%s&broadcast=false",deadline,(long long)MIN_NQTFEE,secret,destNXTaddr);
+        sprintf(cmd+strlen(cmd),"&deadline=%u&feeNQT=%lld&secretPhrase=%s&recipient=%s&broadcast=false",deadline,(long long)MIN_NQTFEE+phasecost,secret,destNXTaddr);
         if ( reftx != 0 && reftx[0] != 0 )
             sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s",reftx);
         if ( phaselink != 0 && phaselink[0] != 0 )
             sprintf(cmd+strlen(cmd),"&phased=true&phasingFinishHeight=%u&phasingVotingModel=4&phasingQuorum=1&phasingLinkedFullHash=%s",finishheight,phaselink);
-        //printf("generated cmd.(%s) reftxid.(%s)\n",cmd,reftxid);
+//printf("generated cmd.(%s)\n",cmd);
         if ( (retstr= issue_NXTPOST(cmd)) != 0 )
         {
-            //printf("(%s)\n",retstr);
+//printf("(%s)\n",retstr);
             if ( (json= cJSON_Parse(retstr)) != 0 )
             {
                 if ( extract_cJSON_str(tx->txbytes,MAX_JSON_FIELD,json,"transactionBytes") > 0 &&
@@ -328,6 +330,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         memset(&_iQ,0,sizeof(_iQ));
         iQ->s = order->s;
         iQ->exchangeid = prices->exchangeid;
+        iQ->s.timestamp = (uint32_t)time(NULL);
         iQ = create_iQ(iQ);
         //printf("prices777_trade: need to have iQ \n");
         //return(clonestr("{\"error\":\"need to have iQ\"}\n"));
@@ -377,7 +380,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
 char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
 {
     char offerNXT[MAX_JSON_FIELD],UTX[MAX_JSON_FIELD],calchash[256],*triggerhash,*utx,*sighash,*jsonstr,*parsed,*fullhash,*cmpstr;
-    cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid; uint32_t i,j,finishheight; struct InstantDEX_quote *iQ,_iQ;
+    cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid,recvasset; int64_t recvqty; uint32_t i,j,finishheight; struct InstantDEX_quote *iQ,_iQ;
     copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
     //printf("got (%s)\n",origargstr);
     if ( 1 ) //strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
@@ -401,18 +404,22 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
         triggerhash = jstr(origjson,"T");
         fullhash = jstr(origjson,"FH");
         utx = jstr(origjson,"U");
-        for (i=j=0; utx[i]!=0; i++)
-            if ( (UTX[i+j]= utx[i]) == 'Z' )
+        for (i=0; utx[i]!=0; i++)
+            if ( utx[i] == 'Z' )
             {
+                memcpy(UTX,utx,i);
                 for (j=0; j<128; j++)
                     UTX[i+j] = '0';
+                UTX[i+j] = 0;
+                strcat(UTX,utx+i+1);
+                break;
             }
-        UTX[i+j] = 0;
         sighash = jstr(origjson,"S");
         finishheight = juint(origjson,"F");
-        //printf("utx.(%s) sighash.(%s)\n",utx,sighash);
+        //printf("utx.(%s) -> UTX.(%s) sighash.(%s)\n",utx,UTX,sighash);
         if ( (jsonstr= issue_calculateFullHash(UTX,sighash)) != 0 )
         {
+            //printf("calculated.(%s)\n",jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 copy_cJSON(calchash,jobj(json,"fullHash"));
@@ -421,20 +428,23 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                     if ( (parsed= issue_parseTransaction(UTX)) != 0 )
                     {
                         _stripwhite(parsed,' ');
-                        printf("iQ (%llu/%llu) otherbits.%llu qty %llu PARSED OFFER.(%s) triggerhash.(%s) (%s) offer sender.%s\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)otherbits,(long long)otherqty,parsed,fullhash,calchash,sender);
+                        //printf("iQ (%llu/%llu) otherbits.%llu qty %llu PARSED OFFER.(%s) triggerhash.(%s) (%s) offer sender.%s\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)otherbits,(long long)otherqty,parsed,fullhash,calchash,sender);
                         if ( (txobj= cJSON_Parse(parsed)) != 0 )
                         {
                             if ( (cmpstr= jstr(txobj,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 )
                             {
                                 // https://nxtforum.org/nrs-releases/nrs-v1-5-15/msg191715/#msg191715
                                 struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *txstr=0,*txstr2=0; struct pending_trade *pend;
-                                if ( InstantDEX_verify(iQ,otherbits,otherqty,txobj) == 0 )
+                                if ( iQ->s.isask == 0 )
+                                    recvasset = iQ->s.baseid, recvqty = -iQ->s.baseamount;
+                                else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount;
+                                if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
                                 {
                                     gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,INSTANTDEX_TRIGGERDEADLINE,fullhash,0,0);
                                     gen_NXTtx(&responsetx,calc_nxt64bits(offerNXT),otherbits,otherqty,orderid,quoteid,INSTANTDEX_TRIGGERDEADLINE,triggerhash,fullhash,finishheight);
-                                    if ( (fee.txid = issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET)) != 0 )
+                                    if ( (fee.txid= issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET)) != 0 )
                                     {
-                                        if ( (responsetx.txid= issue_broadcastTransaction(&errcode2,&txstr2,responsetx.txbytes,SUPERNET.NXTACCTSECRET)) == 0 )
+                                        if ( (responsetx.txid= issue_broadcastTransaction(&errcode2,&txstr2,responsetx.txbytes,SUPERNET.NXTACCTSECRET)) != 0 )
                                         {
                                             pend = calloc(1,sizeof(*pend));
                                             pend->orderid = orderid, pend->quoteid = quoteid;
@@ -451,8 +461,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                             pend->timestamp = (uint32_t)time(NULL);
                                             queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
                                             printf("BROADCAST fee.txid %llu and %llu\n",(long long)fee.txid,(long long)responsetx.txid);
-                                        }
-                                        else printf("error.%d broadcasting responsetx.(%s) %s\n",errcode2,responsetx.txbytes,txstr2);
+                                        } else printf("error.%d broadcasting responsetx.(%s) %s\n",errcode2,responsetx.txbytes,txstr2);
                                     } else printf("error.%d broadcasting feetx.(%s) %s\n",errcode,fee.txbytes,txstr);
                                 } else printf("(%s) didnt validate against quoteid.%llu\n",parsed,(long long)quoteid);
                                 if ( txstr != 0 )
@@ -489,23 +498,37 @@ void free_pending(struct pending_trade *pend)
 
 int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
 {
-    uint64_t orderid,quoteid,recvasset,recvqty; struct InstantDEX_quote *iQ;
+    uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; struct InstantDEX_quote *iQ;
     decode_hex((void *)&orderid,sizeof(orderid),hexstr);
     decode_hex((void *)&quoteid,sizeof(quoteid),hexstr+16);
-    if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && iQ->s.responded == 0 )
+    if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
-        printf("match unconfirmed %llu/%llu\n",(long long)orderid,(long long)quoteid);
+        printf("match unconfirmed %llu/%llu feepaid.%d responded.%d sender.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ->s.feepaid,iQ->s.responded,sender,SUPERNET.NXTADDR);
         if ( iQ->s.swap != 0 )
         {
-            if ( verify_NXTtx(txobj,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT)) != 0 )
+            if ( verify_NXTtx(txobj,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT)) == 0 )
+            {
                 iQ->s.feepaid = 1;
+                printf("FEE DETECTED.(%s)\n",jprint(txobj,0));
+            }
             else
             {
-                if ( iQ->s.isask == 0 )
-                    recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount / get_assetmult(recvasset);
-                else recvasset = iQ->s.relid, recvqty = iQ->s.relamount / get_assetmult(recvasset);
-                if ( InstantDEX_verify(iQ,recvasset,recvqty,txobj) == 0 )
+                if ( iQ->s.isask != 0 )
+                {
+                    sendasset = iQ->s.relid, sendqty = -iQ->s.relamount;
+                    recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount;
+                }
+                else
+                {
+                    sendasset = iQ->s.baseid, sendqty = -iQ->s.baseamount;
+                    recvasset = iQ->s.relid, recvqty = iQ->s.relamount;
+                }
+                printf("iQ: %llu/%llu %lld/%lld | recv %llu %lld offerNXT.%llu\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)iQ->s.baseamount,(long long)iQ->s.relamount,(long long)recvasset,(long long)recvqty,(long long)iQ->s.offerNXT);
+                if ( InstantDEX_verify(SUPERNET.my64bits,sendasset,sendqty,txobj,recvasset,recvqty) == 0 )
+                {
                     iQ->s.responded = 1;
+                    printf("RESPONSE DETECTED\n");
+                }
                 else printf("mismatched response\n");
             }
         }
