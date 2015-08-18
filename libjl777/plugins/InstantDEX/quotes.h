@@ -255,6 +255,8 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
             else if ( prices777_equiv(ptr->s.relid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->s.baseid) == prices777_equiv(prices->relid) )
                 invert = 1;
             else continue;
+            if ( ptr->s.pending != 0 )
+                continue;
             iQ = *ptr;
             isask = iQ.s.isask;
             if ( invert != 0 )
