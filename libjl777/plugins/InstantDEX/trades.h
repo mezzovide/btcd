@@ -496,6 +496,22 @@ void free_pending(struct pending_trade *pend)
     free(pend);
 }
 
+void pending_completed(uint64_t orderid,uint64_t quoteid)
+{
+    int32_t iter; struct pending_trade *pend;
+    for (iter=0; iter<2; iter++)
+    {
+        while ( (pend= queue_dequeue(&Pending_offersQ.pingpong[iter],0)) != 0 )
+        {
+            if ( pend->orderid == orderid && pend->quoteid == quoteid )
+            {
+                printf("COMPLETED %llu/%llu %d %f %f\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume);
+                free_pending(pend);
+            } else queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
+        }
+    }
+}
+
 int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
 {
     uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; struct InstantDEX_quote *iQ;
@@ -509,7 +525,9 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
             if ( verify_NXTtx(txobj,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT)) == 0 )
             {
                 iQ->s.feepaid = 1;
-                printf("FEE DETECTED.(%s)\n",jprint(txobj,0));
+                printf("FEE DETECTED\n");
+                if ( iQ->s.responded != 0 && iQ->s.feepaid == 0 )
+                    iQ->s.closed = 1, pending_completed(orderid,quoteid);
             }
             else
             {
@@ -528,8 +546,9 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
                 {
                     iQ->s.responded = 1;
                     printf("RESPONSE DETECTED\n");
-                }
-                else printf("mismatched response\n");
+                    if ( iQ->s.responded != 0 && iQ->s.feepaid == 0 )
+                        iQ->s.closed = 1, pending_completed(orderid,quoteid);
+                } else printf("mismatched response\n");
             }
         }
     }
