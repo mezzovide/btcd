@@ -480,7 +480,6 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
         {
             if ( strcmp(exchangestr,"InstantDEX") != 0 && strcmp(exchangestr,"active") != 0 && strcmp(exchangestr,"basket") != 0 )
             {
-                create_iQ(iQ);
                 return(prices777_trade(prices,dir,price,volume,iQ,0,iQ->s.quoteid));
             }
             if ( iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= automatch(prices,dir,volume,price,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET)) != 0 )

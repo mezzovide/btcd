@@ -193,6 +193,24 @@ char *InstantDEX_tradehistory()
     return(jprint(json,1));
 }
 
+int32_t substr128(char *dest,char *src)
+{
+    char zeroes[129],*match; int32_t i;
+    for (i=0; i<128; i++)
+        zeroes[i] = '0';
+    zeroes[i] = 0;
+    strcpy(dest,src);
+    if ( (match= strstr(dest,zeroes)) != 0 )
+    {
+        strcpy(match,"Z");
+        for (i=0; match[128+i]!=0; i++)
+            match[i+1] = match[128+i];
+        match[i+1] = 0;
+    }
+    //printf("substr128.(%s) -> (%s)\n",src,dest);
+    return(0);
+}
+
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight)
 {
     char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; cJSON *json;
@@ -245,6 +263,7 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
                     extract_cJSON_str(tx->sighash,MAX_JSON_FIELD,json,"signatureHash") > 0 )
                 {
                     tx->txid = j64bits(json,"transaction");
+                    substr128(tx->utxbytes2,tx->utxbytes);
                 }
                 free_json(json);
             }
@@ -259,10 +278,10 @@ uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *
     struct NXTtx fee,sendtx; uint64_t otherqty = 0,otherassetbits = 0,assetidbits = 0,qty = 0;
     if ( finishheight != 0 )
         finishheight += _get_NXTheight(0);
-    triggertx[0] = txbytes[0] = 0;
+    swapstr[0] = triggertx[0] = txbytes[0] = 0;
     *txidp = 0;
     gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,order->s.quoteid,INSTANTDEX_TRIGGERDEADLINE,triggerhash,0,0);
-    strcpy(txbytes,fee.txbytes);
+    strcpy(triggertx,fee.txbytes);
     if ( order->s.baseamount < 0 )
         assetidbits = order->s.baseid, qty = -order->s.baseamount, otherassetbits = order->s.relid, otherqty = order->s.relamount;
     else if ( order->s.relamount < 0 )
@@ -274,7 +293,7 @@ uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *
         gen_NXTtx(&sendtx,order->s.offerNXT,assetidbits,qty,orderid,order->s.quoteid,INSTANTDEX_TRIGGERDEADLINE,fee.fullhash,phaselink,finishheight);
         *txidp = sendtx.txid;
         strcpy(txbytes,sendtx.txbytes);
-        sprintf(swapstr,",\"finish\":\"%u\",\"triggerhash\":\"%s\",\"fullhash\":\"%s\",\"utx\":\"%s\",\"sighash\":\"%s\",\"otherbits\":\"%llu\",\"otherqty\":\"%llu\"}",finishheight,fee.fullhash,sendtx.fullhash,sendtx.utxbytes,sendtx.sighash,(long long)otherassetbits,(long long)otherqty);
+        sprintf(swapstr,",\"F\":\"%u\",\"T\":\"%s\",\"FH\":\"%s\",\"U\":\"%s\",\"S\":\"%s\",\"a\":\"%llu\",\"q\":\"%llu\"}",finishheight,fee.fullhash,sendtx.fullhash,sendtx.utxbytes2,sendtx.sighash,(long long)otherassetbits,(long long)otherqty);
     }
     return(fee.txid);
 }
@@ -286,18 +305,16 @@ uint64_t prices777_swapbuf(uint64_t *txidp,char *triggertx,char *txbytes,char *s
     sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"baseqty\":\"%lld\",\"relqty\":\"%lld\"}",(long long)orderid,(long long)order->s.quoteid,SUPERNET.NXTADDR,order->wt > 0. ? "buy" : (order->wt < 0. ? "sell" : "swap"),prices->exchange,prices->base,prices->rel,(long long)order->s.baseid,(long long)order->s.relid,(long long)order->s.baseamount,(long long)order->s.relamount);
     if ( order->s.price > SMALLVAL )
         sprintf(swapbuf + strlen(swapbuf) - 1,",\"price\":%.8f,\"volume\":%.8f}",order->s.price,order->s.vol);
-    if ( order->wt == 0. )
-    {
-        txid = InstantDEX_swapstr(txidp,triggertx,swapbuf,swapstr,orderid,order,0,0,5);
-        strcpy(swapbuf+strlen(swapbuf)-1,swapstr);
-        printf("swapbuf.(%s)\n",swapbuf);
-    }
+    txid = InstantDEX_swapstr(txidp,triggertx,txbytes,swapstr,orderid,order,0,0,5);
+    strcpy(swapbuf+strlen(swapbuf)-1,swapstr);
+    //printf("swapbuf.(%s)\n",swapbuf);
     return(txid);
 }
 
 char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double volume,struct InstantDEX_quote *iQ,struct prices777_order *order,uint64_t orderid)
 {
-    char *retstr; struct exchange_info *exchange; struct pending_trade *pend; uint32_t nonce; char swapbuf[8192],triggertx[4096],txbytes[4096];
+    struct InstantDEX_quote _iQ;
+    char *retstr; struct exchange_info *exchange; struct pending_trade *pend; uint32_t nonce; char *str,swapbuf[8192],triggertx[4096],txbytes[4096];
     pend = calloc(1,sizeof(*pend));
     pend->prices = prices, pend->dir = dir, pend->price = price, pend->volume = volume, pend->orderid = orderid;
     if ( iQ == 0 && order == 0 )
@@ -307,9 +324,14 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
     }
     else if ( iQ == 0 && (iQ= find_iQ(order->s.quoteid)) == 0 )
     {
-        printf("prices777_trade: need to have iQ \n");
-        return(clonestr("{\"error\":\"need to have iQ\"}\n"));
-    }
+        iQ = &_iQ;
+        memset(&_iQ,0,sizeof(_iQ));
+        iQ->s = order->s;
+        iQ->exchangeid = prices->exchangeid;
+        iQ = create_iQ(iQ);
+        //printf("prices777_trade: need to have iQ \n");
+        //return(clonestr("{\"error\":\"need to have iQ\"}\n"));
+    } else iQ = create_iQ(iQ);
     iQ->s.pending = 1;
     pend->quoteid = iQ->s.quoteid;
     if ( order != 0 )
@@ -324,12 +346,16 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
             return(clonestr("{\"error\":\"need to specify swapbuf\"}\n"));
         }
         pend->triggertxid = prices777_swapbuf(&pend->txid,triggertx,txbytes,swapbuf,prices,order,orderid);
-        pend->triggertx = clonestr(triggertx);
-        pend->txbytes = clonestr(txbytes);
+        if ( triggertx[0] != 0 )
+            pend->triggertx = clonestr(triggertx);
+        if ( txbytes != 0 )
+            pend->txbytes = clonestr(txbytes);
         pend->tradesjson = cJSON_Parse(swapbuf);
         pend->type = 'T';
         iQ->s.swap = 1;
-        return(busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0));
+        if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+            free(str);
+        return(clonestr(swapbuf));
     }
     else if ( strcmp(prices->exchange,"nxtae") == 0 )
     {
@@ -350,8 +376,8 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
 
 char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
 {
-    char offerNXT[MAX_JSON_FIELD],calchash[256],*triggerhash,*utx,*sighash,*jsonstr,*parsed,*fullhash,*cmpstr;
-    cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid; uint32_t finishheight; struct InstantDEX_quote *iQ,_iQ;
+    char offerNXT[MAX_JSON_FIELD],UTX[MAX_JSON_FIELD],calchash[256],*triggerhash,*utx,*sighash,*jsonstr,*parsed,*fullhash,*cmpstr;
+    cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid; uint32_t i,j,finishheight; struct InstantDEX_quote *iQ,_iQ;
     copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
     //printf("got (%s)\n",origargstr);
     if ( 1 ) //strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
@@ -364,27 +390,35 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
             iQ = &_iQ, memset(iQ,0,sizeof(*iQ));
             //return(clonestr("{\"error\":\"cant find quoteid\"}"));
         }
-        if ( iQ->s.pending != 0 )
+        if ( iQ->s.responded != 0 )
         {
-            fprintf(stderr,"already pending quoteid.%llu\n",(long long)iQ->s.quoteid);
+            fprintf(stderr,"already responded quoteid.%llu\n",(long long)iQ->s.quoteid);
             return(0);
         }
-        otherbits = j64bits(origjson,"otherbits");
-        otherqty = j64bits(origjson,"otherqty");
-        triggerhash = jstr(origjson,"triggerhash");
-        fullhash = jstr(origjson,"fullhash");
-        utx = jstr(origjson,"utx");
-        sighash = jstr(origjson,"sighash");
-        finishheight = juint(origjson,"finish");
+        //sprintf(swapstr,",\"F\":\"%u\",\"T\":\"%s\",\"FH\":\"%s\",\"U\":\"%s\",\"S\":\"%s\",\"a\":\"%llu\",\"q\":\"%llu\"}",finishheight,fee.fullhash,sendtx.fullhash,sendtx.utxbytes,sendtx.sighash,(long long)otherassetbits,(long long)otherqty);
+        otherbits = j64bits(origjson,"a");
+        otherqty = j64bits(origjson,"q");
+        triggerhash = jstr(origjson,"T");
+        fullhash = jstr(origjson,"FH");
+        utx = jstr(origjson,"U");
+        for (i=j=0; utx[i]!=0; i++)
+            if ( (UTX[i+j]= utx[i]) == 'Z' )
+            {
+                for (j=0; j<128; j++)
+                    UTX[i+j] = '0';
+            }
+        UTX[i+j] = 0;
+        sighash = jstr(origjson,"S");
+        finishheight = juint(origjson,"F");
         //printf("utx.(%s) sighash.(%s)\n",utx,sighash);
-        if ( (jsonstr= issue_calculateFullHash(utx,sighash)) != 0 )
+        if ( (jsonstr= issue_calculateFullHash(UTX,sighash)) != 0 )
         {
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 copy_cJSON(calchash,jobj(json,"fullHash"));
                 if ( strcmp(calchash,fullhash) == 0 )
                 {
-                    if ( (parsed= issue_parseTransaction(utx)) != 0 )
+                    if ( (parsed= issue_parseTransaction(UTX)) != 0 )
                     {
                         _stripwhite(parsed,' ');
                         printf("iQ (%llu/%llu) otherbits.%llu qty %llu PARSED OFFER.(%s) triggerhash.(%s) (%s) offer sender.%s\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)otherbits,(long long)otherqty,parsed,fullhash,calchash,sender);
@@ -455,14 +489,26 @@ void free_pending(struct pending_trade *pend)
 
 int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
 {
-    uint64_t orderid,quoteid; struct InstantDEX_quote *iQ;
+    uint64_t orderid,quoteid,recvasset,recvqty; struct InstantDEX_quote *iQ;
     decode_hex((void *)&orderid,sizeof(orderid),hexstr);
     decode_hex((void *)&quoteid,sizeof(quoteid),hexstr+16);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && iQ->s.responded == 0 )
     {
         printf("match unconfirmed %llu/%llu\n",(long long)orderid,(long long)quoteid);
-        // if ( matches response required )
-            iQ->s.responded = 1;
+        if ( iQ->s.swap != 0 )
+        {
+            if ( verify_NXTtx(txobj,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT)) != 0 )
+                iQ->s.feepaid = 1;
+            else
+            {
+                if ( iQ->s.isask == 0 )
+                    recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount / get_assetmult(recvasset);
+                else recvasset = iQ->s.relid, recvqty = iQ->s.relamount / get_assetmult(recvasset);
+                if ( InstantDEX_verify(iQ,recvasset,recvqty,txobj) == 0 )
+                    iQ->s.responded = 1;
+                else printf("mismatched response\n");
+            }
+        }
     }
     return(-1);
 }
@@ -484,7 +530,7 @@ char *offer_statemachine(struct pending_trade *pend)
     }
     else if ( pend->type == 'T' )
     {
-       if ( (iQ= find_iQ(pend->quoteid)) != 0 && iQ->s.responded != 0 )
+       if ( (iQ= find_iQ(pend->quoteid)) != 0 && iQ->s.responded != 0  && iQ->s.feepaid != 0 )
        {
            if ( iQ->s.matched == 0 )
            {
@@ -493,6 +539,7 @@ char *offer_statemachine(struct pending_trade *pend)
                    if ( issue_broadcastTransaction(&errcode,&txstr,pend->triggertx,SUPERNET.NXTACCTSECRET) == pend->triggertxid && errcode == 0 )
                    {
                        iQ->s.matched = 1;
+                       printf("quoteid.%llu matched\n",(long long)pend->quoteid);
                    }
                }
            }

@@ -169,9 +169,9 @@ void set_best_amounts(int64_t *baseamountp,int64_t *relamountp,double price,doub
 #define INSTANTDEX_NXTAEID 2
 #define MAX_EXCHANGES 64
 
-struct NXTtx { uint64_t txid; char fullhash[MAX_JSON_FIELD],utxbytes[MAX_JSON_FIELD],txbytes[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD]; };
+struct NXTtx { uint64_t txid; char fullhash[MAX_JSON_FIELD],utxbytes[MAX_JSON_FIELD],utxbytes2[MAX_JSON_FIELD],txbytes[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD]; };
 
-struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits,baseid,relid; int64_t baseamount,relamount; uint32_t timestamp; uint16_t duration,isask:1,closed:1,swap:1,responded:1,matched:1,automatch:2,pending:1,minperc:7; };
+struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits,baseid,relid; int64_t baseamount,relamount; uint32_t timestamp; uint16_t duration,isask:1,closed:1,swap:1,responded:1,matched:1,feepaid:1,automatch:2,pending:1,minperc:7; };
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
@@ -216,6 +216,7 @@ struct exchange_info
 
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight);
 int32_t InstantDEX_verify(struct InstantDEX_quote *iQ,uint64_t assetidbits,uint64_t sendqty,cJSON *txobj);
+int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXTbits);
 
 struct exchange_info *get_exchange(int32_t exchangeid);
 char *exchange_str(int32_t exchangeid);
@@ -231,6 +232,7 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct price
 int32_t prices777_getmatrix(double *basevals,double *btcusdp,double *btcdbtcp,double Hmatrix[32][32],double *RTprices,char *contracts[],int32_t num,uint32_t timestamp);
 struct InstantDEX_quote *find_iQ(uint64_t quoteid);
 int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui,struct InstantDEX_quote *iQ,cJSON *json);
+struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ);
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);

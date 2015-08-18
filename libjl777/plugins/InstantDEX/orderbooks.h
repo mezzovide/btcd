@@ -196,8 +196,9 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     {
         if ( typeval != 0 || subtypeval != 0 )
             return(-3);
-            if ( qty != calc_nxt64bits(amountNQT) )
+        if ( qty != calc_nxt64bits(amountNQT) )
             return(-4);
+        return(0);
     }
     else
     {
@@ -222,6 +223,7 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
             return(-12);
         if ( qty != quantity )
             return(-13);
+        return(0);
     }
     return(-1);
 }
@@ -407,7 +409,7 @@ void prices777_orderbook_item(struct prices777 *prices,int32_t bidask,struct pri
         volume = (origvolume * origprice), price = 1./origprice;
     else price = origprice, volume = origvolume;
     jaddstr(item,"plugin","InstantDEX"), jaddstr(item,"method","tradesequence");
-    jaddnum(item,"price",price), jaddnum(item,"volume",volume);
+    jaddnum(item,"dotrade",1), jaddnum(item,"price",price), jaddnum(item,"volume",volume);
     if ( allflag != 0 )
     {
         if ( prices->basketsize == 0 )

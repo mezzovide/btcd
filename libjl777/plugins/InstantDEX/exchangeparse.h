@@ -130,6 +130,8 @@ struct exchange_info *find_exchange(int32_t *exchangeidp,char *exchangestr)
             exchange->exchangeid = exchangeid;
             exchange->nxt64bits = stringbits(exchangestr);
             printf("CREATE EXCHANGE.(%s) id.%d %llu\n",exchangestr,exchangeid,(long long)exchange->nxt64bits);
+            //if ( exchangestr[0] == 0 )
+            //    getchar();
             break;
         }
         if ( strcmp(exchangestr,exchange->name) == 0 )

@@ -293,7 +293,7 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
     iQ->s.minperc = juint(json,"minperc");
     iQ->s.duration = juint(json,"duration");
     copy_cJSON(exchangestr,jobj(json,"exchange"));
-    if ( find_exchange(&exchangeid,exchangestr) == 0 )
+    if ( exchangestr[0] == 0 || find_exchange(&exchangeid,exchangestr) == 0 )
         exchangeid = -1;
     iQ->exchangeid = exchangeid;
     copy_cJSON(base,jobj(json,"base")), copy_cJSON(rel,jobj(json,"rel")), copy_cJSON(name,jobj(json,"name"));
