@@ -185,6 +185,7 @@ double prices777_bittrex(struct prices777 *prices,int32_t maxdepth) // "BTC-BTCD
 
 int32_t bter_supports(char *base,char *rel)
 {
+    return(0);
     if ( strcmp(rel,"BTC") == 0 || strcmp(rel,"CNY") == 0 )
         return(1);
     else if ( strcmp(base,"BTC") == 0 || strcmp(base,"CNY") == 0 )
