@@ -8,7 +8,7 @@ $(PKG)_CHECKSUM := 4c1016bac1df8464d05dad1bdb5106c190d36c22
 $(PKG)_SUBDIR   := nanomsg-$($(PKG)_VERSION)
 $(PKG)_FILE     := nanomsg-$($(PKG)_VERSION).tar.gz
 $(PKG)_URL      := https://github.com/nanomsg/nanomsg/releases/download/0.6-beta/$($(PKG)_FILE)
-$(PKG)_DEPS     := gcc cmake
+$(PKG)_DEPS     := gcc cmake pthreads autoconf automake
 
 define $(PKG)_UPDATE
 	echo 'TODO: Updates for package bdb48 need to be fixed.' >&2;
@@ -16,11 +16,12 @@ define $(PKG)_UPDATE
 endef
 
 define $(PKG)_BUILD
-    cd '$(1)' && .configure \
-	$(MXE_CONFIGURE_OPTS) \
-	--disable-shared
+    cd '$(1)' && autoreconf -ifv && ./configure \
+	CC=$(PREFIX)/bin/$(TARGET)-gcc \
+	--host=$(TARGET) \
+	--prefix=$(PREFIX)/$(TARGET)
 
-	$(MAKE) -C '$(1)' -j '$(JOBS)'
+	$(MAKE) -C '$(1)' -j '$(JOBS)' LDFLAGS+='.libs/libnanomsg.a'
 	$(MAKE) -C '$(1)' -j 1 install $(MXE_DISABLE_DOCS)	
 #    ln -sf '$(PREFIX)/$(TARGET)/bin/curl-config' '$(PREFIX)/bin/$(TARGET)-curl-config'
 #

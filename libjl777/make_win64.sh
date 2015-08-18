@@ -3,8 +3,9 @@ cp -n mxepatch/bdb48.mk mxe/src/bdb48.mk
 cp -n mxepatch/nanomsg.mk mxe/src/nanomsg.mk
 cp -n mxepatch/nanomsg-1.patch mxe/src/nanomsg-1.patch
 cp -n mxepatch/nanomsg-2.patch mxe/src/nanomsg-2.patch
+cp -n mxepatch/nanomsg-3-global.patch mxe/src/nanomsg-3-global.patch
 cd mxe
-patch -N -s --reject-file=- < ../../mxepatch/mxe.patch
+patch -N -s --reject-file=- < ../mxepatch/mxe.patch
 cd src
 patch -N -s --reject-file=- < ../../mxepatch/curl.mk.patch
 cd ..
