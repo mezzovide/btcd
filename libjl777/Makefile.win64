@@ -19,9 +19,9 @@ endif
 
 PATH := $(PWD)/mxe/usr/bin:$(PATH)
 
-PLIBS := ../libs/libjl777-win64.a ../libs/libminiupnpc-win64.a ../libs/libnanomsg-win64.a -lpthread -lcurl -lgnutls -lnettle -lhogweed -lgmp -lm -liphlpapi -lws2_32 -lwsock32 ../libs/libmman.a -lz -lcrypt32 -lssp -D_win64 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINGW_HAS_SECURE_API=1
+PLIBS := ../libs/libjl777-win64.a ../libs/libminiupnpc-win64.a ../libs/libnanomsg-win64.a -lpthread -lcurl -lgnutls -lnettle -lhogweed -lgmp -lm -liphlpapi -lws2_32 -lwsock32 -lz -lcrypt32 -lssp -lmman -D_win64 -DNN_EXPORTS -DNN_HAVE_MINGW -DNN_HAVE_WINDOWS -DNN_USE_LITERAL_IFADDR=1 -DSTATICLIB -DCURL_STATICLIB -DMINGW_HAS_SECURE_API=1
 
-LIBS= libs/libjl777-win64.a libs/libnanomsg-win64.a libs/libminiupnpc-win64.a -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 libs/libmman.a -lssp -lgnutls -lnettle -lhogweed -lgmp -lz -lcrypt32
+LIBS= libs/libjl777-win64.a libs/libnanomsg-win64.a libs/libminiupnpc-win64.a -lpthread -lcurl -lm -liphlpapi -lws2_32 -lwsock32 -lssp -lgnutls -lnettle -lhogweed -lgmp -lz -lcrypt32 -lmman
 
 CC=x86_64-w64-mingw32.static-gcc
 OS=win
@@ -77,7 +77,7 @@ test:	all
 	(cd tests; make test)
 
 clean: doesntexist
-	rm libs/libjl777-win64.a SuperNET; rm -f libjl777-win64.a  $(OBJS) *~
+	rm libs/libjl777-win64.a SuperNET64.exe; rm -f libjl777-win64.a  $(OBJS) *~
 
 PINCLUDES := -Iincludes -Inonportable/$(OS)  -I../nanomsg/src -I../nanomsg/src/utils -Iincludes/libtom -Iincludes/miniupnp #-I. -Iutils -Iramchain -Icoins -Imgw -I -Isophia -I../includes -I../.. -I../coins -I../ramchain -I../sophia -I../$
 

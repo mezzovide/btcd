@@ -35,6 +35,7 @@ make libwebsockets MXE_TARGETS='i686-w64-mingw32.static'
 make boost MXE_TARGETS='i686-w64-mingw32.static'
 make bdb48 MXE_TARGETS='i686-w64-mingw32.static'
 make nanomsg MXE_TARGETS='i686-w64-mingw32.static'
+make mman-win32 MXE_TARGETS='i686-w64-mingw32.static'
 export PATH=$PWD/usr/bin:$PATH
 cp ./usr/i686-w64-mingw32.static/include/winioctl.h ./usr/i686-w64-mingw32.static/include/WinIoCtl.h
 cp ./usr/i686-w64-mingw32.static/include/windows.h ./usr/i686-w64-mingw32.static/include/Windows.h
@@ -52,11 +53,11 @@ cp mxepatch/winheaders/objidl.h mxe/usr/i686-w64-mingw32.static/include/objidl.h
 cd miniupnpc
 sh make_win.sh
 echo ">>>>>>>>>>>>>>>>>>building mman-win32"
-cd ../mman-win32
-make clean
-./configure --cc=i686-w64-mingw32.static-gcc --enable-static
-make
-cp libmman.a ../libs/libmman.a
-cd ..
+#cd ../mman-win32
+#make clean
+#./configure --cc=i686-w64-mingw32.static-gcc --enable-static
+#make
+#cp libmman.a ../libs/libmman.a
+#cd ..
 echo ">>>>>>>>>>>>>>>>>>finished with make winpatch"
 
