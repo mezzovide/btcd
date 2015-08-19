@@ -36,7 +36,7 @@ static char *Supported_exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", 
 
 #define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory"
 
-#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "makeoffer3", "respondtx", "swap"
+#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "swap"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
 char *PLUGNAME(_pubmethods)[] = { INSTANTDEX_REMOTEAPI }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
@@ -352,9 +352,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         return(0);
     if ( jsonstr != 0 && (json= cJSON_Parse(jsonstr)) != 0 )
     {
-        // makeoffer3/bid/ask/respondtx verify phasing, asset/nxtae, asset/asset, asset/external, external/external
-        // autofill and automatch
-        // tradehistory and other stats -> peggy integration
+        // test: asset/asset, asset/external, external/external, autofill and automatch
+        // peggy integration
         bidask_parse(exchangestr,name,base,rel,gui,&iQ,json);
         if ( iQ.s.offerNXT == 0 )
             iQ.s.offerNXT = SUPERNET.my64bits;
@@ -443,7 +442,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             }
             else if ( strcmp(method,"orderbook") == 0 )
             {
-                if ( maxdepth < MAX_DEPTH )
+                if ( maxdepth < MAX_DEPTH || strcmp(exchangestr,INSTANTDEX_NAME) == 0 )
                     return(prices777_orderbook_jsonstr(invert,SUPERNET.my64bits,prices,&prices->O,maxdepth,allfields));
                 else if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 )
                 {
