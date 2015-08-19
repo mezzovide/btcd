@@ -292,7 +292,8 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
     copy_cJSON(gui,jobj(json,"gui")), strncpy(iQ->gui,gui,sizeof(iQ->gui)-1);
     iQ->s.automatch = juint(json,"automatch");
     iQ->s.minperc = juint(json,"minperc");
-    iQ->s.duration = juint(json,"duration");
+    if ( (iQ->s.duration= juint(json,"duration")) == 0 || iQ->s.duration > ORDERBOOK_EXPIRATION )
+        iQ->s.duration = ORDERBOOK_EXPIRATION;
     copy_cJSON(exchangestr,jobj(json,"exchange"));
     if ( exchangestr[0] == 0 || find_exchange(&exchangeid,exchangestr) == 0 )
         exchangeid = -1;

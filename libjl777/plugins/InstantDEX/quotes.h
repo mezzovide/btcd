@@ -54,6 +54,8 @@ uint64_t calc_quoteid(struct InstantDEX_quote *iQ)
     struct InstantDEX_quote Q;
     if ( iQ == 0 )
         return(0);
+    if ( iQ->s.duration == 0 || iQ->s.duration > ORDERBOOK_EXPIRATION )
+        iQ->s.duration = ORDERBOOK_EXPIRATION;
     if ( iQ->s.quoteid == 0 )
     {
         Q = *iQ;
@@ -142,7 +144,8 @@ char *InstantDEX_cancelorder(uint64_t orderid,uint64_t quoteid)
 struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ)
 {
     struct InstantDEX_quote *newiQ; struct prices777 *prices; int32_t inverted;
-    printf("createiQ %llu/%llu %f %f\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,iQ->s.price,iQ->s.vol);
+    calc_quoteid(iQ);
+    printf("createiQ %llu/%llu %f %f quoteid.%llu\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,iQ->s.price,iQ->s.vol,(long long)iQ->s.quoteid);
     if ( (newiQ= find_iQ(iQ->s.quoteid)) != 0 )
         return(newiQ);
     newiQ = calloc(1,sizeof(*newiQ));
