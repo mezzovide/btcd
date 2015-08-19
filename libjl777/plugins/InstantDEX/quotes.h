@@ -500,6 +500,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
                 return(retstr);
             retstr = InstantDEX_str(0,1,iQ);
             create_iQ(iQ);
+            prices777_InstantDEX(prices,MAX_DEPTH);
             queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(retstr));
         }
         else

@@ -442,7 +442,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             }
             else if ( strcmp(method,"orderbook") == 0 )
             {
-                if ( maxdepth < MAX_DEPTH || strcmp(exchangestr,INSTANTDEX_NAME) == 0 )
+                if ( maxdepth < MAX_DEPTH )
                     return(prices777_orderbook_jsonstr(invert,SUPERNET.my64bits,prices,&prices->O,maxdepth,allfields));
                 else if ( (retstr= prices->orderbook_jsonstrs[invert][allfields]) == 0 )
                 {

@@ -233,6 +233,7 @@ int32_t prices777_getmatrix(double *basevals,double *btcusdp,double *btcdbtcp,do
 struct InstantDEX_quote *find_iQ(uint64_t quoteid);
 int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui,struct InstantDEX_quote *iQ,cJSON *json);
 struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ);
+double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth);
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);
