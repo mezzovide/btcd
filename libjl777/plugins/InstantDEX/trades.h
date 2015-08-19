@@ -384,6 +384,7 @@ char *InstantDEX_tradehistory(int32_t firsti,int32_t endi)
         }
     }
     jadd(json,"tradehistory",array);
+    jaddnum(json,"numentries",INSTANTDEX.numhist);
     return(jprint(json,1));
 }
 
