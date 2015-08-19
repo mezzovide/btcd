@@ -26,7 +26,7 @@ int32_t txind777_txbuf(uint8_t *txbuf,int32_t len,uint64_t val,int32_t size);
 int32_t txinds777_flush(struct txinds777_info *txinds,uint32_t blocknum,uint32_t blocktimestamp);
 struct txinds777_info *txinds777_init(char *path,char *name);
 int64_t txinds777_seek(struct txinds777_info *txinds,uint32_t blocknum);
-void *txinds777_read(uint8_t *buf,struct txinds777_info *txinds);
+void *txinds777_read(int32_t *lenp,uint8_t *buf,struct txinds777_info *txinds);
 void txinds777_purge(struct txinds777_info *txinds);
 
 #endif
@@ -61,9 +61,10 @@ int64_t txinds777_seek(struct txinds777_info *txinds,uint32_t blocknum)
     return(txinds->curitem);
 }
 
-void *txinds777_read(uint8_t *buf,struct txinds777_info *txinds)
+void *txinds777_read(int32_t *lenp,uint8_t *buf,struct txinds777_info *txinds)
 {
     int64_t txind,fpos; int32_t len;
+    *lenp = 0;
     if ( txinds->indexfp == 0 || txinds->txlogfp == 0 )
         return(0);
     fseek(txinds->indexfp,txinds->curitem * sizeof(int64_t),SEEK_SET);
@@ -78,7 +79,10 @@ void *txinds777_read(uint8_t *buf,struct txinds777_info *txinds)
     {
         fseek(txinds->txlogfp,fpos,SEEK_SET);
         if ( fread(buf,1,len,txinds->txlogfp) == len )
+        {
+            *lenp = len;
             return(buf);
+        }
     }
     return(0);
 }
@@ -148,7 +152,7 @@ int64_t txind777_bundle(struct txinds777_info *txinds,uint32_t blocknum,uint32_t
 
 FILE *txinds777_initfile(long *fposp,char *path,char *name,char *suffix,uint64_t expected)
 {
-    FILE *fp; char fname[512]; long fpos = -1;
+    FILE *fp; char fname[512]; long fpos = 0;
     sprintf(fname,"%s/%s%s",path,name,suffix), os_compatible_path(fname);
     if ( (fp= fopen(fname,"rb+")) != 0 )
     {
@@ -161,6 +165,7 @@ FILE *txinds777_initfile(long *fposp,char *path,char *name,char *suffix,uint64_t
                 printf("txinds777_init: error mismatched position %ld vs %lld after set fpos\n",fpos,(long long)expected);
         }
     }
+    else fp = fopen(fname,"wb+");
     *fposp = fpos;
     return(fp);
 }
@@ -171,6 +176,7 @@ struct txinds777_info *txinds777_init(char *path,char *name)
     struct txinds777_info *txinds = calloc(1,sizeof(*txinds));
     strcpy(txinds->path,path), strcpy(txinds->name,name);
     sprintf(fname,"%s/%s",path,name), os_compatible_path(fname);
+    printf("txinds777_init(%s,%s)\n",path,name);
     if ( (fp= fopen(fname,"rb+")) != 0 )
     {
         if ( fread(&txinds->H,1,sizeof(txinds->H),fp) == sizeof(txinds->H) )
@@ -233,6 +239,7 @@ struct txinds777_info *txinds777_init(char *path,char *name)
         txinds->txlogfp = txinds777_initfile(&logfpos,path,name,".log",0);
     if ( txinds->indexfp == 0 )
         txinds->indexfp = txinds777_initfile(&indexfpos,path,name,".index",0);
+    printf("fps %p %p %p\n",txinds->fp,txinds->txlogfp,txinds->indexfp);
     return(txinds);
 }
 

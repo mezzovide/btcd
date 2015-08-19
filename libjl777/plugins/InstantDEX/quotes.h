@@ -447,6 +447,7 @@ void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
            if ( (retstr= offer_statemachine(pend)) != 0 )
            {
                printf("offer_statemachine %llu/%llu %d %f %f (%s)\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume,retstr);
+               InstantDEX_history(1,pend,retstr);
                free(retstr);
                free_pending(pend);
            } else queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);

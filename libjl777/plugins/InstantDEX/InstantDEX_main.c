@@ -26,9 +26,10 @@
 #define INSTANTDEX_FEE ((long)(2.5 * SATOSHIDEN))
 
 #define DEFINES_ONLY
+#include "../includes/portable777.h"
 #include "../agents/plugin777.c"
 #include "../utils/NXT777.c"
-#include "../includes/portable777.h"
+#include "../common/txind777.c"
 #undef DEFINES_ONLY
 
 static char *Supported_exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo", "quadriga" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
@@ -531,6 +532,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         plugin->allowremote = 1;
         portable_mutex_init(&plugin->mutex);
         init_InstantDEX(calc_nxt64bits(SUPERNET.NXTADDR),0,json);
+        INSTANTDEX.history = txinds777_init(SUPERNET.DBPATH,"InstantDEX");
+        INSTANTDEX.numhist = (int32_t)INSTANTDEX.history->curitem;
+        InstantDEX_inithistory(0,INSTANTDEX.numhist);
         //update_NXT_assettrades();
         INSTANTDEX.readyflag = 1;
         strcpy(retbuf,"{\"result\":\"InstantDEX init\"}");

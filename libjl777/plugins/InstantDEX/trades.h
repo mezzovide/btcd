@@ -193,6 +193,134 @@ char *InstantDEX_tradehistory()
     return(jprint(json,1));
 }
 
+void free_pending(struct pending_trade *pend)
+{
+    struct InstantDEX_quote *iQ;
+    if ( (iQ= find_iQ(pend->quoteid)) != 0 )
+        iQ->s.closed = 1;
+    else printf("free_pending: cant find pending tx for %llu\n",(long long)pend->quoteid);
+    if ( pend->triggertx != 0 )
+        free(pend->triggertx);
+    if ( pend->txbytes != 0 )
+        free(pend->txbytes);
+    if ( pend->tradesjson != 0 )
+        free_json(pend->tradesjson);
+    free(pend);
+}
+
+void InstantDEX_history(int32_t action,struct pending_trade *pend,char *str)
+{
+    uint8_t txbuf[16384]; char *tmpstr; uint16_t n; long len = 0;
+    // struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
+    memcpy(&txbuf[len],&action,sizeof(action)), len += sizeof(action);
+    if ( action == 0 )
+    {
+        memcpy(&txbuf[len],pend,sizeof(*pend)), len += sizeof(*pend);
+        if ( pend->triggertx != 0 )
+        {
+            n = (uint16_t)strlen(pend->triggertx) + 1;
+            memcpy(&txbuf[len],&n,sizeof(n)), len += sizeof(n);
+            memcpy(&txbuf[len],pend->triggertx,n), len += n;
+        }
+        if ( pend->txbytes != 0 )
+        {
+            n = (uint16_t)strlen(pend->txbytes) + 1;
+            memcpy(&txbuf[len],&n,sizeof(n)), len += sizeof(n);
+            memcpy(&txbuf[len],pend->txbytes,n), len += n;
+        }
+        if ( pend->tradesjson != 0 )
+        {
+            tmpstr = jprint(pend->tradesjson,0);
+            n = (uint16_t)strlen(tmpstr) + 1;
+            memcpy(&txbuf[len],&n,sizeof(n)), len += sizeof(n);
+            memcpy(&txbuf[len],tmpstr,n), len += n;
+            free(tmpstr);
+        }
+    }
+    else
+    {
+        memcpy(&txbuf[len],&pend->orderid,sizeof(pend->orderid)), len += sizeof(pend->orderid);
+        memcpy(&txbuf[len],&pend->quoteid,sizeof(pend->quoteid)), len += sizeof(pend->quoteid);
+    }
+    if ( str != 0 )
+    {
+        n = (uint16_t)strlen(str) + 1;
+        memcpy(&txbuf[len],&n,sizeof(n)), len += sizeof(n);
+        memcpy(&txbuf[len],str,n), len += n;
+    }
+    txind777_create(INSTANTDEX.history,INSTANTDEX.numhist,pend->timestamp,txbuf,len);
+    txinds777_flush(INSTANTDEX.history,INSTANTDEX.numhist,pend->timestamp);
+    INSTANTDEX.numhist++;
+}
+
+char *InstantDEX_loadhistory(struct pending_trade *pend,int32_t *actionp,uint8_t *txbuf,int32_t size)
+{
+    char *tmpstr,*str = 0; long n,len = 0;
+    // struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
+    memcpy(actionp,&txbuf[len],sizeof(*actionp)), len += sizeof(*actionp);
+    if ( *actionp == 0 )
+    {
+        memcpy(pend,&txbuf[len],sizeof(*pend)), len += sizeof(*pend);
+        if ( pend->triggertx != 0 )
+        {
+            memcpy(&n,&txbuf[len],sizeof(n)), len += sizeof(n);
+            pend->triggertx = calloc(1,n);
+            memcpy(pend->triggertx,&txbuf[len],n), len += n;
+        }
+        if ( pend->txbytes != 0 )
+        {
+            memcpy(&n,&txbuf[len],sizeof(n)), len += sizeof(n);
+            pend->txbytes = calloc(1,n);
+            memcpy(pend->txbytes,&txbuf[len],n), len += n;
+        }
+        if ( pend->tradesjson != 0 )
+        {
+            memcpy(&n,&txbuf[len],sizeof(n)), len += sizeof(n);
+            tmpstr = calloc(1,n);
+            memcpy(tmpstr,&txbuf[len],n), len += n;
+            if ( (pend->tradesjson= cJSON_Parse(tmpstr)) == 0 )
+                printf("cant parse.(%s)\n",tmpstr);
+            free(tmpstr);
+        }
+    }
+    else
+    {
+        memcpy(&pend->orderid,&txbuf[len],sizeof(pend->orderid)), len += sizeof(pend->orderid);
+        memcpy(&pend->quoteid,&txbuf[len],sizeof(pend->quoteid)), len += sizeof(pend->quoteid);
+    }
+    if ( str != 0 )
+    {
+        memcpy(&n,&txbuf[len],sizeof(n)), len += sizeof(n);
+        str = calloc(1,n);
+        memcpy(str,&txbuf[len],n), len += n;
+    }
+    if ( len != size )
+        printf("loadhistory warning: len.%ld != size.%d\n",len,size);
+    return(str);
+}
+
+int32_t InstantDEX_inithistory(int32_t firsti,int32_t endi)
+{
+    int32_t i,size,action; uint8_t txbuf[32768]; void *ptr; char *str; struct pending_trade *pend;
+    txinds777_seek(INSTANTDEX.history,firsti);
+    printf("InstantDEX_inithistory firsti.%d endi.%d\n",firsti,endi);
+    for (i=firsti; i<=endi; i++)
+    {
+        if ( (ptr= txinds777_read(&size,txbuf,INSTANTDEX.history)) == 0 || size <= 0 || size > sizeof(txbuf) )
+        {
+            printf("InstantDEX_inithistory: error reading entry.%d\n",i);
+            break;
+        }
+        pend = calloc(1,sizeof(*pend));
+        str = InstantDEX_loadhistory(pend,&action,ptr,size);
+        printf("action.%d orderid.%llu quoteid.%llu (%s)\n",action,(long long)pend->orderid,(long long)pend->quoteid,str!=0?str:"");
+        if ( str != 0 )
+            free(str);
+        free_pending(pend);
+    }
+    return(i);
+}
+
 int32_t substr128(char *dest,char *src)
 {
     char zeroes[129],*match; int32_t i;
@@ -317,6 +445,11 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
 {
     struct InstantDEX_quote _iQ;
     char *retstr; struct exchange_info *exchange; struct pending_trade *pend; uint32_t nonce; char *str,swapbuf[8192],triggertx[4096],txbytes[4096];
+    if ( (exchange= find_exchange(0,prices->exchange)) == 0 && exchange->trade != 0 )
+    {
+        printf("prices777_trade: need to have supported exchange\n");
+        return(clonestr("{\"error\":\"need to have supported exchange\"}\n"));
+    }
     pend = calloc(1,sizeof(*pend));
     pend->prices = prices, pend->dir = dir, pend->price = price, pend->volume = volume, pend->orderid = orderid;
     if ( iQ == 0 && order == 0 )
@@ -330,7 +463,8 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         memset(&_iQ,0,sizeof(_iQ));
         iQ->s = order->s;
         iQ->exchangeid = prices->exchangeid;
-        iQ->s.timestamp = (uint32_t)time(NULL);
+        if ( iQ->s.timestamp == 0 )
+            iQ->s.timestamp = (uint32_t)time(NULL);
         iQ = create_iQ(iQ);
         //printf("prices777_trade: need to have iQ \n");
         //return(clonestr("{\"error\":\"need to have iQ\"}\n"));
@@ -339,6 +473,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
     pend->quoteid = iQ->s.quoteid;
     if ( order != 0 )
         pend->order = *order;
+    else pend->order.s = iQ->s;
     pend->timestamp = (uint32_t)time(NULL);
     queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
     if ( strcmp(prices->exchange,INSTANTDEX_NAME) == 0 )
@@ -358,19 +493,22 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         iQ->s.swap = 1;
         if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
             free(str);
+        InstantDEX_history(0,pend,swapbuf);
         return(clonestr(swapbuf));
     }
     else if ( strcmp(prices->exchange,"nxtae") == 0 )
     {
         pend->type = 'N';
         retstr = fill_nxtae(&pend->txid,SUPERNET.my64bits,dir,price,volume,prices->baseid,prices->relid);
+        InstantDEX_history(0,pend,retstr);
     }
-    else if ( (exchange= find_exchange(0,prices->exchange)) != 0 )
+    else if ( exchange != 0 )
     {
         if ( exchange->trade != 0 )
         {
             printf(" issue dir.%d %s/%s price %f vol %f -> %s\n",dir,prices->base,prices->rel,price,volume,prices->exchange);
             (*exchange->trade)(&retstr,exchange,prices->base,prices->rel,dir,price,volume);
+            InstantDEX_history(0,pend,retstr);
             return(retstr);
         } else return(clonestr("{\"error\":\"no trade function for exchange\"}\n"));
     }
@@ -434,7 +572,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             if ( (cmpstr= jstr(txobj,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 )
                             {
                                 // https://nxtforum.org/nrs-releases/nrs-v1-5-15/msg191715/#msg191715
-                                struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *txstr=0,*txstr2=0; struct pending_trade *pend;
+                                struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *str,*txstr=0,*txstr2=0; struct pending_trade *pend;
                                 if ( iQ->s.isask == 0 )
                                     recvasset = iQ->s.baseid, recvqty = -iQ->s.baseamount;
                                 else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount;
@@ -457,10 +595,13 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                             retjson = cJSON_CreateObject();
                                             jadd(retjson,"fee",cJSON_Parse(txstr));
                                             jadd(retjson,"responsetx",cJSON_Parse(txstr2));
+                                            str = jprint(retjson,0);
                                             pend->tradesjson = retjson;
                                             pend->timestamp = (uint32_t)time(NULL);
+                                            InstantDEX_history(0,pend,str);
+                                            free(str);
                                             queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
-                                            printf("BROADCAST fee.txid %llu and %llu\n",(long long)fee.txid,(long long)responsetx.txid);
+                                            printf("BROADCAST fee.txid %llu and %llu (%s %s)\n",(long long)fee.txid,(long long)responsetx.txid,fee.fullhash,responsetx.fullhash);
                                         } else printf("error.%d broadcasting responsetx.(%s) %s\n",errcode2,responsetx.txbytes,txstr2);
                                     } else printf("error.%d broadcasting feetx.(%s) %s\n",errcode,fee.txbytes,txstr);
                                 } else printf("(%s) didnt validate against quoteid.%llu\n",parsed,(long long)quoteid);
@@ -481,37 +622,6 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
     return(0);
 }
 
-void free_pending(struct pending_trade *pend)
-{
-    struct InstantDEX_quote *iQ;
-    if ( (iQ= find_iQ(pend->quoteid)) != 0 )
-        iQ->s.closed = 1;
-    else printf("free_pending: cant find pending tx for %llu\n",(long long)pend->quoteid);
-    if ( pend->triggertx != 0 )
-        free(pend->triggertx);
-    if ( pend->txbytes != 0 )
-        free(pend->txbytes);
-    if ( pend->tradesjson != 0 )
-        free_json(pend->tradesjson);
-    free(pend);
-}
-
-/*void pending_completed(uint64_t orderid,uint64_t quoteid)
-{
-    int32_t iter; struct pending_trade *pend;
-    for (iter=0; iter<2; iter++)
-    {
-        while ( (pend= queue_dequeue(&Pending_offersQ.pingpong[iter],0)) != 0 )
-        {
-            if ( pend->orderid == orderid && pend->quoteid == quoteid )
-            {
-                printf("COMPLETED %llu/%llu %d %f %f\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume);
-                free_pending(pend);
-            } else queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
-        }
-    }
-}*/
-
 int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quoteid)
 {
     int32_t errcode,errcode2; char *txstr,*txstr2; int32_t iter; struct pending_trade *pend;
@@ -525,10 +635,11 @@ int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quot
                 {
                     iQ->s.matched = 1;
                     iQ->s.closed = 1;
-                    printf("COMPLETED %llu/%llu %d %f %f\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume);
-                    free_pending(pend);
-                    return(1);
-                }
+                    printf("COMPLETED %llu/%llu %d %f %f with txids %llu %llu\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume,(long long)pend->triggertxid,(long long)pend->txid);
+                    InstantDEX_history(1,pend,0);
+                } else InstantDEX_history(-1,pend,0);
+                free_pending(pend);
+                return(1);
             }
             queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
         }
@@ -709,6 +820,7 @@ char *InstantDEX_dotrades(cJSON *json,struct prices777_order *trades,int32_t num
         pend->tradesjson = json;
         pend->type = 'S';
         pend->timestamp = (uint32_t)time(NULL);
+        InstantDEX_history(0,pend,0);
         queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
     }
     return(jprint(retjson,1));
