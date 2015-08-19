@@ -344,7 +344,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
 {
     char *prices777_allorderbooks();
     char *InstantDEX_openorders();
-    char *InstantDEX_tradehistory();
+    char *InstantDEX_tradehistory(int32_t firsti,int32_t endi);
     char *InstantDEX_cancelorder(uint64_t sequenceid,uint64_t quoteid);
     char *retstr = 0,key[512],retbuf[1024],exchangestr[MAX_JSON_FIELD],method[MAX_JSON_FIELD],gui[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD]; struct InstantDEX_quote iQ;
     cJSON *json; uint64_t assetbits,sequenceid; uint32_t maxdepth; int32_t invert=0,keysize,allfields; struct prices777 *prices;
@@ -381,7 +381,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         else if ( strcmp(method,"orderstatus") == 0 )
             retstr = InstantDEX_orderstatus(sequenceid,iQ.s.quoteid);
         else if ( strcmp(method,"tradehistory") == 0 )
-            retstr = InstantDEX_tradehistory();
+            retstr = InstantDEX_tradehistory(juint(json,"firsti"),juint(json,"endi"));
         else if ( strcmp(method,"lottostats") == 0 )
             retstr = jprint(Lottostats_json,0);
         else if ( strcmp(method,"tradesequence") == 0 )

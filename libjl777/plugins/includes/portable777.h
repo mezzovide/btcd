@@ -190,7 +190,7 @@ struct prices777_basketinfo
     struct prices777_orderentry book[MAX_GROUPS+1][MAX_DEPTH];
 };
 
-struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
+struct pending_trade { struct queueitem DL; struct InstantDEX_quote iQ; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type,version,size; };
 
 struct prices777
 {

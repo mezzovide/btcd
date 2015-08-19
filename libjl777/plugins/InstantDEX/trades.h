@@ -183,16 +183,6 @@ cJSON *get_tradehistory(char *refNXTaddr,uint32_t timestamp)
     return(retjson);
 }
 
-char *InstantDEX_tradehistory()
-{
-    cJSON *history,*json;
-    json = cJSON_CreateObject();
-    history = get_tradehistory(SUPERNET.NXTADDR,0);
-    if ( history != 0 )
-        cJSON_AddItemToObject(json,"tradehistory",history);
-    return(jprint(json,1));
-}
-
 void free_pending(struct pending_trade *pend)
 {
     struct InstantDEX_quote *iQ;
@@ -210,7 +200,7 @@ void free_pending(struct pending_trade *pend)
 
 void InstantDEX_history(int32_t action,struct pending_trade *pend,char *str)
 {
-    uint8_t txbuf[16384]; char *tmpstr; uint16_t n; long len = 0;
+    uint8_t txbuf[32768]; char *tmpstr; uint16_t n; long len = 0;
     // struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
     memcpy(&txbuf[len],&action,sizeof(action)), len += sizeof(action);
     if ( action == 0 )
@@ -248,6 +238,11 @@ void InstantDEX_history(int32_t action,struct pending_trade *pend,char *str)
         memcpy(&txbuf[len],&n,sizeof(n)), len += sizeof(n);
         memcpy(&txbuf[len],str,n), len += n;
     }
+    else
+    {
+        n = 0;
+        memcpy(&txbuf[len],&n,sizeof(n)), len += sizeof(n);
+    }
     txind777_create(INSTANTDEX.history,INSTANTDEX.numhist,pend->timestamp,txbuf,len);
     txinds777_flush(INSTANTDEX.history,INSTANTDEX.numhist,pend->timestamp);
     INSTANTDEX.numhist++;
@@ -255,12 +250,12 @@ void InstantDEX_history(int32_t action,struct pending_trade *pend,char *str)
 
 char *InstantDEX_loadhistory(struct pending_trade *pend,int32_t *actionp,uint8_t *txbuf,int32_t size)
 {
-    char *tmpstr,*str = 0; long n,len = 0;
-    // struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
+    char *tmpstr,*str = 0; uint16_t n; long len = 0;
     memcpy(actionp,&txbuf[len],sizeof(*actionp)), len += sizeof(*actionp);
     if ( *actionp == 0 )
     {
         memcpy(pend,&txbuf[len],sizeof(*pend)), len += sizeof(*pend);
+        //printf("pendsize.%ld trigger.%p tx.%p json.%p\n",sizeof(*pend),pend->triggertx,pend->txbytes,pend->tradesjson);
         if ( pend->triggertx != 0 )
         {
             memcpy(&n,&txbuf[len],sizeof(n)), len += sizeof(n);
@@ -288,9 +283,9 @@ char *InstantDEX_loadhistory(struct pending_trade *pend,int32_t *actionp,uint8_t
         memcpy(&pend->orderid,&txbuf[len],sizeof(pend->orderid)), len += sizeof(pend->orderid);
         memcpy(&pend->quoteid,&txbuf[len],sizeof(pend->quoteid)), len += sizeof(pend->quoteid);
     }
-    if ( str != 0 )
+    memcpy(&n,&txbuf[len],sizeof(n)), len += sizeof(n);
+    if ( n != 0 )
     {
-        memcpy(&n,&txbuf[len],sizeof(n)), len += sizeof(n);
         str = calloc(1,n);
         memcpy(str,&txbuf[len],n), len += n;
     }
@@ -299,26 +294,97 @@ char *InstantDEX_loadhistory(struct pending_trade *pend,int32_t *actionp,uint8_t
     return(str);
 }
 
+struct pending_trade *InstantDEX_historyi(int32_t *actionp,char **strp,int32_t i,uint8_t *txbuf,int32_t maxsize)
+{
+    void *ptr; int32_t size; struct pending_trade *pend = 0;
+    *strp = 0;
+    txinds777_seek(INSTANTDEX.history,i);
+    if ( (ptr= txinds777_read(&size,txbuf,INSTANTDEX.history)) == 0 || size <= 0 || size > maxsize )
+    {
+        printf("InstantDEX_inithistory: error reading entry.%d | ptr.%p size.%d\n",i,ptr,maxsize);
+        return(0);
+    }
+    pend = calloc(1,sizeof(*pend));
+    *strp = InstantDEX_loadhistory(pend,actionp,ptr,size);
+    return(pend);
+}
+
 int32_t InstantDEX_inithistory(int32_t firsti,int32_t endi)
 {
-    int32_t i,size,action; uint8_t txbuf[32768]; void *ptr; char *str; struct pending_trade *pend;
-    txinds777_seek(INSTANTDEX.history,firsti);
+    int32_t i,action; uint8_t txbuf[32768]; char *str; struct pending_trade *pend;
     printf("InstantDEX_inithistory firsti.%d endi.%d\n",firsti,endi);
-    for (i=firsti; i<=endi; i++)
+    for (i=firsti; i<endi; i++)
     {
-        if ( (ptr= txinds777_read(&size,txbuf,INSTANTDEX.history)) == 0 || size <= 0 || size > sizeof(txbuf) )
+        if ( (pend= InstantDEX_historyi(&action,&str,i,txbuf,sizeof(txbuf))) != 0 )
         {
-            printf("InstantDEX_inithistory: error reading entry.%d\n",i);
-            break;
+            printf("type.%d (%c) action.%d orderid.%llu quoteid.%llu (%s)\n",pend->type,pend->type!=0?pend->type:'0',action,(long long)pend->orderid,(long long)pend->quoteid,str!=0?str:"");
+            if ( str != 0 )
+                free(str);
+            free_pending(pend);
         }
-        pend = calloc(1,sizeof(*pend));
-        str = InstantDEX_loadhistory(pend,&action,ptr,size);
-        printf("action.%d orderid.%llu quoteid.%llu (%s)\n",action,(long long)pend->orderid,(long long)pend->quoteid,str!=0?str:"");
-        if ( str != 0 )
-            free(str);
-        free_pending(pend);
     }
     return(i);
+}
+
+cJSON *InstantDEX_tradeitem(struct pending_trade *pend)
+{
+    // struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
+    char str[64]; cJSON *json = cJSON_CreateObject();
+    str[0] = (pend->type == 0) ? '0' : pend->type;
+    str[1] = 0;
+    jaddstr(json,"type",str);
+    jaddnum(json,"timestamp",pend->timestamp);
+    jadd64bits(json,"orderid",pend->orderid), jadd64bits(json,"quoteid",pend->quoteid);
+    if ( pend->iQ.s.baseid != 0 && pend->iQ.s.relid != 0 )
+        jadd64bits(json,"baseid",pend->iQ.s.baseid), jadd64bits(json,"relid",pend->iQ.s.relid);
+    if ( pend->iQ.s.baseamount != 0 && pend->iQ.s.relamount != 0 )
+        jaddnum(json,"baseqty",pend->iQ.s.baseamount), jaddnum(json,"relqty",pend->iQ.s.relamount);
+    if ( pend->dir != 0 )
+        jaddnum(json,"dir",pend->dir);
+    if ( pend->price > SMALLVAL && pend->volume > SMALLVAL )
+        jaddnum(json,"price",pend->price), jaddnum(json,"volume",pend->volume);
+    if ( pend->triggertxid != 0 )
+        jadd64bits(json,"triggertxid",pend->triggertxid);
+    if ( pend->txid != 0 )
+        jadd64bits(json,"txid",pend->txid);
+    if ( pend->triggertx != 0 )
+        jaddstr(json,"triggertx",pend->triggertx);
+    if ( pend->txbytes != 0 )
+        jaddstr(json,"txbytes",pend->txbytes);
+    return(json);
+}
+
+char *InstantDEX_tradehistory(int32_t firsti,int32_t endi)
+{
+    cJSON *json,*array,*item,*tmp; int32_t i,action; uint8_t txbuf[32768]; char *str; struct pending_trade *pend;
+    json = cJSON_CreateObject();
+    array = cJSON_CreateArray();
+    if ( endi == 0 )
+        endi = INSTANTDEX.numhist-1;
+    if ( endi < firsti )
+        endi = firsti;
+    for (i=firsti; i<=endi; i++)
+    {
+        if ( (pend= InstantDEX_historyi(&action,&str,i,txbuf,sizeof(txbuf))) != 0 )
+        {
+            item = cJSON_CreateObject();
+            jaddnum(item,"i",i);
+            jaddnum(item,"action",action);
+            jadd(item,"trade",InstantDEX_tradeitem(pend));
+            if ( pend->tradesjson != 0 )
+                jadd(item,"trades",cJSON_Duplicate(pend->tradesjson,1));
+            if ( str != 0 )
+            {
+                if ( (tmp= cJSON_Parse(str)) != 0 )
+                    jadd(item,"str",tmp);
+                free(str);
+            }
+            free_pending(pend);
+            jaddi(array,item);
+        }
+    }
+    jadd(json,"tradehistory",array);
+    return(jprint(json,1));
 }
 
 int32_t substr128(char *dest,char *src)
@@ -451,6 +517,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         return(clonestr("{\"error\":\"need to have supported exchange\"}\n"));
     }
     pend = calloc(1,sizeof(*pend));
+    pend->size = (int32_t)sizeof(*pend);
     pend->prices = prices, pend->dir = dir, pend->price = price, pend->volume = volume, pend->orderid = orderid;
     if ( iQ == 0 && order == 0 )
     {
@@ -471,6 +538,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
     } else iQ = create_iQ(iQ);
     iQ->s.pending = 1;
     pend->quoteid = iQ->s.quoteid;
+    pend->iQ = *iQ;
     if ( order != 0 )
         pend->order = *order;
     else pend->order.s = iQ->s;
@@ -813,7 +881,7 @@ char *InstantDEX_dotrades(cJSON *json,struct prices777_order *trades,int32_t num
         jaddi(retarray,item);
     }
     jadd(retjson,"traderesults",retarray);
-    if ( dotrade != 0 )
+    if ( dotrade != 0 && numtrades > 1 )
     {
         pend = calloc(1,sizeof(*pend));
         pend->dir = iQ.s.isask == 0 ? 1 : -1, pend->price = iQ.s.price, pend->volume = iQ.s.vol, pend->orderid = iQ.s.quoteid;
