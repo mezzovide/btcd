@@ -471,7 +471,7 @@ int init_hexbytes_noT(char *hexbytes,unsigned char *message,long len);
 #include "hmac/hmac_done.c"
 #include "hmac/hmac_file.c"
 #include "hmac/hmac_memory.c"
-#include "sha512.c"
+//#include "sha512.c"
 #include "rmd128.c"
 //#include "rmd160.c"
 #include "rmd256.c"
