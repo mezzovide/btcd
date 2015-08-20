@@ -5,22 +5,22 @@ compiler:
 addons:
  apt:
   sources:
-   ubuntu-toolchain-r-test
+  - ubuntu-toolchain-r-test
   packages:
-   g++
-   make 
-   cmake 
-   automake 
-   unzip 
-   git 
-   build-essential 
-   libtool 
-   libssl-dev 
-   libdb++-dev 
-   libboost-all-dev 
-   libcurl4-gnutls-dev
-   miniupnpc 
-   libminiupnpc-dev
+  -  g++
+  -  make 
+  -  cmake 
+  -  automake 
+  -  unzip 
+  -  git 
+  -  build-essential 
+  -  libtool 
+  -  libssl-dev 
+  -  libdb++-dev 
+  -  libboost1.55-all-dev 
+  -  libcurl4-gnutls-dev
+  -  miniupnpc 
+  -  libminiupnpc-dev
 
 before_script:
  - cd libjl777
