@@ -1,4 +1,4 @@
-
+[![Build Status](https://travis-ci.org/mezzovide/btcd.svg?branch=jl777)](https://travis-ci.org/mezzovide/btcd)
 BitcoinDark
 ============================
 
