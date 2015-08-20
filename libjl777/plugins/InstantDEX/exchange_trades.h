@@ -289,7 +289,7 @@ uint64_t bitstamp_trade(char **retstrp,struct exchange_info *exchange,char *base
  	char *sig,*data,*path,url[512],req[4096],payload[2048],dest[1024 + 1]; cJSON *json; uint64_t nonce,txid = 0;
     memset(payload,0,sizeof(payload));
     nonce = time(NULL);
-    sprintf(payload,"%llu%s%s",nonce,exchange->userid,exchange->apikey);
+    sprintf(payload,"%llu%s%s",(long long)nonce,exchange->userid,exchange->apikey);
     if ( dir == 0 )
         path = "balance";
     else
@@ -299,7 +299,7 @@ uint64_t bitstamp_trade(char **retstrp,struct exchange_info *exchange,char *base
     if ( (sig= hmac_sha256_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),payload)) != 0 )
     {
         touppercase(sig);
-        sprintf(req,"{\"key\":\"%s\",\"signature\":\"%s\",\"nonce\":%llu}",exchange->apikey,sig,nonce);
+        sprintf(req,"{\"key\":\"%s\",\"signature\":\"%s\",\"nonce\":%llu}",exchange->apikey,sig,(long long)nonce);
         sprintf(url,"https://www.bitstamp.net/api/%s/",path);
         printf("bitstamp.(%s) ->\n",req);
         if ( (data= curl_post(&cHandle,url,0,req,0,0,0)) != 0 )
@@ -644,7 +644,7 @@ uint64_t quadriga_trade(char **retstrp,struct exchange_info *exchange,char *base
     cJSON *json; uint64_t nonce,txid = 0;
     memset(payload,0,sizeof(payload));
     nonce = time(NULL);
-    sprintf(payload,"%llu%s%s",nonce,exchange->userid,exchange->apikey);
+    sprintf(payload,"%llu%s%s",(long long)nonce,exchange->userid,exchange->apikey);
     calc_md5(md5secret,exchange->apisecret,(int32_t)strlen(exchange->apisecret));
     if ( dir == 0 )
         path = "balance";
@@ -654,7 +654,7 @@ uint64_t quadriga_trade(char **retstrp,struct exchange_info *exchange,char *base
     }
     if ( (sig= hmac_sha256_str(dest,md5secret,(int32_t)strlen(md5secret),payload)) != 0 )
     {
-        sprintf(req,"{\"key\":\"%s\",\"nonce\":%llu,\"signature\":\"%s\"}",exchange->apikey,nonce,sig);
+        sprintf(req,"{\"key\":\"%s\",\"nonce\":%llu,\"signature\":\"%s\"}",exchange->apikey,(long long)nonce,sig);
         sprintf(hdr1,"Content-Type:application/json"), sprintf(hdr2,"charset=utf-8"), sprintf(hdr3,"Content-Length:%ld",strlen(req));
         printf("quadriga req.(%s) -> (%s) [%s %s sig.%s]\n",req,payload,md5secret,payload,sig);
         sprintf(url,"https://api.quadrigacx.com/v2/%s",path);
