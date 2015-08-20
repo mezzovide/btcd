@@ -24,13 +24,13 @@ addons:
 
 before_script:
  - cd libjl777
- - make onetime
+ - make -j8 onetime
 
 script:
  - echo "Start make SuperNET"
- - make SuperNET
+ - make -j8 SuperNET
  - echo "Start make BTCD"
- - make btcd
+ - make -j8 btcd
 
 #  - clang
 # Install dependencies
