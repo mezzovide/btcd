@@ -599,7 +599,6 @@ https://www.LakeBTC.com/api_v1
         sprintf(url,"https://www.lakebtc.com/api_v1");
         sprintf(hdr1,"Authorization:Basic %s",buf64);
         sprintf(hdr2,"Json-Rpc-Tonce: %llu",(long long)tonce);
-        sprintf(buf,"params=");
         if ( (data= curl_post(&cHandle,url,0,buf,hdr1,hdr2,0,0)) != 0 )
         {
             printf("submit cmd.(%s) [%s]\n",buf,data);
