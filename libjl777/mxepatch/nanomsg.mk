@@ -19,14 +19,8 @@ define $(PKG)_BUILD
     cd '$(1)' && autoreconf -ifv && ./configure \
 	CC=$(PREFIX)/bin/$(TARGET)-gcc \
 	--host=$(TARGET) \
-	--prefix=$(PREFIX)/$(TARGET)
+	--prefix=$(PREFIX)/$(TARGET) 
 
 	$(MAKE) -C '$(1)' -j '$(JOBS)' LDFLAGS+='.libs/libnanomsg.a'
-	$(MAKE) -C '$(1)' -j 1 install $(MXE_DISABLE_DOCS)	
-#    ln -sf '$(PREFIX)/$(TARGET)/bin/curl-config' '$(PREFIX)/bin/$(TARGET)-curl-config'
-#
-#    '$(TARGET)-gcc' \
-#        -W -Wall -Werror -ansi -pedantic \
-#        '$(2).c' -o '$(PREFIX)/$(TARGET)/bin/test-curl.exe' \
-#        `'$(TARGET)-pkg-config' libcurl --cflags --libs`
+	$(MAKE) -C '$(1)' -j 1 install	
 endef
