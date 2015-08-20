@@ -52,7 +52,7 @@ rm mxe/usr/i686-w64-mingw32.static/include/objidl.h
 cp mxepatch/winheaders/objidl.h mxe/usr/i686-w64-mingw32.static/include/objidl.h
 cd miniupnpc
 sh make_win.sh
-echo ">>>>>>>>>>>>>>>>>>building mman-win32"
+#echo ">>>>>>>>>>>>>>>>>>building mman-win32"
 #cd ../mman-win32
 #make clean
 #./configure --cc=i686-w64-mingw32.static-gcc --enable-static
