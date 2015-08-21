@@ -67,14 +67,17 @@ cJSON *exchanges_json()
             break;
         cJSON_AddItemToObject(item,"name",cJSON_CreateString(exchange->name));
         memset(api,0,sizeof(api));
+        n = 0;
         if ( exchange->trade != 0 )
         {
+            //printf("%s.(%s/%s/%s).%p\n",exchange->name,exchange->apikey,exchange->apisecret,exchange->userid,exchange);
             if ( exchange->apikey[0] != 0 )
                 api[n++] = 'K';
             if ( exchange->apisecret[0] != 0 )
                 api[n++] = 'S';
             if ( exchange->userid[0] != 0 )
                 api[n++] = 'U';
+            api[n] = 0;
             cJSON_AddItemToObject(item,"trade",cJSON_CreateString(api));
         }
         cJSON_AddItemToArray(array,item);

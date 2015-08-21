@@ -1053,6 +1053,7 @@ int32_t prices777_init(char *jsonstr)
                 extract_cJSON_str(exchangeptr->apikey,sizeof(exchangeptr->apikey),item,"key");
                 extract_cJSON_str(exchangeptr->userid,sizeof(exchangeptr->userid),item,"userid");
                 extract_cJSON_str(exchangeptr->apisecret,sizeof(exchangeptr->apisecret),item,"secret");
+                //printf("%p ADDEXCHANGE.(%s) [%s, %s, %s]\n",exchangeptr,exchange,exchangeptr->apikey,exchangeptr->userid,exchangeptr->apisecret);
             }
             if ( strcmp(exchange,"truefx") == 0 )
             {
