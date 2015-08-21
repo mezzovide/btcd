@@ -1,5 +1,5 @@
---- nanomsg-new/src/transports/tcp/ctcp.c	2015-08-20 18:32:06.201391970 +0700
-+++ ctcp.1	2015-08-20 20:20:19.301598252 +0700
+--- a/src/transports/tcp/ctcp.c	2015-08-20 18:32:06.201391970 +0700
++++ b/src/transports/tcp/ctcp.c	2015-08-20 20:20:19.301598252 +0700
 @@ -111,6 +111,32 @@
  static void nn_ctcp_start_connecting (struct nn_ctcp *self,
      struct sockaddr_storage *ss, size_t sslen);
