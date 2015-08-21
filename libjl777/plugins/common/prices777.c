@@ -661,6 +661,24 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 #include "../InstantDEX/exchangeparse.h"
 #include "../InstantDEX/exchange_trades.h"
 
+cJSON *basketitem_json(struct prices777_basket *basket)
+{
+    cJSON *item = cJSON_CreateObject();
+    jaddstr(item,"base",basket->base);
+    jaddstr(item,"base",basket->rel);
+    jaddnum(item,"group",basket->groupid);
+    jaddnum(item,"wt",basket->wt);
+    return(item);
+}
+
+cJSON *basket_json(struct prices777 *prices)
+{
+    int32_t i; cJSON *array = cJSON_CreateArray();
+    for (i=0; i<prices->basketsize; i++)
+        jaddi(array,basketitem_json(&prices->basket[i]));
+    return(array);
+}
+
 char *prices777_allorderbooks()
 {
     int32_t i; struct prices777 *prices; char numstr[64]; cJSON *item,*json,*array = cJSON_CreateArray();
@@ -674,6 +692,10 @@ char *prices777_allorderbooks()
         jaddstr(item,"rel",prices->rel);
         sprintf(numstr,"%llu",(long long)prices->relid), jaddstr(item,"relid",numstr);
         jaddstr(item,"exchange",prices->exchange);
+        if ( strcmp(prices->exchange,"basket") == 0 )
+            jadd(item,"basket",basket_json(prices));
+        else if ( strcmp(prices->exchange,"active") == 0 )
+            jadd(item,"active",basket_json(prices));
         jaddi(array,item);
     }
     json = cJSON_CreateObject();
@@ -705,7 +727,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         {
             if ( (exchangeptr= find_exchange(0,pairs[i].exchange)) != 0 )
             {
-                printf("%s set supports.%p %p\n",pairs[i].exchange,pairs[i].supports,pairs[i].trade);
+                printf("%p %s set supports.%p %p\n",exchangeptr,pairs[i].exchange,pairs[i].supports,pairs[i].trade);
                 exchangeptr->supports = pairs[i].supports;
                 exchangeptr->trade = pairs[i].trade;
             }
@@ -1053,6 +1075,7 @@ int32_t prices777_init(char *jsonstr)
                 extract_cJSON_str(exchangeptr->apikey,sizeof(exchangeptr->apikey),item,"key");
                 extract_cJSON_str(exchangeptr->userid,sizeof(exchangeptr->userid),item,"userid");
                 extract_cJSON_str(exchangeptr->apisecret,sizeof(exchangeptr->apisecret),item,"secret");
+                //printf("%p ADDEXCHANGE.(%s) [%s, %s, %s]\n",exchangeptr,exchange,exchangeptr->apikey,exchangeptr->userid,exchangeptr->apisecret);
             }
             if ( strcmp(exchange,"truefx") == 0 )
             {

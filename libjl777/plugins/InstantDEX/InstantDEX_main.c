@@ -34,7 +34,7 @@
 
 static char *Supported_exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo", "quadriga" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
 
-#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory", "balance"
+#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory", "balance", "allexchanges"
 
 #define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "swap"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
@@ -376,6 +376,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = prices777_allorderbooks();
         else if ( strcmp(method,"openorders") == 0 )
             retstr = InstantDEX_openorders(SUPERNET.NXTADDR,juint(json,"allorders"));
+        else if ( strcmp(method,"allexchanges") == 0 )
+            retstr = jprint(exchanges_json(),1);
         else if ( strcmp(method,"cancelorder") == 0 )
             retstr = InstantDEX_cancelorder(sequenceid,iQ.s.quoteid);
         else if ( strcmp(method,"orderstatus") == 0 )

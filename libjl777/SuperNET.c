@@ -366,7 +366,8 @@ void SuperNET_apiloop(void *ipaddr)
                     }
                     if ( retstr == 0 && (retstr= process_nn_message(sock,jsonstr)) != 0 )
                         free(retstr);
-                } else msleep(SUPERNET.recvtimeout);
+                }
+                msleep(SUPERNET.recvtimeout);
             }
         }
         nn_shutdown(sock,0);
