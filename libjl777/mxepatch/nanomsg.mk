@@ -19,7 +19,7 @@ define $(PKG)_BUILD
     cd '$(1)' && autoreconf -ifv && ./configure \
 	CC=$(PREFIX)/bin/$(TARGET)-gcc \
 	--host=$(TARGET) \
-	--prefix=$(PREFIX)/$(TARGET) 
+	--prefix=$(PREFIX)/$(TARGET)
 
 	$(MAKE) -C '$(1)' -j '$(JOBS)' LDFLAGS+='.libs/libnanomsg.a'
 	$(MAKE) -C '$(1)' -j 1 install	

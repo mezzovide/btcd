@@ -41,14 +41,14 @@ export PATH=$PWD/usr/bin:$PATH
 cp ./usr/i686-w64-mingw32.static/include/winioctl.h ./usr/i686-w64-mingw32.static/include/WinIoCtl.h
 cp ./usr/i686-w64-mingw32.static/include/windows.h ./usr/i686-w64-mingw32.static/include/Windows.h
 cd ..
-cd nanomsg
-echo ">>>>>>>>>>>>>>>>>>building nanomsg"
-make clean
-sh ./autogen.sh
-CC=i686-w64-mingw32.static-gcc CXX=i686-w64-mingw32.static-g++ ./configure --disable-replication --enable-cxx --host i686-w64-mingw32.static
-make CFLAGS='-g -O2 -w -DNN_HAVE_WINDOWS -DNN_HAVE_MINGW -D_WIN32_WINNT=0x0600'
-cp .libs/libnanomsg.a ../libs/libnanomsg-win32.a
-cd ../
+#cd nanomsg
+#echo ">>>>>>>>>>>>>>>>>>building nanomsg"
+#make clean
+#sh ./autogen.sh
+#CC=i686-w64-mingw32.static-gcc CXX=i686-w64-mingw32.static-g++ ./configure --disable-replication --enable-cxx --host i686-w64-mingw32.static
+#make CFLAGS='-g -O2 -w -DNN_HAVE_WINDOWS -DNN_HAVE_MINGW -D_WIN32_WINNT=0x0600'
+#cp .libs/libnanomsg.a ../libs/libnanomsg-win32.a
+#cd ../
 rm mxe/usr/i686-w64-mingw32.static/include/objidl.h
 cp mxepatch/winheaders/objidl.h mxe/usr/i686-w64-mingw32.static/include/objidl.h
 cd miniupnpc
