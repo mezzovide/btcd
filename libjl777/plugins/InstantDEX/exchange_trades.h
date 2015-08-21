@@ -452,24 +452,48 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *base,ch
     return(txid);
 }
 
-uint64_t huobi_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+uint64_t huobi_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     static CURL *cHandle;
- 	char *data,*method,url[1024],cmdbuf[8192],buf[512],digest[33];
-    cJSON *json; uint64_t nonce,txid = 0;
+    char *baserels[][2] = { {"btc","cny"}, {"ltc","cny"} };
+    char *data,*extra,*method,pricestr[64],pairstr[64],base[64],rel[64],url[1024],cmdbuf[8192],buf[512],digest[33]; cJSON *json; uint64_t nonce,txid = 0; int32_t type;
     nonce = time(NULL);
+    pricestr[0] = 0;
+    if ( (extra= *retstrp) != 0 )
+        *retstrp = 0;
     if ( dir == 0 )
     {
         method = "get_account_info";
+        sprintf(buf,"access_key=%s&created=%llu&method=%s&secret_key=%s",exchange->apikey,(long long)nonce,method,exchange->apisecret);
+        calc_md5(digest,buf,(int32_t)strlen(buf));
+        sprintf(cmdbuf,"access_key=%s&created=%llu&method=%s&sign=%s",exchange->apikey,(long long)nonce,method,digest);
     }
     else
     {
-        method = "notyet";
+        strcpy(base,_base), strcpy(rel,_rel);
+        tolowercase(base), tolowercase(rel);
+        if ( flipstr_for_exchange(pairstr,"%s%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        {
+            printf("cant find baserel (%s/%s)\n",base,rel);
+            return(0);
+        }
+        if ( extra != 0 && strcmp(extra,"market") == 0 )
+            method = (dir > 0) ? "buy_market" : "sell_market";
+        else method = (dir > 0) ? "buy" : "sell", sprintf(pricestr,"&price=%.2f",price);
+        if ( strcmp(pairstr,"btccny") == 0 )
+            type = 1;
+        else if ( strcmp(pairstr,"ltccny") == 0 )
+            type = 2;
+        else
+        {
+            printf("cant find baserel (%s/%s)\n",base,rel);
+            return(0);
+        }
+        sprintf(buf,"access_key=%s&amount=%.4f&coin_type=%d&created=%llu&method=%s%s&secret_key=%s",exchange->apikey,volume,type,(long long)nonce,method,pricestr,exchange->apisecret);
+        calc_md5(digest,buf,(int32_t)strlen(buf));
+        sprintf(cmdbuf,"access_key=%s&amount=%.4f&coin_type=%d&created=%llu&method=%s%s&sign=%s",exchange->apikey,volume,type,(long long)nonce,method,pricestr,digest);
     }
-    sprintf(buf,"access_key=%s&created=%llu&method=%s&secret_key=%s",exchange->apikey,(long long)nonce,method,exchange->apisecret);
-    calc_md5(digest,buf,(int32_t)strlen(buf));
-    sprintf(cmdbuf,"access_key=%s&created=%llu&method=%s&sign=%s",exchange->apikey,(long long)nonce,method,digest);
-    sprintf(url,"https://api.huobi.com/apiv2");
+    sprintf(url,"https://api.huobi.com/apiv3");
     if ( (data= curl_post(&cHandle,url,0,cmdbuf,"Content-Type:application/x-www-form-urlencoded",0,0,0)) != 0 )
     {
         printf("submit cmd.(%s) [%s]\n",cmdbuf,data);
@@ -489,7 +513,7 @@ uint64_t bityes_trade(char **retstrp,struct exchange_info *exchange,char *_base,
 {
     static CURL *cHandle;
     char *baserels[][2] = { {"btc","usd"}, {"ltc","usd"} };
-    char *data,*extra,*typestr,*method,pricestr[64],pairstr[64],base[64],rel[64],url[1024],cmdbuf[8192],buf[512],digest[33]; cJSON *json; uint64_t nonce,txid = 0; int32_t type;
+    char *data,*extra,*method,pricestr[64],pairstr[64],base[64],rel[64],url[1024],cmdbuf[8192],buf[512],digest[33]; cJSON *json; uint64_t nonce,txid = 0; int32_t type;
     nonce = time(NULL);
     pricestr[0] = 0;
     if ( (extra= *retstrp) != 0 )
