@@ -103,14 +103,19 @@ uint64_t bittrex_trade(char **retstrp,struct exchange_info *exchange,char *base,
 uint64_t poloniex_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
 {
     static CURL *cHandle;
- 	char *sig,*data,cmdbuf[8192],hdr1[1024],hdr2[1024],pairstr[512],dest[SHA512_DIGEST_SIZE*2 + 1]; cJSON *json; uint64_t nonce,txid = 0;
+ 	char *sig,*data,*extra,*typestr,cmdbuf[8192],hdr1[1024],hdr2[1024],pairstr[512],dest[SHA512_DIGEST_SIZE*2 + 1]; cJSON *json; uint64_t nonce,txid = 0;
     nonce = time(NULL);
+    if ( (extra= *retstrp) != 0 )
+        *retstrp = 0;
     if ( dir == 0 )
         sprintf(cmdbuf,"command=returnCompleteBalances&nonce=%llu",(long long)nonce);
     else
     {
         dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
-        sprintf(cmdbuf,"command=%s&nonce=%ld&currencyPair=%s&rate=%.8f&amount=%.8f",dir>0?"buy":"sell",time(NULL),pairstr,price,volume);
+        if ( extra != 0 && strcmp(extra,"margin") == 0 )
+            typestr = (dir > 0) ? "marginBuy":"marginSell";
+        else typestr = (dir > 0) ? "buy":"sell";
+        sprintf(cmdbuf,"command=%s&nonce=%ld&currencyPair=%s&rate=%.8f&amount=%.8f",typestr,time(NULL),pairstr,price,volume);
     }
     if ( (sig= hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),cmdbuf)) != 0 )
         sprintf(hdr2,"Sign:%s",sig);
