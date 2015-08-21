@@ -664,7 +664,6 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 cJSON *basketitem_json(struct prices777_basket *basket)
 {
     cJSON *item = cJSON_CreateObject();
-    struct prices777_basket { struct prices777 *prices; double wt; int32_t groupid,groupsize,aski,bidi; char base[64],rel[64]; };
     jaddstr(item,"base",basket->base);
     jaddstr(item,"base",basket->rel);
     jaddnum(item,"group",basket->groupid);
@@ -674,8 +673,7 @@ cJSON *basketitem_json(struct prices777_basket *basket)
 
 cJSON *basket_json(struct prices777 *prices)
 {
-    int32_t i; cJSON *array = cJSON_CreateObject();
-    array = cJSON_CreateObject();
+    int32_t i; cJSON *array = cJSON_CreateArray();
     for (i=0; i<prices->basketsize; i++)
         jaddi(array,basketitem_json(&prices->basket[i]));
     return(array);
