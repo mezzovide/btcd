@@ -4,8 +4,7 @@ cp -n mxepatch/nanomsg.mk mxe/src/nanomsg.mk
 cp -n mxepatch/nanomsg-1.patch mxe/src/nanomsg-1.patch
 cp -n mxepatch/nanomsg-2.patch mxe/src/nanomsg-2.patch
 cp -n mxepatch/nanomsg-3-global.patch mxe/src/nanomsg-3-global.patch
-cp -n mxepatch/nanomsg-4-ctcp.patch mxe/src/nanomsg-4-ctcp.patch
-cp -n mxepatch/nanomsg-5-options.patch mxe/src/nanomsg-5-options.patch
+cp -n mxepatch/nanomsg-4-options.patch mxe/src/nanomsg-4-options.patch
 cd mxe
 patch -N -s --reject-file=- < ../mxepatch/mxe.patch
 cd src
