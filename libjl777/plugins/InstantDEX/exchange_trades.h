@@ -198,21 +198,30 @@ int32_t cny_flip(char *market,char *coinname,char *base,char *rel,int32_t dir,do
     return(txid);
 }*/
 
-uint64_t btce_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+uint64_t btce_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     /*Authentication is made by sending the following HTTP headers:
     Key — API key. API key examples: 46G9R9D6-WJ77XOIP-XH9HH5VQ-A3XN3YOZ-8T1R8I8T
     API keys are created in the Profile in the API keys section.
     Sign — Signature. POST-parameters (?nonce=1&param0=val0), signed with a Secret key using HMAC-SHA512*/
     static CURL *cHandle;
- 	char *sig,*data,payload[8192],hdr1[1024],hdr2[1024],pairstr[512],dest[SHA512_DIGEST_SIZE*2 + 1]; cJSON *json,*resultobj; uint64_t nonce,txid = 0;
+    
+    char *baserels[][2] = { {"btc","usd"}, {"btc","rur"}, {"btc","eur"}, {"ltc","btc"}, {"ltc","usd"}, {"ltc","rur"}, {"ltc","eur"}, {"nmc","btc"}, {"nmc","usd"}, {"nvc","btc"}, {"nvc","usd"}, {"eur","usd"}, {"eur","rur"}, {"ppc","btc"}, {"ppc","usd"} };
+    char *sig,*data,base[64],rel[64],payload[8192],hdr1[1024],hdr2[1024],pairstr[512],dest[SHA512_DIGEST_SIZE*2 + 1]; cJSON *json,*resultobj; uint64_t nonce,txid = 0;
     sprintf(hdr1,"Key:%s",exchange->apikey);
     nonce = time(NULL);
     if ( dir == 0 )
         sprintf(payload,"method=getInfo&nonce=%llu",(long long)nonce);
     else
     {
-        dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
+        strcpy(base,_base), strcpy(rel,_rel);
+        tolowercase(base), tolowercase(rel);
+        if ( flipstr_for_exchange(pairstr,"%s_%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        {
+            printf("cant find baserel (%s/%s)\n",base,rel);
+            return(0);
+        }
+        //dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
         sprintf(payload,"method=Trade&nonce=%ld&pair=%s&type=%s&rate=%.6f&amount=%.6f",time(NULL),pairstr,dir>0?"buy":"sell",price,volume);
     }
     if ( (sig= hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),payload)) != 0 )
@@ -476,23 +485,56 @@ uint64_t huobi_trade(char **retstrp,struct exchange_info *exchange,char *base,ch
     return(txid);
 }
 
-uint64_t bityes_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+uint64_t bityes_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     static CURL *cHandle;
- 	char *data,*method,url[1024],cmdbuf[8192],buf[512],digest[33];
-    cJSON *json; uint64_t nonce,txid = 0;
+    char *baserels[][2] = { {"btc","usd"}, {"ltc","usd"} };
+    char *data,*extra,*typestr,*method,pricestr[64],pairstr[64],base[64],rel[64],url[1024],cmdbuf[8192],buf[512],digest[33]; cJSON *json; uint64_t nonce,txid = 0; int32_t type;
     nonce = time(NULL);
+    pricestr[0] = 0;
+    if ( (extra= *retstrp) != 0 )
+        *retstrp = 0;
     if ( dir == 0 )
     {
         method = "get_account_info";
+        sprintf(buf,"access_key=%s&created=%llu&method=%s&secret_key=%s",exchange->apikey,(long long)nonce,method,exchange->apisecret);
+        calc_md5(digest,buf,(int32_t)strlen(buf));
+        sprintf(cmdbuf,"access_key=%s&created=%llu&method=%s&sign=%s",exchange->apikey,(long long)nonce,method,digest);
     }
     else
     {
-        method = "notyet";
+        strcpy(base,_base), strcpy(rel,_rel);
+        tolowercase(base), tolowercase(rel);
+        if ( flipstr_for_exchange(pairstr,"%s%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+        {
+            printf("cant find baserel (%s/%s)\n",base,rel);
+            return(0);
+        }
+        if ( extra != 0 && strcmp(extra,"market") == 0 )
+            method = (dir > 0) ? "buy_market" : "sell_market";
+        else method = (dir > 0) ? "buy" : "sell", sprintf(pricestr,"&price=%.2f",price);
+        if ( strcmp(pairstr,"btcusd") == 0 )
+            type = 1;
+        else if ( strcmp(pairstr,"ltcusd") == 0 )
+            type = 2;
+        else
+        {
+            printf("cant find baserel (%s/%s)\n",base,rel);
+            return(0);
+        }
+        /* access_key	Required	Access Key
+         amount	Required	Order Amount
+         coin_type	Required	Type 1 -BTC 2 -LTC
+         created	Required	Submit 10 digits timestamp
+         method	Required	Request method:  buy_market
+         sign	Required	MD5 Signature
+         Encryption Instance	sign=md5(access_key=xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxx&amount=10&coin_type=1&created=1386844119&method=buy_market&secret_key=xxxxxxxx-xxxxxxxx-xxxxxxxx-xxxxxxxx)
+         trade_password	Optional	No sign signature, payment password is required.
+         */
+        sprintf(buf,"access_key=%s&amount=%.4f&coin_type=%d&created=%llu&method=%s%s&secret_key=%s",exchange->apikey,volume,type,(long long)nonce,method,pricestr,exchange->apisecret);
+        calc_md5(digest,buf,(int32_t)strlen(buf));
+        sprintf(cmdbuf,"access_key=%s&amount=%.4f&coin_type=%d&created=%llu&method=%s%s&sign=%s",exchange->apikey,volume,type,(long long)nonce,method,pricestr,digest);
     }
-    sprintf(buf,"access_key=%s&created=%llu&method=%s&secret_key=%s",exchange->apikey,(long long)nonce,method,exchange->apisecret);
-    calc_md5(digest,buf,(int32_t)strlen(buf));
-    sprintf(cmdbuf,"access_key=%s&created=%llu&method=%s&sign=%s",exchange->apikey,(long long)nonce,method,digest);
     sprintf(url,"https://api.bityes.com/apiv2");
     if ( (data= curl_post(&cHandle,url,0,cmdbuf,"Content-Type:application/x-www-form-urlencoded",0,0,0)) != 0 )
     {
