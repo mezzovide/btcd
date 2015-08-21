@@ -727,7 +727,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         {
             if ( (exchangeptr= find_exchange(0,pairs[i].exchange)) != 0 )
             {
-                printf("%s set supports.%p %p\n",pairs[i].exchange,pairs[i].supports,pairs[i].trade);
+                printf("%p %s set supports.%p %p\n",exchangeptr,pairs[i].exchange,pairs[i].supports,pairs[i].trade);
                 exchangeptr->supports = pairs[i].supports;
                 exchangeptr->trade = pairs[i].trade;
             }

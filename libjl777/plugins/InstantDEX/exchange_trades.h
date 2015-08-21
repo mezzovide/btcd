@@ -580,8 +580,10 @@ https://www.LakeBTC.com/api_v1
     params= (i.e., blank)*/
     
     static CURL *cHandle;
- 	char *data,*method,buf64[512],dest[128],url[1024],cmdbuf[8192],*sig,hdr1[512],hdr2[512],buf[512]; cJSON *json; uint64_t tonce,txid = 0;
+ 	char *data,*method,buf64[4096],params[1024],dest[512],url[1024],cmdbuf[8192],*sig,hdr1[4096],hdr2[4096],buf[4096]; cJSON *json; uint64_t tonce,txid = 0;
     *retstrp = 0;
+    params[0] = 0;
+    printf("%p.%s (%s) (%s) (%s)\n",exchange,exchange->name,exchange->apikey,exchange->apisecret,exchange->userid);
     tonce = ((uint64_t)time(NULL) * 1000000 + ((uint64_t)milliseconds() % 1000) * 1000);
     if ( dir == 0 )
     {
@@ -591,14 +593,19 @@ https://www.LakeBTC.com/api_v1
     {
         method = "notyet";
     }
-    sprintf(buf,"tonce=%llu&accesskey=%s&requestmethod=post&id=123&method=%s&params=",(long long)tonce,exchange->userid,method);
+    sprintf(buf,"tonce=%llu&accesskey=%s&requestmethod=post&id=1&method=%s&params=",(long long)tonce,exchange->userid,method);
     if ( (sig= hmac_sha1_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),buf)) != 0 )
     {
         sprintf(cmdbuf,"%s:%s",exchange->userid,sig);
+        printf("buf.(%s) userid.(%s) secret.(%s) cmdbuf.(%s) sig.(%s)\n",buf,exchange->userid,exchange->apisecret,cmdbuf,sig);
         nn_base64_encode((void *)cmdbuf,strlen(cmdbuf),buf64,sizeof(buf64));
         sprintf(url,"https://www.lakebtc.com/api_v1");
         sprintf(hdr1,"Authorization:Basic %s",buf64);
         sprintf(hdr2,"Json-Rpc-Tonce: %llu",(long long)tonce);
+        //postData="{\"method\":\""+method+"\",\"params\":["+commands+"],\"id\":1}";
+        sprintf(buf,"{\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",method,params);
+        printf("buf64.(%s) buf.(%s)\n",buf64,buf);
+        getchar();
         if ( (data= curl_post(&cHandle,url,0,buf,hdr1,hdr2,0,0)) != 0 )
         {
             printf("submit cmd.(%s) [%s]\n",buf,data);
