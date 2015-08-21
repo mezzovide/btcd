@@ -661,6 +661,26 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 #include "../InstantDEX/exchangeparse.h"
 #include "../InstantDEX/exchange_trades.h"
 
+cJSON *basketitem_json(struct prices777_basket *basket)
+{
+    cJSON *item = cJSON_CreateObject();
+    struct prices777_basket { struct prices777 *prices; double wt; int32_t groupid,groupsize,aski,bidi; char base[64],rel[64]; };
+    jaddstr(item,"base",basket->base);
+    jaddstr(item,"base",basket->rel);
+    jaddnum(item,"group",basket->groupid);
+    jaddnum(item,"wt",basket->wt);
+    return(item);
+}
+
+cJSON *basket_json(struct prices777 *prices)
+{
+    int32_t i; cJSON *array = cJSON_CreateObject();
+    array = cJSON_CreateObject();
+    for (i=0; i<prices->basketsize; i++)
+        jaddi(array,basketitem_json(&prices->basket[i]));
+    return(array);
+}
+
 char *prices777_allorderbooks()
 {
     int32_t i; struct prices777 *prices; char numstr[64]; cJSON *item,*json,*array = cJSON_CreateArray();
@@ -674,6 +694,10 @@ char *prices777_allorderbooks()
         jaddstr(item,"rel",prices->rel);
         sprintf(numstr,"%llu",(long long)prices->relid), jaddstr(item,"relid",numstr);
         jaddstr(item,"exchange",prices->exchange);
+        if ( strcmp(prices->exchange,"basket") == 0 )
+            jadd(item,"basket",basket_json(prices));
+        else if ( strcmp(prices->exchange,"active") == 0 )
+            jadd(item,"active",basket_json(prices));
         jaddi(array,item);
     }
     json = cJSON_CreateObject();
