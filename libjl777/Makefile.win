@@ -72,7 +72,7 @@ PINCLUDES := -Iincludes -Inonportable/win  -I../nanomsg/src -I../nanomsg/src/uti
 
 _echodemo := rm agents/echodemo; gcc -o agents/echodemo -O2 $(PINCLUDES) agents/echodemo.c $(PLIBS)
 
-_api := mkdir -p $(PBINPATH)/cgi; rm $(PBINPATH)/cgi/*; $(CC) -o $(PBINPATH)/cgi/api.exe -O2 $(PINCLUDES) agents/api_main.c ccgi/ccgi.c coins/bitcoind_RPC.c  $(PLIBS); ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/nxt.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/nxts.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/port.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/ports.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/stringified.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/InstantDEX.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/echodemo.exe
+_api := mkdir -p $(PBINPATH)/cgi; rm $(PBINPATH)/cgi/*; $(CC) -o $(PBINPATH)/cgi/api.exe -O2 $(PINCLUDES) agents/api_main.c ccgi/ccgi.c ccgi/prefork.c coins/bitcoind_RPC.c  $(PLIBS); ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/nxt.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/nxts.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/port.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/ports.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/stringified.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/InstantDEX.exe; ln $(PBINPATH)/cgi/api.exe $(PBINPATH)/cgi/echodemo.exe
 
 _msc := rm agents/msc; gcc -o agents/msc -O2 $(PINCLUDES) agents/two/msc.c $(PLIBS)
 
