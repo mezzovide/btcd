@@ -519,7 +519,7 @@ void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB
 
 void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJSON *asks,int32_t maxdepth,char *pricefield,char *volfield,uint32_t reftimestamp)
 {
-    cJSON *item; int32_t i,slot,n=0,m=0,dir,bidask,numitems; uint64_t orderid; uint32_t timestamp; double price,volume,hbla = 0.;
+    cJSON *item; int32_t i,slot,n=0,m=0,dir,bidask,numitems; uint64_t orderid,quoteid; uint32_t timestamp; double price,volume,hbla = 0.;
     struct prices777_basketinfo OB; struct prices777_orderentry *gp; struct prices777_order *order;
     memset(&OB,0,sizeof(OB));
     if ( reftimestamp == 0 )
@@ -544,7 +544,7 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
         for (bidask=0; bidask<2; bidask++)
         {
             price = volume = 0.;
-            orderid = 0;
+            orderid = quoteid = 0;
             dir = (bidask == 0) ? 1 : -1;
             if ( bidask == 0 && i >= n )
                 continue;
@@ -558,12 +558,14 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
             if ( pricefield != 0 && volfield != 0 )
                 price = jdouble(item,pricefield), volume = jdouble(item,volfield);
             else if ( is_cJSON_Array(item) != 0 && (numitems= cJSON_GetArraySize(item)) != 0 ) // big assumptions about order within nested array!
-                price = jdouble(jitem(item,0),0), volume = jdouble(jitem(item,1),0), orderid = j64bits(jitem(item,2),0);
+                price = jdouble(jitem(item,0),0), volume = jdouble(jitem(item,1),0), orderid = j64bits(jitem(item,2),0), quoteid = j64bits(jitem(item,3),0);
             else continue;
+            if ( quoteid == 0 )
+                quoteid = orderid;
             if ( price > SMALLVAL && volume > SMALLVAL )
             {
                 order = (bidask == 0) ? &gp->bid : &gp->ask;
-                order->s.price = price, order->s.vol = volume, order->source = prices, order->s.timestamp = OB.timestamp, order->wt = 1, order->id = orderid;
+                order->s.price = price, order->s.vol = volume, order->source = prices, order->s.timestamp = OB.timestamp, order->wt = 1, order->id = orderid, order->s.quoteid = quoteid;
                 if ( bidask == 0 )
                     order->slot_ba = (OB.numbids++ << 1);
                 else order->slot_ba = (OB.numasks++ << 1) | 1;
