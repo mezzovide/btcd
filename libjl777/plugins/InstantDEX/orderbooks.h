@@ -277,13 +277,15 @@ int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendq
 
 void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t bidask,double price,double volume,uint64_t orderid,uint64_t quoteid)
 {
-    uint64_t baseqty,relqty; char basec,relc;
+    uint64_t baseqty,relqty; char basec,relc; struct InstantDEX_quote *iQ;
     jaddnum(item,"group",group);
     jaddstr(item,"exchange",prices->exchange);
     if ( strcmp(prices->exchange,"nxtae") == 0 || strcmp(prices->exchange,"unconf") == 0 || strcmp(prices->exchange,"InstantDEX") == 0 )
     {
         jadd64bits(item,prices->type == 5 ? "currency" : "asset",prices->baseid);
-        jadd64bits(item,"offerNXT",SUPERNET.my64bits);
+        if ( (iQ= find_iQ(quoteid)) != 0 )
+            jadd64bits(item,"offerNXT",iQ->s.offerNXT);
+        else printf("cant find quoteid.%llu\n",(long long)quoteid);
         jadd64bits(item,"baseid",prices->baseid), jadd64bits(item,"relid",prices->relid);
         if ( strcmp(prices->exchange,"InstantDEX") == 0 )
         {
