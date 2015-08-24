@@ -303,6 +303,7 @@ int32_t bidask_parse(char *exchangestr,char *name,char *base,char *rel,char *gui
     iQ->s.basebits = stringbits(base);
     iQ->s.relbits = stringbits(rel);
     iQ->s.offerNXT = j64bits(json,"offerNXT");
+    printf("GOT OFFERNXT.(%llu)\n",(long long)iQ->s.offerNXT);
     iQ->s.quoteid = j64bits(json,"quoteid");
     if ( (methodstr= jstr(json,"method")) != 0 && (strcmp(methodstr,"placeask") == 0 || strcmp(methodstr,"ask") == 0) )
         iQ->s.isask = 1;
