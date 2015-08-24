@@ -285,7 +285,7 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
         jadd64bits(item,prices->type == 5 ? "currency" : "asset",prices->baseid);
         if ( (iQ= find_iQ(quoteid)) != 0 )
             jadd64bits(item,"offerNXT",iQ->s.offerNXT);
-        else printf("cant find quoteid.%llu\n",(long long)quoteid);
+        else printf("cant find offerNXT.%llu\n",(long long)quoteid);
         jadd64bits(item,"baseid",prices->baseid), jadd64bits(item,"relid",prices->relid);
         if ( strcmp(prices->exchange,"InstantDEX") == 0 )
         {
@@ -558,7 +558,7 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
             if ( pricefield != 0 && volfield != 0 )
                 price = jdouble(item,pricefield), volume = jdouble(item,volfield);
             else if ( is_cJSON_Array(item) != 0 && (numitems= cJSON_GetArraySize(item)) != 0 ) // big assumptions about order within nested array!
-                price = jdouble(jitem(item,0),0), volume = jdouble(jitem(item,1),0), orderid = j64bits(jitem(item,2),0), quoteid = j64bits(jitem(item,3),0);
+                price = jdouble(jitem(item,0),0), volume = jdouble(jitem(item,1),0), orderid = j64bits(jitem(item,2),0);
             else continue;
             if ( quoteid == 0 )
                 quoteid = orderid;
