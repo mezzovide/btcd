@@ -1,9 +1,18 @@
-//
-//  trades.h
-//
-//  Created by jl777 on 7/9/14.
-//  Copyright (c) 2014 jl777. All rights reserved.
-//
+/******************************************************************************
+ * Copyright © 2014-2015 The SuperNET Developers.                             *
+ *                                                                            *
+ * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
+ * the top-level directory of this distribution for the individual copyright  *
+ * holder information and the developer policies on copyright and licensing.  *
+ *                                                                            *
+ * Unless otherwise agreed in a custom licensing agreement, no part of the    *
+ * Nxt software, including this file, may be copied, modified, propagated,    *
+ * or distributed except according to the terms contained in the LICENSE file *
+ *                                                                            *
+ * Removal or modification of this copyright notice is prohibited.            *
+ *                                                                            *
+ ******************************************************************************/
+
 
 #ifndef xcode_trades_h
 #define xcode_trades_h
@@ -408,7 +417,7 @@ int32_t substr128(char *dest,char *src)
 
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight)
 {
-    char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; cJSON *json; uint64_t phasecost = 0;
+    char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; uint8_t msgbuf[17]; cJSON *json; int32_t len; uint64_t phasecost = 0;
     expand_nxt64bits(destNXTaddr,dest64bits);
     memset(tx,0,sizeof(*tx));
     if ( phaselink!= 0 && phaselink[0] != 0 && finishheight <= _get_NXTheight(0) )
@@ -436,8 +445,10 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
     }
     if ( quoteid != 0 )
     {
-        init_hexbytes_noT(hexstr,(void *)&orderid,sizeof(orderid));
-        init_hexbytes_noT(hexstr+16,(void *)&quoteid,sizeof(quoteid));
+        len = 0;
+        len = txind777_txbuf(msgbuf,len,orderid,sizeof(orderid));
+        len = txind777_txbuf(msgbuf,len,quoteid,sizeof(quoteid));
+        init_hexbytes_noT(hexstr,msgbuf,len);
         sprintf(cmd+strlen(cmd),"&messageIsText=true&message=%s",hexstr);
     }
     if ( cmd[0] != 0 )
@@ -477,7 +488,8 @@ uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *
         finishheight += _get_NXTheight(0);
     swapstr[0] = triggertx[0] = txbytes[0] = 0;
     *txidp = 0;
-    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,order->s.quoteid,INSTANTDEX_TRIGGERDEADLINE,triggerhash,0,0);
+    printf("genNXTtx.(%llu/%llu)\n",(long long)orderid,(long long)order->s.quoteid);
+    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,INSTANTDEX_TRIGGERDEADLINE,triggerhash,0,0);
     strcpy(triggertx,fee.txbytes);
     if ( order->s.baseamount < 0 )
         assetidbits = order->s.baseid, qty = -order->s.baseamount, otherassetbits = order->s.relid, otherqty = order->s.relamount;
@@ -562,6 +574,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         pend->tradesjson = cJSON_Parse(swapbuf);
         pend->type = 'T';
         iQ->s.swap = 1;
+        printf("quoteid.%llu SWAP and pending.%d\n",(long long)iQ->s.quoteid,iQ->s.pending);
         if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
             free(str);
         InstantDEX_history(0,pend,swapbuf);
@@ -593,13 +606,13 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
     cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid,recvasset; int64_t recvqty; uint32_t i,j,finishheight; struct InstantDEX_quote *iQ,_iQ;
     copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
     //printf("got (%s)\n",origargstr);
-    if ( 1 ) //strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
+    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
         orderid = j64bits(origjson,"orderid");
         quoteid = j64bits(origjson,"quoteid");
         if ( (iQ= find_iQ(quoteid)) == 0 )
         {
-            printf("cant find quoteid.%llu\n",(long long)quoteid);
+            printf("swap_func: cant find quoteid.%llu\n",(long long)quoteid);
             iQ = &_iQ, memset(iQ,0,sizeof(*iQ));
             //return(clonestr("{\"error\":\"cant find quoteid\"}"));
         }
@@ -646,11 +659,12 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 // https://nxtforum.org/nrs-releases/nrs-v1-5-15/msg191715/#msg191715
                                 struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *str,*txstr=0,*txstr2=0; struct pending_trade *pend;
                                 if ( iQ->s.isask == 0 )
-                                    recvasset = iQ->s.baseid, recvqty = -iQ->s.baseamount;
-                                else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount;
+                                    recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount / get_assetmult(recvasset);
+                                else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount / get_assetmult(recvasset);
+                                printf("GEN RESPONDTX (other.%llu %lld) recv.(%llu %lld) orderid.%llu/%llx quoteid.%llu/%llx\n",(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
                                 if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
                                 {
-                                    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,INSTANTDEX_TRIGGERDEADLINE,fullhash,0,0);
+                                    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,INSTANTDEX_TRIGGERDEADLINE,fullhash,0,0);
                                     gen_NXTtx(&responsetx,calc_nxt64bits(offerNXT),otherbits,otherqty,orderid,quoteid,INSTANTDEX_TRIGGERDEADLINE,triggerhash,fullhash,finishheight);
                                     if ( (fee.txid= issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET)) != 0 )
                                     {
@@ -724,6 +738,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
     uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; struct InstantDEX_quote *iQ;
     decode_hex((void *)&orderid,sizeof(orderid),hexstr);
     decode_hex((void *)&quoteid,sizeof(quoteid),hexstr+16);
+    //printf("match_unconfirmed.(%s) orderid.%llu %llx quoteid.%llu %llx\n",hexstr,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
         printf("match unconfirmed %llu/%llu feepaid.%d responded.%d sender.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ->s.feepaid,iQ->s.responded,sender,SUPERNET.NXTADDR);
@@ -844,8 +859,6 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade,uint64
     {
         exchange = prices->exchange;
         swapbuf[0] = 0;
-        if ( strcmp(exchange,INSTANTDEX_NAME) == 0 )
-            prices777_swapbuf(&txid,triggertx,txbytes,swapbuf,prices,order,orderid,extra==0?0:atoi(extra));
         if ( dotrade == 0 )
         {
             if ( strcmp(exchange,INSTANTDEX_NAME) != 0 )
@@ -860,7 +873,11 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade,uint64
                 }
                 return(cJSON_Parse(buf));
             }
-            else return(cJSON_Parse(swapbuf));
+            else
+            {
+                prices777_swapbuf(&txid,triggertx,txbytes,swapbuf,prices,order,orderid,extra==0?0:atoi(extra));
+                return(cJSON_Parse(swapbuf));
+            }
         }
         retstr = prices777_trade(prices,order->wt,order->s.price,order->s.vol,0,order,orderid,extra);
         if ( retstr != 0 )

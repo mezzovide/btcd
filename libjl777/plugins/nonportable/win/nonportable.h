@@ -1,3 +1,5 @@
+// MIT license
+
 #ifndef NONPORTABLE_WIN_H
 #define NONPORTABLE_WIN_H
 

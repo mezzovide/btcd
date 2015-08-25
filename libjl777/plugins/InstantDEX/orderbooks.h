@@ -1,9 +1,18 @@
-//
-//  orderbooks.h
-//
-//  Created by jl777 on 7/9/14.
-//  Copyright (c) 2014 jl777. All rights reserved.
-//
+/******************************************************************************
+ * Copyright © 2014-2015 The SuperNET Developers.                             *
+ *                                                                            *
+ * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
+ * the top-level directory of this distribution for the individual copyright  *
+ * holder information and the developer policies on copyright and licensing.  *
+ *                                                                            *
+ * Unless otherwise agreed in a custom licensing agreement, no part of the    *
+ * Nxt software, including this file, may be copied, modified, propagated,    *
+ * or distributed except according to the terms contained in the LICENSE file *
+ *                                                                            *
+ * Removal or modification of this copyright notice is prohibited.            *
+ *                                                                            *
+ ******************************************************************************/
+
 
 #ifndef xcode_orderbooks_h
 #define xcode_orderbooks_h
@@ -285,7 +294,7 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
         jadd64bits(item,prices->type == 5 ? "currency" : "asset",prices->baseid);
         if ( (iQ= find_iQ(quoteid)) != 0 )
             jadd64bits(item,"offerNXT",iQ->s.offerNXT);
-        else printf("cant find quoteid.%llu\n",(long long)quoteid);
+        else if ( quoteid != 0 ) printf("cant find offerNXT.%llu\n",(long long)quoteid);
         jadd64bits(item,"baseid",prices->baseid), jadd64bits(item,"relid",prices->relid);
         if ( strcmp(prices->exchange,"InstantDEX") == 0 )
         {
@@ -519,7 +528,7 @@ void prices777_jsonstrs(struct prices777 *prices,struct prices777_basketinfo *OB
 
 void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJSON *asks,int32_t maxdepth,char *pricefield,char *volfield,uint32_t reftimestamp)
 {
-    cJSON *item; int32_t i,slot,n=0,m=0,dir,bidask,numitems; uint64_t orderid; uint32_t timestamp; double price,volume,hbla = 0.;
+    cJSON *item; int32_t i,slot,n=0,m=0,dir,bidask,numitems; uint64_t orderid,quoteid; uint32_t timestamp; double price,volume,hbla = 0.;
     struct prices777_basketinfo OB; struct prices777_orderentry *gp; struct prices777_order *order;
     memset(&OB,0,sizeof(OB));
     if ( reftimestamp == 0 )
@@ -544,7 +553,7 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
         for (bidask=0; bidask<2; bidask++)
         {
             price = volume = 0.;
-            orderid = 0;
+            orderid = quoteid = 0;
             dir = (bidask == 0) ? 1 : -1;
             if ( bidask == 0 && i >= n )
                 continue;
@@ -560,10 +569,12 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
             else if ( is_cJSON_Array(item) != 0 && (numitems= cJSON_GetArraySize(item)) != 0 ) // big assumptions about order within nested array!
                 price = jdouble(jitem(item,0),0), volume = jdouble(jitem(item,1),0), orderid = j64bits(jitem(item,2),0);
             else continue;
+            if ( quoteid == 0 )
+                quoteid = orderid;
             if ( price > SMALLVAL && volume > SMALLVAL )
             {
                 order = (bidask == 0) ? &gp->bid : &gp->ask;
-                order->s.price = price, order->s.vol = volume, order->source = prices, order->s.timestamp = OB.timestamp, order->wt = 1, order->id = orderid;
+                order->s.price = price, order->s.vol = volume, order->source = prices, order->s.timestamp = OB.timestamp, order->wt = 1, order->id = orderid, order->s.quoteid = quoteid;
                 if ( bidask == 0 )
                     order->slot_ba = (OB.numbids++ << 1);
                 else order->slot_ba = (OB.numasks++ << 1) | 1;
@@ -1101,7 +1112,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                     {
                         timestamp = get_blockutime(juint(attachment,"height"));
                         amount = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"amountNQT"));
-                         assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
+                        assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
                         comment[0] = 0;
                         qty = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"quantityQNT"));
                         priceNQT = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"priceNQT"));

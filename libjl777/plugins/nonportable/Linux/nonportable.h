@@ -1,3 +1,5 @@
+// MIT license
+
 #ifndef _NONPORTABLELINUX_H
 #define _NONPORTABLELINUX_H
 
