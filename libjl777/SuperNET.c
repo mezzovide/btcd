@@ -610,6 +610,7 @@ int SuperNET_start(char *fname,char *myip)
 int32_t SuperNET_broadcast(char *msg,int32_t duration) { printf(">>>>>>>>> BROADCAST.(%s)\n",msg); return(0); }
 int32_t SuperNET_narrowcast(char *destip,unsigned char *msg,int32_t len) { printf(">>>>>>>>>>> NARROWCAST.(%s) -> (%s)\n",msg,destip);  return(0); }
 
+#ifdef zkp
 #define DEFINES_ONLY
 #include "NXT777.c"
 #undef DEFINES_ONLY
@@ -711,6 +712,7 @@ void zktest()
                                           results[1], results[2])
 */
 }
+#endif
 
 int main(int argc,const char *argv[])
 {
