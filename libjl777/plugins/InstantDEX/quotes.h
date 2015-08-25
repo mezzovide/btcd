@@ -524,6 +524,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
             {
                 printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
                 iQ = create_iQ(iQ);
+                prices777_InstantDEX(prices,MAX_DEPTH);
                 printf("got create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
             }
             return(retstr);

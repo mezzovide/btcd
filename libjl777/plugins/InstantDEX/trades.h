@@ -654,9 +654,10 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             {
                                 // https://nxtforum.org/nrs-releases/nrs-v1-5-15/msg191715/#msg191715
                                 struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *str,*txstr=0,*txstr2=0; struct pending_trade *pend;
-                                if ( iQ->s.isask != 0 )
-                                    recvasset = iQ->s.baseid, recvqty = -iQ->s.baseamount;
+                                if ( iQ->s.isask == 0 )
+                                    recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount, otherqty = -otherqty;
                                 else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount;
+                                printf("GEN RESPONDTX (other.%llu %lld) recv.(%llu %lld)\n",(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty);
                                 if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
                                 {
                                     gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,INSTANTDEX_TRIGGERDEADLINE,fullhash,0,0);
@@ -853,8 +854,6 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade,uint64
     {
         exchange = prices->exchange;
         swapbuf[0] = 0;
-        if ( strcmp(exchange,INSTANTDEX_NAME) == 0 )
-            prices777_swapbuf(&txid,triggertx,txbytes,swapbuf,prices,order,orderid,extra==0?0:atoi(extra));
         if ( dotrade == 0 )
         {
             if ( strcmp(exchange,INSTANTDEX_NAME) != 0 )
@@ -869,7 +868,11 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade,uint64
                 }
                 return(cJSON_Parse(buf));
             }
-            else return(cJSON_Parse(swapbuf));
+            else
+            {
+                prices777_swapbuf(&txid,triggertx,txbytes,swapbuf,prices,order,orderid,extra==0?0:atoi(extra));
+                return(cJSON_Parse(swapbuf));
+            }
         }
         retstr = prices777_trade(prices,order->wt,order->s.price,order->s.vol,0,order,orderid,extra);
         if ( retstr != 0 )
