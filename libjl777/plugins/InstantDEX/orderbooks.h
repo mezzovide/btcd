@@ -1112,7 +1112,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                     {
                         timestamp = get_blockutime(juint(attachment,"height"));
                         amount = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"amountNQT"));
-                         assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
+                        assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
                         comment[0] = 0;
                         qty = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"quantityQNT"));
                         priceNQT = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"priceNQT"));

@@ -738,8 +738,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
     uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; struct InstantDEX_quote *iQ;
     decode_hex((void *)&orderid,sizeof(orderid),hexstr);
     decode_hex((void *)&quoteid,sizeof(quoteid),hexstr+16);
-    //if ( quoteid != 4879255860373360996 && quoteid != 4687728948689161857 )
-    printf("match_unconfirmed orderid.%llu %llx quoteid.%llu %llx\n",(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
+    //printf("match_unconfirmed.(%s) orderid.%llu %llx quoteid.%llu %llx\n",hexstr,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
         printf("match unconfirmed %llu/%llu feepaid.%d responded.%d sender.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ->s.feepaid,iQ->s.responded,sender,SUPERNET.NXTADDR);
