@@ -602,7 +602,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
     cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid,recvasset; int64_t recvqty; uint32_t i,j,finishheight; struct InstantDEX_quote *iQ,_iQ;
     copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
     //printf("got (%s)\n",origargstr);
-    if ( 1 ) //strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
+    if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
         orderid = j64bits(origjson,"orderid");
         quoteid = j64bits(origjson,"quoteid");
@@ -655,7 +655,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 // https://nxtforum.org/nrs-releases/nrs-v1-5-15/msg191715/#msg191715
                                 struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *str,*txstr=0,*txstr2=0; struct pending_trade *pend;
                                 if ( iQ->s.isask == 0 )
-                                    recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount, otherqty = -otherqty;
+                                    recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount;
                                 else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount;
                                 printf("GEN RESPONDTX (other.%llu %lld) recv.(%llu %lld)\n",(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty);
                                 if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
