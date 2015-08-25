@@ -572,6 +572,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         pend->tradesjson = cJSON_Parse(swapbuf);
         pend->type = 'T';
         iQ->s.swap = 1;
+        printf("quoteid.%llu SWAP and pending.%d\n",(long long)iQ->s.quoteid,iQ->s.pending);
         if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
             free(str);
         InstantDEX_history(0,pend,swapbuf);
@@ -735,6 +736,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
     uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; struct InstantDEX_quote *iQ;
     decode_hex((void *)&orderid,sizeof(orderid),hexstr);
     decode_hex((void *)&quoteid,sizeof(quoteid),hexstr+16);
+    if ( quoteid != 4879255860373360996 && quoteid != 4687728948689161857 )
     printf("match_unconfirmed orderid.%llu quoteid.%llu\n",(long long)orderid,(long long)quoteid);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
