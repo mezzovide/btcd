@@ -417,7 +417,7 @@ int32_t substr128(char *dest,char *src)
 
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight)
 {
-    char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; cJSON *json; uint64_t phasecost = 0;
+    char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; uint8_t msgbuf[17]; cJSON *json; int32_t len; uint64_t phasecost = 0;
     expand_nxt64bits(destNXTaddr,dest64bits);
     memset(tx,0,sizeof(*tx));
     if ( phaselink!= 0 && phaselink[0] != 0 && finishheight <= _get_NXTheight(0) )
@@ -445,8 +445,10 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
     }
     if ( quoteid != 0 )
     {
-        init_hexbytes_noT(hexstr,(void *)&orderid,sizeof(orderid));
-        init_hexbytes_noT(hexstr+16,(void *)&quoteid,sizeof(quoteid));
+        len = 0;
+        len = txind777_txbuf(msgbuf,len,orderid,sizeof(orderid));
+        len = txind777_txbuf(msgbuf,len,quoteid,sizeof(quoteid));
+        init_hexbytes_noT(hexstr,msgbuf,len);
         sprintf(cmd+strlen(cmd),"&messageIsText=true&message=%s",hexstr);
     }
     if ( cmd[0] != 0 )
@@ -736,8 +738,8 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
     uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; struct InstantDEX_quote *iQ;
     decode_hex((void *)&orderid,sizeof(orderid),hexstr);
     decode_hex((void *)&quoteid,sizeof(quoteid),hexstr+16);
-    if ( quoteid != 4879255860373360996 && quoteid != 4687728948689161857 )
-    printf("match_unconfirmed orderid.%llu quoteid.%llu\n",(long long)orderid,(long long)quoteid);
+    //if ( quoteid != 4879255860373360996 && quoteid != 4687728948689161857 )
+    printf("match_unconfirmed orderid.%llu %llx quoteid.%llu %llx\n",(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
         printf("match unconfirmed %llu/%llu feepaid.%d responded.%d sender.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ->s.feepaid,iQ->s.responded,sender,SUPERNET.NXTADDR);
