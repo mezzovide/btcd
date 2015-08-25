@@ -415,11 +415,6 @@ int32_t substr128(char *dest,char *src)
     return(0);
 }
 
-
-// for bigger value ones, the finish height at 10, 20 or even 30
-// but I should scale the duration accordingly too at the larger finish heights
-// with finish height 30 blocks ahead and duration of 6 hours, then it is very unlikely for any problems
-
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight)
 {
     char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; uint8_t msgbuf[17]; cJSON *json; int32_t len; uint64_t phasecost = 0;
@@ -464,10 +459,10 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
             sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s",reftx);
         if ( phaselink != 0 && phaselink[0] != 0 )
             sprintf(cmd+strlen(cmd),"&phased=true&phasingFinishHeight=%u&phasingVotingModel=4&phasingQuorum=1&phasingLinkedFullHash=%s",finishheight,phaselink);
-printf("generated cmd.(%s)\n",cmd);
+//printf("generated cmd.(%s)\n",cmd);
         if ( (retstr= issue_NXTPOST(cmd)) != 0 )
         {
-printf("(%s)\n",retstr);
+//printf("(%s)\n",retstr);
             if ( (json= cJSON_Parse(retstr)) != 0 )
             {
                 if ( extract_cJSON_str(tx->txbytes,MAX_JSON_FIELD,json,"transactionBytes") > 0 &&
@@ -503,7 +498,7 @@ uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *
     if ( order->s.baseamount < 0 )
         assetidbits = order->s.baseid, qty = -order->s.baseamount, otherassetbits = order->s.relid, otherqty = order->s.relamount;
     else if ( order->s.relamount < 0 )
-        assetidbits = order->s.baseid, qty = -order->s.relamount, otherassetbits = order->s.baseid, otherqty = order->s.baseamount;
+        assetidbits = order->s.relid, qty = -order->s.relamount, otherassetbits = order->s.baseid, otherqty = order->s.baseamount;
     if ( assetidbits != 0 && qty != 0 )
     {
         if ( triggerhash == 0 || triggerhash[0] == 0 )
@@ -669,7 +664,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *str,*txstr=0,*txstr2=0; struct pending_trade *pend;
                                 if ( iQ->s.isask == 0 )
                                     recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount / get_assetmult(recvasset);
-                                else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount / get_assetmult(recvasset);
+                                else recvasset = iQ->s.relid, recvqty = iQ->s.relamount / get_assetmult(recvasset);
                                 printf("GEN RESPONDTX deadline.%d (other.%llu %lld) recv.(%llu %lld) orderid.%llu/%llx quoteid.%llu/%llx\n",deadline,(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
                                 if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
                                 {
