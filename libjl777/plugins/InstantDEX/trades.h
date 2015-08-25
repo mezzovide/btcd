@@ -415,6 +415,11 @@ int32_t substr128(char *dest,char *src)
     return(0);
 }
 
+
+// for bigger value ones, the finish height at 10, 20 or even 30
+// but I should scale the duration accordingly too at the larger finish heights
+// with finish height 30 blocks ahead and duration of 6 hours, then it is very unlikely for any problems
+
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight)
 {
     char secret[8192],cmd[16384],destNXTaddr[64],assetidstr[64],hexstr[64],*retstr; uint8_t msgbuf[17]; cJSON *json; int32_t len; uint64_t phasecost = 0;
@@ -483,13 +488,17 @@ printf("(%s)\n",retstr);
 
 uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *swapstr,uint64_t orderid,struct prices777_order *order,char *triggerhash,char *phaselink,int32_t finishheight)
 {
-    struct NXTtx fee,sendtx; uint64_t otherqty = 0,otherassetbits = 0,assetidbits = 0,qty = 0;
+    struct NXTtx fee,sendtx; uint64_t otherqty = 0,otherassetbits = 0,assetidbits = 0,qty = 0; int32_t deadline = INSTANTDEX_TRIGGERDEADLINE;
     if ( finishheight != 0 )
+    {
+        if ( finishheight > FINISH_HEIGHT )
+            deadline *= (finishheight / FINISH_HEIGHT);
         finishheight += _get_NXTheight(0);
+    }
     swapstr[0] = triggertx[0] = txbytes[0] = 0;
     *txidp = 0;
     printf("genNXTtx.(%llu/%llu)\n",(long long)orderid,(long long)order->s.quoteid);
-    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,INSTANTDEX_TRIGGERDEADLINE,triggerhash,0,0);
+    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,deadline,triggerhash,0,0);
     strcpy(triggertx,fee.txbytes);
     if ( order->s.baseamount < 0 )
         assetidbits = order->s.baseid, qty = -order->s.baseamount, otherassetbits = order->s.relid, otherqty = order->s.relamount;
@@ -499,7 +508,7 @@ uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *
     {
         if ( triggerhash == 0 || triggerhash[0] == 0 )
             triggerhash = fee.fullhash;
-        gen_NXTtx(&sendtx,order->s.offerNXT,assetidbits,qty,orderid,order->s.quoteid,INSTANTDEX_TRIGGERDEADLINE,fee.fullhash,phaselink,finishheight);
+        gen_NXTtx(&sendtx,order->s.offerNXT,assetidbits,qty,orderid,order->s.quoteid,deadline,fee.fullhash,phaselink,finishheight);
         *txidp = sendtx.txid;
         strcpy(txbytes,sendtx.txbytes);
         sprintf(swapstr,",\"F\":\"%u\",\"T\":\"%s\",\"FH\":\"%s\",\"U\":\"%s\",\"S\":\"%s\",\"a\":\"%llu\",\"q\":\"%llu\"}",finishheight,fee.fullhash,sendtx.fullhash,sendtx.utxbytes2,sendtx.sighash,(long long)otherassetbits,(long long)otherqty);
@@ -603,7 +612,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
 char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
 {
     char offerNXT[MAX_JSON_FIELD],UTX[MAX_JSON_FIELD],calchash[256],*triggerhash,*utx,*sighash,*jsonstr,*parsed,*fullhash,*cmpstr;
-    cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid,recvasset; int64_t recvqty; uint32_t i,j,finishheight; struct InstantDEX_quote *iQ,_iQ;
+    cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid,recvasset; int64_t recvqty; uint32_t i,j,deadline,finishheight; struct InstantDEX_quote *iQ,_iQ;
     copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
     //printf("got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
@@ -654,18 +663,18 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                         //printf("iQ (%llu/%llu) otherbits.%llu qty %llu PARSED OFFER.(%s) triggerhash.(%s) (%s) offer sender.%s\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)otherbits,(long long)otherqty,parsed,fullhash,calchash,sender);
                         if ( (txobj= cJSON_Parse(parsed)) != 0 )
                         {
-                            if ( (cmpstr= jstr(txobj,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 )
+                            if ( (cmpstr= jstr(txobj,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 && (deadline= juint(txobj,"deadline")) > 0 )
                             {
                                 // https://nxtforum.org/nrs-releases/nrs-v1-5-15/msg191715/#msg191715
                                 struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *str,*txstr=0,*txstr2=0; struct pending_trade *pend;
                                 if ( iQ->s.isask == 0 )
                                     recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount / get_assetmult(recvasset);
                                 else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount / get_assetmult(recvasset);
-                                printf("GEN RESPONDTX (other.%llu %lld) recv.(%llu %lld) orderid.%llu/%llx quoteid.%llu/%llx\n",(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
+                                printf("GEN RESPONDTX deadline.%d (other.%llu %lld) recv.(%llu %lld) orderid.%llu/%llx quoteid.%llu/%llx\n",deadline,(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
                                 if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
                                 {
-                                    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,INSTANTDEX_TRIGGERDEADLINE,fullhash,0,0);
-                                    gen_NXTtx(&responsetx,calc_nxt64bits(offerNXT),otherbits,otherqty,orderid,quoteid,INSTANTDEX_TRIGGERDEADLINE,triggerhash,fullhash,finishheight);
+                                    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,deadline,fullhash,0,0);
+                                    gen_NXTtx(&responsetx,calc_nxt64bits(offerNXT),otherbits,otherqty,orderid,quoteid,deadline,triggerhash,fullhash,finishheight);
                                     if ( (fee.txid= issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET)) != 0 )
                                     {
                                         if ( (responsetx.txid= issue_broadcastTransaction(&errcode2,&txstr2,responsetx.txbytes,SUPERNET.NXTACCTSECRET)) != 0 )
@@ -735,6 +744,7 @@ int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quot
 
 int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
 {
+    // ok, the bug here is that on a delayed respondtx, the originator should refuse to release the trigger (and the money tx)
     uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; struct InstantDEX_quote *iQ;
     decode_hex((void *)&orderid,sizeof(orderid),hexstr);
     decode_hex((void *)&quoteid,sizeof(quoteid),hexstr+16);
