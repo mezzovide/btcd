@@ -759,14 +759,16 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
             {
                 if ( iQ->s.isask != 0 )
                 {
-                    sendasset = iQ->s.relid, sendqty = -iQ->s.relamount;
-                    recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount;
+                    sendasset = iQ->s.relid, sendqty = iQ->s.relamount;
+                    recvasset = iQ->s.baseid, recvqty = -iQ->s.baseamount;
                 }
                 else
                 {
                     sendasset = iQ->s.baseid, sendqty = -iQ->s.baseamount;
                     recvasset = iQ->s.relid, recvqty = iQ->s.relamount;
                 }
+                sendqty /= get_assetmult(sendasset);
+                recvqty /= get_assetmult(recvasset);
                 printf("iQ: %llu/%llu %lld/%lld | recv %llu %lld offerNXT.%llu\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)iQ->s.baseamount,(long long)iQ->s.relamount,(long long)recvasset,(long long)recvqty,(long long)iQ->s.offerNXT);
                 if ( InstantDEX_verify(SUPERNET.my64bits,sendasset,sendqty,txobj,recvasset,recvqty) == 0 )
                 {
