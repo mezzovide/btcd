@@ -661,7 +661,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 if ( iQ->s.isask == 0 )
                                     recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount / get_assetmult(recvasset);
                                 else recvasset = iQ->s.relid, recvqty = -iQ->s.relamount / get_assetmult(recvasset);
-                                printf("GEN RESPONDTX (other.%llu %lld) recv.(%llu %lld) orderid.%llu quoteid.%llu\n",(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)quoteid);
+                                printf("GEN RESPONDTX (other.%llu %lld) recv.(%llu %lld) orderid.%llu/%llx quoteid.%llu/%llx\n",(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
                                 if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
                                 {
                                     gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,INSTANTDEX_TRIGGERDEADLINE,fullhash,0,0);
