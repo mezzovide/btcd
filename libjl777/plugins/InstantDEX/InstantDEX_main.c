@@ -542,7 +542,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 {
     char *resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
-    if ( Debuglevel > 2 )
+    //if ( Debuglevel > 2 )
         fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s) initflag.%d\n",plugin->name,jsonstr,initflag);
     if ( initflag > 0 )
     {

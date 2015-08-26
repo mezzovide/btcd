@@ -606,14 +606,14 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
     char offerNXT[MAX_JSON_FIELD],UTX[MAX_JSON_FIELD],calchash[256],*triggerhash,*utx,*sighash,*jsonstr,*parsed,*fullhash,*cmpstr;
     cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid,recvasset; int64_t recvqty; uint32_t i,j,deadline,timestamp,now,finishheight; struct InstantDEX_quote *iQ,_iQ;
     copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
-    //printf("got (%s)\n",origargstr);
+    printf("swap_func got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
         orderid = j64bits(origjson,"orderid");
         quoteid = j64bits(origjson,"quoteid");
         if ( (iQ= find_iQ(quoteid)) == 0 )
         {
-            printf("swap_func: cant find quoteid.%llu\n",(long long)quoteid);
+            fprintf(stderr,"swap_func: cant find quoteid.%llu\n",(long long)quoteid);
             iQ = &_iQ, memset(iQ,0,sizeof(*iQ));
             //return(clonestr("{\"error\":\"cant find quoteid\"}"));
         }
@@ -699,15 +699,15 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                     free(txstr);
                                 if ( txstr2 != 0 )
                                     free(txstr2);
-                            }
+                            } else fprintf(stderr,"swap rejects tx deadline %d >= INSTANTDEX_TRIGGERDEADLINE/2 && (now %d - %d timestamp) %d < 60\n",deadline,now,timestamp,now-timestamp);
                             free_json(txobj);
-                        }
-                    }
-                } else printf("mismatch (%s) != (%s)\n",calchash,fullhash);
+                        } else fprintf(stderr,"swap cant parse tx.(%s)\n",parsed);
+                    } else fprintf(stderr,"swap cant parse UTX.(%s)\n",UTX);
+                } else fprintf(stderr,"mismatch (%s) != (%s)\n",calchash,fullhash);
                 free_json(json);
-            }
+            } else fprintf(stderr,"swap cant parse.(%s)\n",jsonstr);
             free(jsonstr);
-        } else printf("calchash.(%s)\n",jsonstr);
+        } else fprintf(stderr,"calchash.(%s)\n",jsonstr);
     } else fprintf(stderr,"got my swap from network (%s)\n",origargstr);
     return(0);
 }
