@@ -962,15 +962,50 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
     return(firstprices);
 }
 
-void prices777_propagate(struct prices777 *prices)
+int32_t prices777_propagate(struct prices777 *prices)
 {
-    int32_t i;
+    int32_t i,n = 0;
     for (i=0; i<prices->numdependents; i++)
     {
+        n++;
         if ( (*prices->dependents[i]) < 0xff )
             (*prices->dependents[i])++;
         if ( Debuglevel > 2 )
             printf("numdependents.%d of %d %p %d\n",i,prices->numdependents,prices->dependents[i],*prices->dependents[i]);
+    }
+    return(n);
+}
+
+int32_t prices777_updated;
+void prices777_basketsloop(void *ptr)
+{
+    extern int32_t prices777_NXTBLOCK;
+    int32_t i,n; uint32_t updated; struct prices777 *prices;
+    while ( 1 )
+    {
+        for (i=n=0; i<BUNDLE.num; i++)
+        {
+            updated = (uint32_t)time(NULL);
+            if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->changed != 0 )
+            {
+                prices->pollnxtblock = prices777_NXTBLOCK;
+                n++;
+                //if ( Debuglevel > 2 )
+                printf("updating basket(%s) lastprice %.8f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
+                prices->lastupdate = updated;
+                if ( (prices->lastprice= prices777_basket(prices,MAX_DEPTH)) != 0. )
+                {
+                    if ( prices->O.numbids > 0 || prices->O.numasks > 0 )
+                    {
+                        prices777_jsonstrs(prices,&prices->O);
+                        prices777_updated += prices777_propagate(prices);
+                    }
+                }
+                prices->changed = 0;
+            }
+        }
+        if ( prices777_updated == 0 )
+            msleep(250);
     }
 }
 
@@ -980,6 +1015,7 @@ void prices777_exchangeloop(void *ptr)
     struct prices777 *prices; int32_t i,n,pollflag,isnxtae = 0; double updated = 0.; struct exchange_info *exchange = ptr;
     if ( strcmp(exchange->name,"nxtae") == 0 || strcmp(exchange->name,"unconf") == 0 )
         isnxtae = 1;
+    printf("POLL.(%s)\n",exchange->name);
     while ( 1 )
     {
         for (i=n=0; i<BUNDLE.num; i++)
@@ -999,9 +1035,10 @@ void prices777_exchangeloop(void *ptr)
                     prices->lastprice = (*exchange->updatefunc)(prices,MAX_DEPTH);
                     portable_mutex_unlock(&exchange->mutex);
                     updated = exchange->lastupdate = milliseconds(), prices->lastupdate = milliseconds();
-                    if ( prices->lastprice != 0. && strcmp(exchange->name,"unconf") != 0 )
+                    if ( prices->lastprice != 0. )
                     {
-                        printf("%-13s %12s (%10s %10s) %022llu %022llu isnxtae.%d poll %u -> %u %.8f hbla %.8f %.8f\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,prices->pollnxtblock,prices777_NXTBLOCK,prices->lastprice,prices->lastbid,prices->lastask);
+                        if ( strcmp(exchange->name,"unconf") != 0 )
+                            printf("%-13s %12s (%10s %10s) %022llu %022llu isnxtae.%d poll %u -> %u %.8f hbla %.8f %.8f\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,isnxtae,prices->pollnxtblock,prices777_NXTBLOCK,prices->lastprice,prices->lastbid,prices->lastask);
                         prices777_propagate(prices);
                     }
                     prices->pollnxtblock = prices777_NXTBLOCK;
@@ -1011,30 +1048,8 @@ void prices777_exchangeloop(void *ptr)
             }
         }
         if ( n == 0 )
-            sleep(6);
-        else
-        {
-            for (i=n=0; i<BUNDLE.num; i++)
-            {
-                if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->changed != 0 )
-                {
-                    prices->pollnxtblock = prices777_NXTBLOCK;
-                    //if ( Debuglevel > 2 )
-                    printf("updating basket(%s) lastprice %.8f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
-                    prices->lastupdate = updated;
-                    if ( (prices->lastprice= prices777_basket(prices,MAX_DEPTH)) != 0. )
-                    {
-                        if ( prices->O.numbids > 0 || prices->O.numasks > 0 )
-                        {
-                            prices777_jsonstrs(prices,&prices->O);
-                            prices777_propagate(prices);
-                        }
-                    }
-                    prices->changed = 0;
-                }
-            }
-            sleep(1);
-        }
+            sleep(15);
+        else sleep(1);
     }
 }
 
@@ -1045,7 +1060,8 @@ int32_t prices777_init(char *jsonstr)
     cJSON *json=0,*item,*exchanges; int32_t i,n; char *exchange,*base,*rel,*contract; struct exchange_info *exchangeptr;
     if ( BUNDLE.ptrs[0] != 0 )
         return(0);
-   // "BTCUSD", "NXTBTC", "SuperNET", "ETHBTC", "LTCBTC", "XMRBTC", "BTSBTC", "XCPBTC",  // BTC priced
+    if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,"unconf",0,0,0,"NXT/BTC",calc_nxt64bits("12659653638116877017"),NXT_ASSETID,0)) != 0 )
+        BUNDLE.num++;
     if ( SUPERNET.peggy != 0 )
     {
         if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,"huobi","BTC","USD",0.,0,0,0,0)) != 0 )
@@ -1086,6 +1102,7 @@ int32_t prices777_init(char *jsonstr)
                 extract_cJSON_str(exchangeptr->apikey,sizeof(exchangeptr->apikey),item,"key");
                 extract_cJSON_str(exchangeptr->userid,sizeof(exchangeptr->userid),item,"userid");
                 extract_cJSON_str(exchangeptr->apisecret,sizeof(exchangeptr->apisecret),item,"secret");
+                exchangeptr->commission = jdouble(item,"commission");
                 //printf("%p ADDEXCHANGE.(%s) [%s, %s, %s]\n",exchangeptr,exchange,exchangeptr->apikey,exchangeptr->userid,exchangeptr->apisecret);
             }
             if ( strcmp(exchange,"truefx") == 0 )
@@ -1106,6 +1123,7 @@ int32_t prices777_init(char *jsonstr)
         if ( exchangeptr->refcount > 0 || strcmp(exchangeptr->name,"unconf") == 0 )
             portable_thread_create((void *)prices777_exchangeloop,exchangeptr);
     }
+    portable_thread_create((void *)prices777_basketsloop,0);
     return(0);
 }
 

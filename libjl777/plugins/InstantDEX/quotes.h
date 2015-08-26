@@ -473,7 +473,12 @@ void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
                InstantDEX_history(1,pend,retstr);
                free(retstr);
                free_pending(pend);
-           } else queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
+           }
+           else
+           {
+               printf("requeue %llu/%llu %d %f %f\n",(long long)pend->orderid,(long long)pend->quoteid,pend->dir,pend->price,pend->volume);
+               queue_enqueue("requeue",&Pending_offersQ.pingpong[iter ^ 1],&pend->DL);
+           }
         }
     }
 }

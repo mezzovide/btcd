@@ -210,7 +210,7 @@ struct prices777
     portable_mutex_t mutex;
     char *orderbook_jsonstrs[2][2];
     struct prices777_basketinfo O,O2; double groupwts[MAX_GROUPS + 1];
-    uint8_t changed,type; uint8_t **dependents; int32_t numdependents,numgroups,basketsize;
+    uint8_t changed,type; uint8_t **dependents; int32_t numdependents,numgroups,basketsize; double commission;
     struct prices777_basket basket[];
 };
 
@@ -220,7 +220,7 @@ struct exchange_info
     int32_t (*supports)(char *base,char *rel);
     uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
     char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD];
-    uint32_t num,exchangeid,pollgap,refcount,polling; uint64_t nxt64bits; double lastupdate;
+    uint32_t num,exchangeid,pollgap,refcount,polling; uint64_t nxt64bits; double lastupdate,commission;
     portable_mutex_t mutex;
 };
 
@@ -228,6 +228,7 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
 int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendqty,cJSON *txobj,uint64_t recvasset,uint64_t recvqty);
 int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXTbits);
 cJSON *exchanges_json();
+struct InstantDEX_quote *delete_iQ(uint64_t quoteid);
 
 struct exchange_info *get_exchange(int32_t exchangeid);
 char *exchange_str(int32_t exchangeid);
