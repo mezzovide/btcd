@@ -1060,14 +1060,14 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
     name[0] = 0;
     if ( is_native_crypto(name,calc_nxt64bits(assetidstr)) > 0 )
     {
-        printf("found native crypto.(%s) name.(%s)\n",assetidstr,name);
+        //printf("found native crypto.(%s) name.(%s)\n",assetidstr,name);
         ap_type = 0;
         *numdecimalsp = 8;
         return(0);
     }
     if ( (assetid= calc_nxt64bits(assetidstr)) == NXT_ASSETID )
     {
-        printf("found NXT_ASSETID.(%s)\n",assetidstr);
+        //printf("found NXT_ASSETID.(%s)\n",assetidstr);
         ap_type = 0;
         *numdecimalsp = 8;
         return(0);
@@ -1084,12 +1084,12 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
         {
             if ( get_cJSON_int(json,"errorCode") == 0 )
             {
-                printf("assetstr.(%s)\n",jsonstr);
+                //printf("assetstr.(%s)\n",jsonstr);
                 if ( extract_cJSON_str(name,16,json,"name") <= 0 )
                     *numdecimalsp = -1;
                 else *numdecimalsp = (int32_t)get_cJSON_int(json,"decimals");
                 ap_type = 2;
-            } else printf("errorcode.%lld (%s)\n",(long long)get_cJSON_int(json,"errorCode"),jsonstr);
+            } //else printf("errorcode.%lld (%s)\n",(long long)get_cJSON_int(json,"errorCode"),jsonstr);
             free_json(json);
         } else printf("cant parse.(%s)\n",jsonstr);
         free(jsonstr);

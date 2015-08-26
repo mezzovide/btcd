@@ -797,7 +797,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
             if ( iQ->s.responded != 0 && iQ->s.feepaid != 0 )
             {
                 printf("both detected\n");
-                complete_swap(iQ,orderid,quoteid,0);
+                complete_swap(iQ,orderid,quoteid,iQ->s.offerNXT != SUPERNET.my64bits);
             }
         }
     }

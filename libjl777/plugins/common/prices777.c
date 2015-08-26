@@ -925,7 +925,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                             prices->dependents = realloc(prices->dependents,sizeof(*prices->dependents) * (prices->numdependents + 1));
                             prices->dependents[prices->numdependents++] = &firstprices->changed;
                         }
-                        else if ( strcmp(exchangestr,"nxtae") == 0 && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
+                        else if ( (strcmp(exchangestr,"InstantDEX") == 0 || strcmp(exchangestr,"nxtae") == 0) && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
                         {
                             struct prices777_basket basket[2]; int32_t valid;
                             basket[0].prices = firstprices, basket[1].prices = prices;
@@ -938,7 +938,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                             {
                                 _set_assetname(&mult,name,0,refbaseid), strcat(name,"/"), _set_assetname(&mult,name+strlen(name),0,refrelid);
                                 BUNDLE.ptrs[BUNDLE.num++] = prices = prices777_createbasket(1,name,_base,_rel,refbaseid,refrelid,basket,2,"basket");
-                                //prices->lastprice = prices777_basket(prices,MAX_DEPTH);
+                                prices->lastprice = prices777_basket(prices,MAX_DEPTH);
                                 printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
                                 printf("B total polling.%d added.(%s) (%s/%s) {%s && %s}\n",BUNDLE.num,prices->contract,_base,_rel,firstprices->contract,basket[1].prices->contract);
                             } else //if ( Debuglevel > 2 )
