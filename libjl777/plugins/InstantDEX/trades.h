@@ -774,11 +774,11 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
                 if ( iQ->s.isask != 0 )
                 {
                     sendasset = iQ->s.relid, sendqty = iQ->s.relamount;
-                    recvasset = iQ->s.baseid, recvqty = -iQ->s.baseamount;
+                    recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount;
                 }
                 else
                 {
-                    sendasset = iQ->s.baseid, sendqty = -iQ->s.baseamount;
+                    sendasset = iQ->s.baseid, sendqty = iQ->s.baseamount;
                     recvasset = iQ->s.relid, recvqty = iQ->s.relamount;
                 }
                 sendqty /= get_assetmult(sendasset);
