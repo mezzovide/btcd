@@ -678,8 +678,9 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                         {
                                             pend = calloc(1,sizeof(*pend));
                                             pend->orderid = orderid, pend->quoteid = quoteid;
-                                            iQ->s.responded = 1;
+                                            //iQ->s.responded = 1;
                                             iQ->s.pending = 1;
+                                            iQ->s.swap = 1;
                                             pend->triggertx = clonestr(triggerhash);
                                             pend->txbytes = clonestr(fullhash);
                                             pend->type = 'R';
