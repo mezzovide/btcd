@@ -588,6 +588,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         pend->type = 'N';
         retstr = fill_nxtae(&pend->txid,SUPERNET.my64bits,dir,price,volume,prices->baseid,prices->relid);
         InstantDEX_history(0,pend,retstr);
+        return(retstr);
     }
     else if ( exchange != 0 )
     {
@@ -912,6 +913,9 @@ cJSON *InstantDEX_tradejson(struct prices777_order *order,int32_t dotrade,uint64
             }
             else
             {
+                //{"inverted":0,"contract":"MMNXT/Jay","baseid":"979292558519844732","relid":"8688289798928624137","bids":[{"plugin":"Inst
+                //    antDEX","method":"tradesequence","dotrade":1,"price":2,"volume":2,"trades":[]}],"asks":[],"numbids":1,"numasks":0,"lastb
+                //    id":2,"lastask":0,"NXT":"11471677413693100042","timestamp":1440587058,"maxdepth":25}
                 prices777_swapbuf(&txid,triggertx,txbytes,swapbuf,prices,order,orderid,extra==0?0:atoi(extra));
                 return(cJSON_Parse(swapbuf));
             }

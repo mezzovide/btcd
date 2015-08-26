@@ -487,10 +487,15 @@ void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
 char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr,char *name,char *base,char *rel,struct InstantDEX_quote *iQ,char *extra)
 {
     extern queue_t InstantDEXQ;
-    char *retstr = 0; int32_t inverted,dir; struct prices777 *prices; double price,volume;
-    printf("placebidask.(%llu)\n",(long long)iQ->s.offerNXT);
+    char *retstr = 0; int32_t inverted,dir; struct prices777 *prices; double price,volume; struct exchange_info *exchange;
+    if ( exchangestr != 0 && (exchange= exchange_find(exchangestr)) != 0 )
+        iQ->exchangeid = exchange->exchangeid;
+    //printf("placebidask.(%llu)\n",(long long)iQ->s.offerNXT);
     if ( iQ->exchangeid < 0 || (exchangestr= exchange_str(iQ->exchangeid)) == 0 )
+    {
+        printf("exchangestr.%s id.%d\n",exchangestr,iQ->exchangeid);
         return(clonestr("{\"error\":\"exchange not active, check SuperNET.conf exchanges array\"}\n"));
+    }
     if ( (prices= prices777_find(&inverted,iQ->s.baseid,iQ->s.relid,exchangestr)) == 0 )
         prices = prices777_poll(exchangestr,name,base,iQ->s.baseid,rel,iQ->s.relid);
     if ( prices != 0 )
@@ -508,7 +513,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
             price = 1. / price;
             printf("price inverted (%f %f) -> (%f %f)\n",iQ->s.price,iQ->s.vol,price,volume);
         }
-        printf("dir.%d price %f vol %f isask.%d\n",dir,price,volume,iQ->s.isask);
+        //printf("dir.%d price %f vol %f isask.%d\n",dir,price,volume,iQ->s.isask);
         if ( remoteaddr == 0 )
         {
             if ( strcmp(exchangestr,"InstantDEX") != 0 && strcmp(exchangestr,"active") != 0 && strcmp(exchangestr,"basket") != 0 )
@@ -518,7 +523,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
             if ( iQ->s.automatch != 0 && (SUPERNET.automatch & 1) != 0 && (retstr= automatch(prices,dir,volume,price,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET)) != 0 )
                 return(retstr);
             retstr = InstantDEX_str(0,1,iQ);
-            printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
+            //printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
             iQ = create_iQ(iQ);
             printf("got create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
             prices777_InstantDEX(prices,MAX_DEPTH);
@@ -528,7 +533,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
         {
             if ( (retstr= autofill(remoteaddr,iQ,SUPERNET.NXTADDR,SUPERNET.NXTACCTSECRET)) == 0 )
             {
-                printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
+                //printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
                 iQ = create_iQ(iQ);
                 prices777_InstantDEX(prices,MAX_DEPTH);
                 printf("got create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);

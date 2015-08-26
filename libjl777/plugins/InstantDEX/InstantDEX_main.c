@@ -382,6 +382,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             else strcpy(exchangestr,"basket");
         }
         assetbits = InstantDEX_name(key,&keysize,exchangestr,name,base,&iQ.s.baseid,rel,&iQ.s.relid);
+        exchange = exchange_find(exchangestr);
         if ( strcmp(method,"allorderbooks") == 0 )
             retstr = prices777_allorderbooks();
         else if ( strcmp(method,"openorders") == 0 )
@@ -398,7 +399,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = jprint(Lottostats_json,0);
         else if ( strcmp(method,"balance") == 0 )
         {
-            if ( (exchange= exchange_find(exchangestr)) != 0 && exchange->trade != 0 )
+            if ( exchange != 0 && exchange->trade != 0 )
                 (*exchange->trade)(&retstr,exchange,0,0,0,0,0);
             else retstr = clonestr("{\"error\":\"cant find exchange\"}");
             printf("%s ptr%.p trade.%p\n",exchangestr,exchange,exchange!=0?exchange->trade:0);
