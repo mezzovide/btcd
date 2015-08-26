@@ -1044,7 +1044,8 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         if ( broadcastmode != 0 && broadcastmode[0] != 0 )
             cJSON_AddItemToObject(datajson,"broadcast",cJSON_CreateString(broadcastmode));
         cJSON_AddItemToObject(datajson,"plugin",cJSON_CreateString("relay"));
-        cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
+        if ( key[0] != 0 )
+            cJSON_AddItemToObject(datajson,"key",cJSON_CreateString(key));
         cJSON_AddItemToObject(datajson,"time",cJSON_CreateNumber(timestamp + diff));
         if ( secret != GENESIS_SECRET )
         {
@@ -1252,10 +1253,20 @@ int32_t busdata_poll()
                                 nn_send(sock,tokenized,len,0);
                             }
                             free(retstr);
-                        } else nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
-                    } else nn_send(sock,"{\"error\":\"duplicate command\"}",(int32_t)strlen("{\"error\":\"duplicate command\"}")+1,0);
+                        }
+                        else
+                        {
+                            printf("null return from busdata_processor\n");
+                            //nn_send(sock,"{\"error\":\"null return\"}",(int32_t)strlen("{\"error\":\"null return\"}")+1,0);
+                        }
+                    }
+                    else
+                    {
+                        printf("duplicate command\n");
+                        //nn_send(sock,"{\"error\":\"duplicate command\"}",(int32_t)strlen("{\"error\":\"duplicate command\"}")+1,0);
+                    }
                     free_json(json);
-                }
+                } else printf("couldnt parse.(%s)\n",msg);
                 nn_freemsg(msg);
             } //else printf("sock.%d nothing\n",sock);
         }
