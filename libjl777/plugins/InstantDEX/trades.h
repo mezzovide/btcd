@@ -436,15 +436,9 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
     else
     {
         expand_nxt64bits(assetidstr,assetidbits);
-        //if ( utx->type == 2 && utx->subtype == 1 )
-        sprintf(cmd,"requestType=transferAsset&asset=%s&quantityQNT=%lld",assetidstr,(long long)qty);
-        /*else if ( utx->type == 5 && utx->subtype == 3 )
-         sprintf(cmd,"requestType=transferCurrency&currency=%s&units=%lld",assetidstr,(long long)(utx->U.quantityQNT));
-         else
-         {
-         printf("unsupported type.%d subtype.%d\n",utx->type,utx->subtype);
-         return(0);
-         }*/
+        if ( is_mscoin(assetidstr) == 0 )
+            sprintf(cmd,"requestType=transferAsset&asset=%s&quantityQNT=%lld",assetidstr,(long long)qty);
+        else sprintf(cmd,"requestType=transferCurrency&currency=%s&units=%lld",assetidstr,(long long)qty);
     }
     if ( quoteid != 0 )
     {

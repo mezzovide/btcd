@@ -332,6 +332,22 @@ char *_issue_getCurrency(char *assetidstr)
     return(issue_NXTPOST(cmd));
 }
 
+int32_t is_mscoin(char *assetidstr)
+{
+    char *jsonstr; cJSON *json; int32_t retcode = 0;
+    if ( (jsonstr= _issue_getCurrency(assetidstr)) != 0 )
+    {
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            if ( get_cJSON_int(json,"errorCode") == 0 )
+                retcode = 1;
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(retcode);
+}
+
 uint64_t _get_bestassetprice(uint64_t *volp,char *assetcmd,char *arrayfield,uint64_t assetid)
 {
     char cmd[4096],*jsonstr;
