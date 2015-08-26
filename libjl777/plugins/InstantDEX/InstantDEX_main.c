@@ -136,6 +136,7 @@ int32_t prices777_key(char *key,char *exchange,char *name,char *base,uint64_t ba
 int32_t get_assetname(char *name,uint64_t assetid)
 {
     char assetidstr[64],*jsonstr; cJSON *json;
+    name[0] = 0;
     if ( is_native_crypto(name,assetid) != 0 )
         return((int32_t)strlen(name));
     expand_nxt64bits(assetidstr,assetid);

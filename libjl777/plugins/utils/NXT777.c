@@ -1057,9 +1057,10 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
 {
     cJSON *json; char name[64],*jsonstr; uint64_t assetid; int32_t ap_type = -1; //struct assethash *ap,A;
     *numdecimalsp = -1;
+    name[0] = 0;
     if ( is_native_crypto(name,calc_nxt64bits(assetidstr)) > 0 )
     {
-        printf("found native crypto.(%s)\n",assetidstr);
+        printf("found native crypto.(%s) name.(%s)\n",assetidstr,name);
         ap_type = 0;
         *numdecimalsp = 8;
         return(0);
