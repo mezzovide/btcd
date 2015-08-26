@@ -1066,11 +1066,11 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
         *numdecimalsp = 8;
         return(0);
     }
-    if ( (ap= find_asset(assetid)) != 0 )
+    /*if ( (ap= find_asset(assetid)) != 0 )
     {
         *numdecimalsp = ap->decimals;
         return(ap->type);
-    }
+    }*/
     memset(name,0,sizeof(name));
     if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )
     {
@@ -1111,7 +1111,7 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
     A.decimals = *numdecimalsp;
     A.type = ap_type;
     strcpy(A.name,name);
-    create_asset(assetid,&A);
+    //create_asset(assetid,&A);
     return(ap_type);
 }
 

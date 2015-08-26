@@ -1154,16 +1154,6 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                             int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,char *account,uint64_t amount,uint64_t qty,uint64_t assetid,char *recipient);
                             //printf("sender.%s -> recv.(%s)\n",account,recipient);
                             match_unconfirmed(account,comment,txobj,txidstr,account,amount,qty,assetid,recipient);
-                            /*unstringify(comment);
-                            if ( (commentobj= cJSON_Parse(comment)) != 0 )
-                            {
-                                quoteid = get_API_nxt64bits(cJSON_GetObjectItem(commentobj,"quoteid"));
-                                if ( strcmp(SUPERNET.NXTADDR,account) == 0 || Debuglevel > 2 )
-                                    printf("acct.(%s) pending quoteid.%llu asset.%llu qty.%llu %.8f amount %.8f %d:%d tx.%s\n",account,(long long)quoteid,(long long)assetid,(long long)qty,dstr(priceNQT),dstr(amount),type,subtype,txidstr);
-                                if ( quoteid != 0 )
-                                    match_unconfirmed(account,quoteid,txobj);
-                                free_json(commentobj);
-                            }*/
                         }
                         quoteid = calc_nxt64bits(txidstr);
                         price = prices777_price_volume(&vol,baseamount,relamount);
