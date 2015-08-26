@@ -203,7 +203,7 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     if ( extract_cJSON_str(transaction,sizeof(transaction),json,"transaction") > 0 ) n++;
     if ( calc_nxt64bits(recipient) != destNXTbits )
     {
-        printf("recipient.%s != %llu\n",recipient,(long long)destNXTbits);
+        fprintf(stderr,"recipient.%s != %llu\n",recipient,(long long)destNXTbits);
         return(-2);
     }
     typeval = atoi(type), subtypeval = atoi(subtype);
@@ -211,12 +211,12 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     {
         if ( typeval != 0 || subtypeval != 0 )
         {
-            printf("unexpected typeval.%d subtypeval.%d\n",typeval,subtypeval);
+            fprintf(stderr,"unexpected typeval.%d subtypeval.%d\n",typeval,subtypeval);
             return(-3);
         }
         if ( qty != calc_nxt64bits(amountNQT) )
         {
-            printf("unexpected qty.%llu vs.%s\n",(long long)qty,amountNQT);
+            fprintf(stderr,"unexpected qty.%llu vs.%s\n",(long long)qty,amountNQT);
             return(-4);
         }
         return(0);
@@ -225,7 +225,7 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     {
         if ( typeval != 2 || subtypeval != 1 )
         {
-            printf("refasset.%llu qty %lld\n",(long long)refasset,(long long)qty);
+            fprintf(stderr,"refasset.%llu qty %lld\n",(long long)refasset,(long long)qty);
             return(-11);
         }
         price = quantity = assetidbits = 0;
@@ -244,10 +244,13 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
                 price = calc_nxt64bits(priceNQT);
         }
         if ( assetidbits != refasset )
+        {
+            fprintf(stderr,"assetidbits %llu != %llu refasset\n",(long long)assetidbits,(long long)refasset);
             return(-12);
+        }
         if ( qty != quantity )
         {
-            printf("qty.%llu != %llu\n",(long long)qty,(long long)quantity);
+            fprintf(stderr,"qty.%llu != %llu\n",(long long)qty,(long long)quantity);
             return(-13);
         }
         return(0);
@@ -261,7 +264,7 @@ int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendq
     // verify recipient, amounts in txobj
      if ( (err= verify_NXTtx(txobj,recvasset,recvqty,destNXTaddr)) != 0 )
     {
-        printf("InstantDEX_verify tx mismatch %d (%llu %lld) -> (%llu %lld)\n",err,(long long)sendasset,(long long)sendqty,(long long)recvasset,(long long)recvqty);
+        printf("InstantDEX_verify dest.(%llu) tx mismatch %d (%llu %lld) -> (%llu %lld)\n",(long long)destNXTaddr,err,(long long)sendasset,(long long)sendqty,(long long)recvasset,(long long)recvqty);
         return(-1);
     }
     return(0);

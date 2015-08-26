@@ -771,7 +771,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
             }
             if ( iQ->s.responded == 0 )
             {
-                if ( iQ->s.isask != 0 )
+                if ( iQ->s.isask == 0 )
                 {
                     sendasset = iQ->s.relid, sendqty = iQ->s.relamount;
                     recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount;
