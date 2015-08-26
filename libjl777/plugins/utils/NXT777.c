@@ -1056,13 +1056,18 @@ struct assethash *create_asset(uint64_t assetid,struct assethash *ap)
 int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
 {
     cJSON *json; char name[64],*jsonstr; uint64_t assetid; int32_t ap_type = -1; //struct assethash *ap,A;
+    *numdecimalsp = -1;
     if ( is_native_crypto(name,calc_nxt64bits(assetidstr)) > 0 )
     {
+        printf("found native crypto.(%s)\n",assetidstr);
+        ap_type = 0;
         *numdecimalsp = 8;
         return(0);
     }
     if ( (assetid= calc_nxt64bits(assetidstr)) == NXT_ASSETID )
     {
+        printf("found NXT_ASSETID.(%s)\n",assetidstr);
+        ap_type = 0;
         *numdecimalsp = 8;
         return(0);
     }
@@ -1078,15 +1083,16 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
         {
             if ( get_cJSON_int(json,"errorCode") == 0 )
             {
+                printf("assetstr.(%s)\n",jsonstr);
                 if ( extract_cJSON_str(name,16,json,"name") <= 0 )
                     *numdecimalsp = -1;
                 else *numdecimalsp = (int32_t)get_cJSON_int(json,"decimals");
                 ap_type = 2;
-            }
+            } else printf("errorcode.%lld (%s)\n",(long long)get_cJSON_int(json,"errorCode"),jsonstr);
             free_json(json);
-        }
+        } else printf("cant parse.(%s)\n",jsonstr);
         free(jsonstr);
-    }
+    } else printf("couldnt getAsset.(%s)\n",assetidstr);
     if ( ap_type < 0 )
     {
         if ( (jsonstr= _issue_getCurrency(assetidstr)) != 0 )
@@ -1119,8 +1125,6 @@ uint64_t assetmult(char *assetidstr)
 {
     int32_t ap_type,decimals; uint64_t mult = 0;
     ap_type = get_assettype(&decimals,assetidstr);
-    if ( ap_type == 0 )
-        return(1);
     if ( decimals >= 0 && decimals <= 8 )
         mult = calc_decimals_mult(decimals);
     return(mult);

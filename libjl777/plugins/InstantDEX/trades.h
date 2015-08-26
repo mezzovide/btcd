@@ -660,7 +660,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             deadline = juint(txobj,"deadline");
                             timestamp = juint(txobj,"timestamp");
                             now = issue_getTime();
-                            if ( (cmpstr= jstr(txobj,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 && deadline >= INSTANTDEX_TRIGGERDEADLINE/2 && (now - timestamp) < 60 )
+                            if ( (cmpstr= jstr(txobj,"referencedTransactionFullHash")) != 0 && strcmp(cmpstr,triggerhash) == 0 && deadline >= INSTANTDEX_TRIGGERDEADLINE/2 && ((long)now - timestamp) < 60 )
                             {
                                 // https://nxtforum.org/nrs-releases/nrs-v1-5-15/msg191715/#msg191715
                                 struct NXTtx fee,responsetx; int32_t errcode,errcode2; cJSON *retjson; char *str,*txstr=0,*txstr2=0; struct pending_trade *pend;
