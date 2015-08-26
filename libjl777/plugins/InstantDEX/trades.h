@@ -747,7 +747,7 @@ int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quot
 int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,char *account,uint64_t amount,uint64_t qty,uint64_t assetid,char *recipient)
 {
     // ok, the bug here is that on a delayed respondtx, the originator should refuse to release the trigger (and the money tx)
-    uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; uint32_t deadline,timestamp,now; struct InstantDEX_quote *iQ;
+    uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; uint32_t bidask,deadline,timestamp,now; struct InstantDEX_quote *iQ;
     decode_hex((void *)&orderid,sizeof(orderid),hexstr);
     decode_hex((void *)&quoteid,sizeof(quoteid),hexstr+16);
     //printf("match_unconfirmed.(%s) orderid.%llu %llx quoteid.%llu %llx\n",hexstr,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
@@ -758,7 +758,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
         return(0);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
-        printf("match unconfirmed %llu/%llu %p swap.%d feepaid.%d responded.%d sender.(%s) -> recv.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ,iQ->s.swap,iQ->s.feepaid,iQ->s.responded,sender,recipient,SUPERNET.NXTADDR);
+        printf("match unconfirmed %llu/%llu %p swap.%d feepaid.%d responded.%d sender.(%s) -> recv.(%s) me.(%s) offer.(%llu)\n",(long long)orderid,(long long)quoteid,iQ,iQ->s.swap,iQ->s.feepaid,iQ->s.responded,sender,recipient,SUPERNET.NXTADDR,(long long)iQ->s.offerNXT);
         if ( iQ->s.swap != 0 && (strcmp(recipient,INSTANTDEX_ACCT) == 0 || strcmp(recipient,SUPERNET.NXTADDR) == 0) )
         {
             if ( iQ->s.feepaid == 0 )
@@ -771,7 +771,10 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
             }
             if ( iQ->s.responded == 0 )
             {
-                if ( iQ->s.isask != 0 )
+                bidask = iQ->s.isask;
+                if ( iQ->s.offerNXT == SUPERNET.my64bits )
+                    bidask ^= 1;
+                if ( bidask != 0 )
                 {
                     sendasset = iQ->s.relid, sendqty = iQ->s.relamount;
                     recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount;
