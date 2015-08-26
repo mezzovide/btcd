@@ -714,7 +714,7 @@ char *prices777_allorderbooks()
     return(jprint(json,1));
 }
 
-struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize)
+struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *_base,char *_rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize)
 {
     static long allocated;
     struct exchange_pair { char *exchange; double (*updatefunc)(struct prices777 *prices,int32_t maxdepth); int32_t (*supports)(char *base,char *rel); uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume); } pairs[] =
@@ -730,8 +730,10 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         {"exmo", prices777_exmo, exmo_supports, exmo_trade }, {"quadriga", prices777_quadriga, quadriga_supports, quadriga_trade },
         {"truefx", 0 }, {"ecb", 0 }, {"instaforex", 0 }, {"fxcm", 0 }, {"yahoo", 0 },
     };
-    int32_t i,rellen; char basebuf[64],relbuf[64]; struct exchange_info *exchangeptr;
+    int32_t i,rellen; char basebuf[64],relbuf[64],base[64],rel[64]; struct exchange_info *exchangeptr;
     struct prices777 *prices;
+    safecopy(base,_base,sizeof(base));
+    safecopy(rel,_rel,sizeof(rel));
     if ( needfunc < 0 )
     {
         for (i=0; i<sizeof(pairs)/sizeof(*pairs); i++)
@@ -1060,7 +1062,7 @@ int32_t prices777_init(char *jsonstr)
     cJSON *json=0,*item,*exchanges; int32_t i,n; char *exchange,*base,*rel,*contract; struct exchange_info *exchangeptr;
     if ( BUNDLE.ptrs[0] != 0 )
         return(0);
-    if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,"unconf",0,0,0,"NXT/BTC",calc_nxt64bits("12659653638116877017"),NXT_ASSETID,0)) != 0 )
+    if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,"unconf","NXT","BTC",0,"NXT/BTC",calc_nxt64bits("12659653638116877017"),NXT_ASSETID,0)) != 0 )
         BUNDLE.num++;
     if ( SUPERNET.peggy != 0 )
     {
