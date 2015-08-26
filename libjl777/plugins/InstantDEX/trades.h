@@ -806,7 +806,10 @@ char *offer_statemachine(struct pending_trade *pend)
 {
     int32_t i,n,pending = 0; cJSON *array,*item;
     if ( time(NULL) > pend->iQ.s.timestamp+INSTANTDEX_TRIGGERDEADLINE*60 )
+    {
+        printf("now.%ld vs timestamp.%u + %u\n",time(NULL),pend->iQ.s.timestamp,INSTANTDEX_TRIGGERDEADLINE*60);
         return(clonestr("{\"status\":\"timeout\",\"trade sequence completed\"}"));
+    }
     if ( pend->type == 'R' )
     {
         // wait for alice tx

@@ -184,7 +184,10 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     cJSON *attachmentobj;
     char sender[MAX_JSON_FIELD],recipient[MAX_JSON_FIELD],deadline[MAX_JSON_FIELD],feeNQT[MAX_JSON_FIELD],amountNQT[MAX_JSON_FIELD],type[MAX_JSON_FIELD],subtype[MAX_JSON_FIELD],verify[MAX_JSON_FIELD],referencedTransaction[MAX_JSON_FIELD],quantityQNT[MAX_JSON_FIELD],priceNQT[MAX_JSON_FIELD],assetidstr[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD],fullhash[MAX_JSON_FIELD],timestamp[MAX_JSON_FIELD],transaction[MAX_JSON_FIELD];
     if ( json == 0 )
+    {
+        printf("verify_NXTtx cant parse json\n");
         return(-1);
+    }
     if ( extract_cJSON_str(sender,sizeof(sender),json,"sender") > 0 ) n++;
     if ( extract_cJSON_str(recipient,sizeof(recipient),json,"recipient") > 0 ) n++;
     if ( extract_cJSON_str(referencedTransaction,sizeof(referencedTransaction),json,"referencedTransactionFullHash") > 0 ) n++;
@@ -207,9 +210,15 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     if ( refasset == NXT_ASSETID )
     {
         if ( typeval != 0 || subtypeval != 0 )
+        {
+            printf("unexpected typeval.%d subtypeval.%d\n",typeval,subtypeval);
             return(-3);
+        }
         if ( qty != calc_nxt64bits(amountNQT) )
+        {
+            printf("unexpected qty.%llu vs.%s\n",(long long)qty,amountNQT);
             return(-4);
+        }
         return(0);
     }
     else

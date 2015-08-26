@@ -489,7 +489,7 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
     char gui[MAX_JSON_FIELD],exchangestr[MAX_JSON_FIELD],name[MAX_JSON_FIELD],base[MAX_JSON_FIELD],rel[MAX_JSON_FIELD],offerNXT[MAX_JSON_FIELD];
     struct InstantDEX_quote iQ;
     copy_cJSON(offerNXT,jobj(json,"offerNXT"));
-printf("got (%s)\n",origargstr);
+//printf("got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
         if ( bidask_parse(exchangestr,name,base,rel,gui,&iQ,json) == 0 )
@@ -542,7 +542,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
 {
     char *resultstr,*methodstr,*retstr = 0;
     retbuf[0] = 0;
-    //if ( Debuglevel > 2 )
+    if ( Debuglevel > 2 )
         fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s) initflag.%d\n",plugin->name,jsonstr,initflag);
     if ( initflag > 0 )
     {

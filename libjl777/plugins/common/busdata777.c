@@ -1260,7 +1260,7 @@ int32_t busdata_poll()
                             if ( noneed == 0 )
                             {
                                 len = construct_tokenized_req(&nonce,tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
-                                fprintf(stderr,"busdatapoll tokenized return.(%s)\n",tokenized);
+                                //fprintf(stderr,"busdatapoll tokenized return.(%s)\n",tokenized);
                                 nn_send(sock,tokenized,len,0);
                             }
                             free(retstr);
