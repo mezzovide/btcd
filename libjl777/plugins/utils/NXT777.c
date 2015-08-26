@@ -1055,7 +1055,7 @@ struct assethash *create_asset(uint64_t assetid,struct assethash *ap)
 
 int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
 {
-    cJSON *json; char name[64],*jsonstr; uint64_t assetid; int32_t ap_type = -1; struct assethash *ap,A;
+    cJSON *json; char name[64],*jsonstr; uint64_t assetid; int32_t ap_type = -1; //struct assethash *ap,A;
     if ( is_native_crypto(name,calc_nxt64bits(assetidstr)) > 0 )
     {
         *numdecimalsp = 8;
@@ -1105,13 +1105,13 @@ int32_t get_assettype(int32_t *numdecimalsp,char *assetidstr)
             free(jsonstr);
         }
     }
-    memset(&A,0,sizeof(A));
+    /*memset(&A,0,sizeof(A));
     A.assetid = assetid;
     A.minvol = A.mult = calc_decimals_mult(*numdecimalsp);
     A.decimals = *numdecimalsp;
     A.type = ap_type;
     strcpy(A.name,name);
-    //create_asset(assetid,&A);
+    create_asset(assetid,&A);*/
     return(ap_type);
 }
 
