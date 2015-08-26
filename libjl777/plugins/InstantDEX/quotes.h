@@ -265,6 +265,7 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
     {
         HASH_ITER(hh,AllQuotes,ptr,tmp)
         {
+            iQ = *ptr;
             if ( iQ.s.timestamp > (now + ORDERBOOK_EXPIRATION) )
                 iQ.s.expired = iQ.s.closed = 1;
             printf("iterate quote.%llu\n",(long long)iQ.s.quoteid);
@@ -275,7 +276,6 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
             else continue;
             if ( ptr->s.pending != 0 )
                 continue;
-            iQ = *ptr;
             isask = iQ.s.isask;
             if ( invert != 0 )
                 isask ^= 1;
