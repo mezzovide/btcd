@@ -268,7 +268,8 @@ cJSON *InstantDEX_orderbook(struct prices777 *prices)
             iQ = *ptr;
             if ( iQ.s.timestamp > (now + ORDERBOOK_EXPIRATION) )
                 iQ.s.expired = iQ.s.closed = 1;
-            printf("iterate quote.%llu\n",(long long)iQ.s.quoteid);
+            if ( Debuglevel > 2 )
+                printf("iterate quote.%llu\n",(long long)iQ.s.quoteid);
             if ( prices777_equiv(ptr->s.baseid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->s.relid) == prices777_equiv(prices->relid) )
                 invert = 0;
             else if ( prices777_equiv(ptr->s.relid) == prices777_equiv(prices->baseid) && prices777_equiv(ptr->s.baseid) == prices777_equiv(prices->relid) )
