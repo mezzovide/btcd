@@ -332,6 +332,20 @@ char *_issue_getCurrency(char *assetidstr)
     return(issue_NXTPOST(cmd));
 }
 
+uint32_t issue_getTime()
+{
+    char cmd[4096],*jsonstr; cJSON *json; uint32_t timestamp = 0;
+    //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
+    sprintf(cmd,"requestType=getTime");
+    if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
+    {
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+            timestamp = juint(json,"timestamp"), free_json(json);
+        free(jsonstr);
+    }
+    return(timestamp);
+}
+
 int32_t is_mscoin(char *assetidstr)
 {
     char *jsonstr; cJSON *json; int32_t retcode = 0;
