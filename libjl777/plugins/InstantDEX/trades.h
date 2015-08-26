@@ -490,7 +490,7 @@ uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *
     swapstr[0] = triggertx[0] = txbytes[0] = 0;
     *txidp = 0;
     printf("genNXTtx.(%llu/%llu)\n",(long long)orderid,(long long)order->s.quoteid);
-    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,deadline,triggerhash,0,0);
+    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,triggerhash,0,0);
     strcpy(triggertx,fee.txbytes);
     if ( order->s.baseamount < 0 )
         assetidbits = order->s.baseid, qty = -order->s.baseamount, otherassetbits = order->s.relid, otherqty = order->s.relamount;
@@ -665,7 +665,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 printf("GEN RESPONDTX deadline.%d (other.%llu %lld) recv.(%llu %lld) orderid.%llu/%llx quoteid.%llu/%llx\n",deadline,(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
                                 if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
                                 {
-                                    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,orderid,deadline,fullhash,0,0);
+                                    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,fullhash,0,0);
                                     gen_NXTtx(&responsetx,calc_nxt64bits(offerNXT),otherbits,otherqty,orderid,quoteid,deadline,triggerhash,fullhash,finishheight);
                                     if ( (fee.txid= issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET)) != 0 )
                                     {
@@ -754,7 +754,6 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
             {
                 iQ->s.feepaid = 1;
                 printf("FEE DETECTED\n");
-                complete_swap(iQ,orderid,quoteid,0);
             }
             else if ( iQ->s.responded == 0 )
             {
@@ -775,8 +774,12 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
                     iQ->s.responded = 1;
                     printf("iQ: %llu/%llu %lld/%lld | recv %llu %lld offerNXT.%llu\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,(long long)iQ->s.baseamount,(long long)iQ->s.relamount,(long long)recvasset,(long long)recvqty,(long long)iQ->s.offerNXT);
                     printf("RESPONSE DETECTED\n");
-                    complete_swap(iQ,orderid,quoteid,0);
                 }
+            }
+            if ( iQ->s.responded != 0 && iQ->s.feepaid != 0 )
+            {
+                printf("both detected\n");
+                complete_swap(iQ,orderid,quoteid,0);
             }
         }
     }
