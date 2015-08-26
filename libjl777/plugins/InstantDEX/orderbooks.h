@@ -1116,6 +1116,18 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                 for (i=0; i<n; i++)
                 {
       //{"senderPublicKey":"45c9266036e705a9559ccbd2b2c92b28ea6363d2723e8d42433b1dfaa421066c","signature":"9d6cefff4c67f8cf4e9487122e5e6b1b65725815127063df52e9061036e78c0b49ba38dbfc12f03c158697f0af5811ce9398702c4acb008323df37dc55c1b43d","feeNQT":"100000000","type":2,"fullHash":"6a2cd914b9d4a5d8ebfaecaba94ef4e7d2b681c236a4bee56023aafcecd9b704","version":1,"phased":false,"ecBlockId":"887016880740444200","signatureHash":"ba8eee4beba8edbb6973df4243a94813239bf57b91cac744cb8d6a5d032d5257","attachment":{"quantityQNT":"50","priceNQT":"18503000003","asset":"13634675574519917918","version.BidOrderPlacement":1},"senderRS":"NXT-FJQN-8QL2-BMY3-64VLK","subtype":3,"amountNQT":"0","sender":"5245394173527769812","ecBlockHeight":495983,"deadline":1440,"transaction":"15611117574733507690","timestamp":54136768,"height":2147483647},{"senderPublicKey":"c42956d0a9abc5a2e455e69c7e65ff9a53de2b697e913b25fcb06791f127af06","signature":"ca2c3f8e32d3aa003692fef423193053c751235a25eb5b67c21aefdeb7a41d0d37bc084bd2e33461606e25f09ced02d1e061420da7e688306e76de4d4cf90ae0","feeNQT":"100000000","type":2,"fullHash":"51c04de7106a5d5a2895db05305b53dd33fa8b9935d549f765aa829a23c68a6b","version":1,"phased":false,"ecBlockId":"887016880740444200","signatureHash":"d76fce4c081adc29f7e60eba2a930ab5050dd79b6a1355fae04863dddf63730c","attachment":{"version.AskOrderPlacement":1,"quantityQNT":"11570","priceNQT":"110399999","asset":"979292558519844732"},"senderRS":"NXT-ANWW-C5BZ-SGSB-8LGZY","subtype":2,"amountNQT":"0","sender":"8033808554894054300","ecBlockHeight":495983,"deadline":1440,"transaction":"6511477257080258641","timestamp":54136767,"height":2147483647}],"requestProcessingTime":0}
+                    
+                   /* "senderRS": "NXT-M6QF-Q5WK-2UXK-5D3HR",
+                    "subtype": 0,
+                    "amountNQT": "137700000000",
+                    "sender": "4304363382952792781",
+                    "recipientRS": "NXT-6AC7-V9BD-NL5W-5BUWF",
+                    "recipient": "3959589697280418117",
+                    "ecBlockHeight": 506207,
+                    "deadline": 1440,
+                    "transaction": "5605109208989354417",
+                    "timestamp": 55276659,
+                    "height": 2147483647*/
                     if ( (txobj= jitem(array,i)) == 0 )
                         continue;
                     copy_cJSON(txidstr,cJSON_GetObjectItem(txobj,"transaction"));
@@ -1126,11 +1138,11 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                     accountid = calc_nxt64bits(account);
                     type = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"type"),-1);
                     subtype = (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"subtype"),-1);
+                    timestamp = get_blockutime(juint(txobj,"timestamp"));
+                    amount = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
                     qty = amount = assetid = 0;
                     if ( (attachment= cJSON_GetObjectItem(txobj,"attachment")) != 0 )
                     {
-                        timestamp = get_blockutime(juint(attachment,"height"));
-                        amount = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"amountNQT"));
                         assetid = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"asset"));
                         comment[0] = 0;
                         qty = get_API_nxt64bits(cJSON_GetObjectItem(attachment,"quantityQNT"));

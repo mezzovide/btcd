@@ -758,8 +758,8 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
         return(0);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
-        printf("match unconfirmed %llu/%llu %p swap.%d feepaid.%d responded.%d sender.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ,iQ->s.swap,iQ->s.feepaid,iQ->s.responded,sender,SUPERNET.NXTADDR);
-        if ( iQ->s.swap != 0 )
+        printf("match unconfirmed %llu/%llu %p swap.%d feepaid.%d responded.%d sender.(%s) -> recv.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ,iQ->s.swap,iQ->s.feepaid,iQ->s.responded,sender,recipient,SUPERNET.NXTADDR);
+        if ( iQ->s.swap != 0 && (strcmp(recipient,INSTANTDEX_ACCT) == 0 || strcmp(recipient,SUPERNET.NXTADDR) == 0) )
         {
             if ( iQ->s.feepaid == 0 )
             {
@@ -771,7 +771,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
             }
             if ( iQ->s.responded == 0 )
             {
-                if ( iQ->s.isask == 0 )
+                if ( iQ->s.isask != 0 )
                 {
                     sendasset = iQ->s.relid, sendqty = iQ->s.relamount;
                     recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount;
