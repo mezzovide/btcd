@@ -1152,7 +1152,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                         if ( comment[0] != 0 )
                         {
                             int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,char *account,uint64_t amount,uint64_t qty,uint64_t assetid,char *recipient);
-                            printf("sender.%s -> recv.(%s)\n",account,recipient);
+                            //printf("sender.%s -> recv.(%s)\n",account,recipient);
                             match_unconfirmed(account,comment,txobj,txidstr,account,amount,qty,assetid,recipient);
                             /*unstringify(comment);
                             if ( (commentobj= cJSON_Parse(comment)) != 0 )
