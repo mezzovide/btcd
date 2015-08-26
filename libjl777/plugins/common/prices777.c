@@ -1099,7 +1099,8 @@ int32_t prices777_init(char *jsonstr)
                 extract_cJSON_str(exchangeptr->apikey,sizeof(exchangeptr->apikey),item,"key");
                 extract_cJSON_str(exchangeptr->userid,sizeof(exchangeptr->userid),item,"userid");
                 extract_cJSON_str(exchangeptr->apisecret,sizeof(exchangeptr->apisecret),item,"secret");
-                exchangeptr->commission = jdouble(item,"commission");
+                if ( exchangeptr->commission == 0. )
+                    exchangeptr->commission = jdouble(item,"commission");
                 //printf("%p ADDEXCHANGE.(%s) [%s, %s, %s]\n",exchangeptr,exchange,exchangeptr->apikey,exchangeptr->userid,exchangeptr->apisecret);
             }
             if ( strcmp(exchange,"truefx") == 0 )
@@ -1109,7 +1110,11 @@ int32_t prices777_init(char *jsonstr)
                 printf("truefx.(%s %s)\n",BUNDLE.truefxuser,BUNDLE.truefxpass);
             }
             else if ( base != 0 && rel != 0 && base[0] != 0 && rel[0] != 0 && (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,exchange,base,rel,jdouble(item,"decay"),contract,stringbits(base),stringbits(rel),0)) != 0 )
+            {
+                if ( (BUNDLE.ptrs[BUNDLE.num]->commission= jdouble(item,"commission")) == 0. )
+                    BUNDLE.ptrs[BUNDLE.num]->commission = exchangeptr->commission;
                 BUNDLE.num++;
+            }
         }
     }
     if ( json != 0 )

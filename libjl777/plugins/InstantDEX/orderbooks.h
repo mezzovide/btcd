@@ -573,6 +573,12 @@ void prices777_json_quotes(double *hblap,struct prices777 *prices,cJSON *bids,cJ
                 quoteid = orderid;
             if ( price > SMALLVAL && volume > SMALLVAL )
             {
+                if ( prices->commission != 0. )
+                {
+                    if ( bidask == 0 )
+                        price -= prices->commission * price;
+                    else price += prices->commission * price;
+                }
                 order = (bidask == 0) ? &gp->bid : &gp->ask;
                 order->s.price = price, order->s.vol = volume, order->source = prices, order->s.timestamp = OB.timestamp, order->wt = 1, order->id = orderid, order->s.quoteid = quoteid;
                 if ( bidask == 0 )
