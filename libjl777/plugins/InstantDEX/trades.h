@@ -741,7 +741,7 @@ int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quot
     return(-1);
 }
 
-int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
+int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,char *account,uint64_t amount,uint64_t qty,uint64_t assetid,char *recipient)
 {
     // ok, the bug here is that on a delayed respondtx, the originator should refuse to release the trigger (and the money tx)
     uint64_t orderid,quoteid,recvasset,sendasset; int64_t recvqty,sendqty; uint32_t deadline,timestamp,now; struct InstantDEX_quote *iQ;
@@ -758,10 +758,13 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj)
         printf("match unconfirmed %llu/%llu feepaid.%d responded.%d sender.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ->s.feepaid,iQ->s.responded,sender,SUPERNET.NXTADDR);
         if ( iQ->s.swap != 0 )
         {
-            if ( iQ->s.feepaid == 0 && verify_NXTtx(txobj,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT)) == 0 )
+            if ( iQ->s.feepaid == 0 )
             {
-                iQ->s.feepaid = 1;
-                printf("FEE DETECTED\n");
+                if ( verify_NXTtx(txobj,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT)) == 0 )
+                {
+                    iQ->s.feepaid = 1;
+                    printf("FEE DETECTED\n");
+                } else printf("notfee: dest.%s src.%s amount.%llu qty.%llu assetid.%llu\n",recipient,sender,(long long)amount,(long long)qty,(long long)assetid);
             }
             else if ( iQ->s.responded == 0 )
             {

@@ -1096,7 +1096,7 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
 
 double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
 {
-    char url[1024],account[1024],txidstr[1024],comment[1024],*str; uint32_t timestamp; int32_t type,i,subtype,n;
+    char url[1024],account[1024],txidstr[1024],comment[1024],recipient[1024],*str; uint32_t timestamp; int32_t type,i,subtype,n;
     cJSON *json,*bids,*asks,*array,*txobj,*attachment;
     double price,vol; uint64_t assetid,accountid,quoteid,baseamount,relamount,qty,priceNQT,amount;
     bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
@@ -1116,6 +1116,7 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                     if ( (txobj= jitem(array,i)) == 0 )
                         continue;
                     copy_cJSON(txidstr,cJSON_GetObjectItem(txobj,"transaction"));
+                    copy_cJSON(recipient,cJSON_GetObjectItem(txobj,"recipient"));
                     copy_cJSON(account,cJSON_GetObjectItem(txobj,"account"));
                     if ( account[0] == 0 )
                         copy_cJSON(account,cJSON_GetObjectItem(txobj,"sender"));
@@ -1135,8 +1136,8 @@ double prices777_unconfNXT(struct prices777 *prices,int32_t maxdepth)
                         copy_cJSON(comment,jobj(attachment,"message"));
                         if ( comment[0] != 0 )
                         {
-                            int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj);
-                            match_unconfirmed(account,comment,txobj);
+                            int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,char *account,uint64_t amount,uint64_t qty,uint64_t assetid,char *recipient);
+                            match_unconfirmed(account,comment,txobj,txidstr,account,amount,qty,assetid,recipient);
                             /*unstringify(comment);
                             if ( (commentobj= cJSON_Parse(comment)) != 0 )
                             {
