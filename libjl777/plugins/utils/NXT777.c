@@ -328,7 +328,7 @@ char *_issue_getCurrency(char *assetidstr)
     char cmd[4096];
     //sprintf(cmd,"requestType=getAsset&asset=%s",assetidstr);
     sprintf(cmd,"requestType=getCurrency&currency=%s",assetidstr);
-    printf("_cmd.(%s)\n",cmd);
+    //printf("_cmd.(%s)\n",cmd);
     return(issue_NXTPOST(cmd));
 }
 

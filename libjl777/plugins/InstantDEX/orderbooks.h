@@ -1039,11 +1039,31 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
     bids = cJSON_CreateArray(), asks = cJSON_CreateArray();
     for (flip=0; flip<2; flip++)
     {
-        /// xxx add MScoin
-        if ( flip == 0 )
-            cmd = "getBidOrders", field = "bidOrders", array = bids;
-        else cmd = "getAskOrders", field = "askOrders", array = asks;
-        sprintf(url,"requestType=%s&asset=%llu&limit=%d",cmd,(long long)prices->baseid,maxdepth);
+        /*{
+            "offer": "16959774565785265980",
+            "expirationHeight": 1000000,
+            "accountRS": "NXT-QFAF-GR4F-RBSR-AXW2G",
+            "limit": "9000000",
+            "currency": "5775213290661997199",
+            "supply": "0",
+            "account": "9728792749189838093",
+            "height": 348856,
+            "rateNQT": "650"
+        }*/
+        if ( prices->type != 5 )
+        {
+            if ( flip == 0 )
+                cmd = "getBidOrders", field = "bidOrders", array = bids;
+            else cmd = "getAskOrders", field = "askOrders", array = asks;
+            sprintf(url,"requestType=%s&asset=%llu&limit=%d",cmd,(long long)prices->baseid,maxdepth);
+        }
+        else
+        {
+            if ( flip == 0 )
+                cmd = "getBuyOffers", field = "offers", array = bids;
+            else cmd = "getSellOffers", field = "offers", array = asks;
+            sprintf(url,"requestType=%s&currency=%llu&limit=%d",cmd,(long long)prices->baseid,maxdepth);
+        }
         if ( (str= issue_NXTPOST(url)) != 0 )
         {
             //printf("{%s}\n",str);
@@ -1066,7 +1086,9 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
                          "height": 480173
                          */
                         item = cJSON_GetArrayItem(srcobj,i);
-                        qty = j64bits(item,"quantityQNT"), pqt = j64bits(item,"priceNQT");
+                        if ( prices->type != 5 )
+                            qty = j64bits(item,"quantityQNT"), pqt = j64bits(item,"priceNQT");
+                        else qty = j64bits(item,"limit"), pqt = j64bits(item,"rateNQT");
                         baseamount = (qty * prices->ap_mult), relamount = (qty * pqt);
                         price = prices777_price_volume(&vol,baseamount,relamount);
                         if ( i == 0  )
@@ -1078,7 +1100,7 @@ double prices777_NXT(struct prices777 *prices,int32_t maxdepth)
                         }
                         //printf("(%llu %llu) %f %f mult.%llu qty.%llu pqt.%llu baseamount.%lld relamount.%lld\n",(long long)prices->baseid,(long long)prices->relid,price,vol,(long long)prices->ap_mult,(long long)qty,(long long)pqt,(long long)baseamount,(long long)relamount);
                         timestamp = get_blockutime(juint(item,"height"));
-                        item = inner_json(price,vol,timestamp,j64bits(item,"order"),j64bits(item,"account"),qty,pqt,baseamount,relamount);
+                        item = inner_json(price,vol,timestamp,j64bits(item,prices->type != 5 ? "order" : "offer"),j64bits(item,"account"),qty,pqt,baseamount,relamount);
                         cJSON_AddItemToArray(array,item);
                     }
                 }
