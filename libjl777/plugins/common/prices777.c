@@ -714,7 +714,7 @@ char *prices777_allorderbooks()
     return(jprint(json,1));
 }
 
-struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *_base,char *_rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize)
+struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *_base,char *_rel,double decay,char *_name,uint64_t baseid,uint64_t relid,int32_t basketsize)
 {
     static long allocated;
     struct exchange_pair { char *exchange; double (*updatefunc)(struct prices777 *prices,int32_t maxdepth); int32_t (*supports)(char *base,char *rel); uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume); } pairs[] =
@@ -730,10 +730,11 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         {"exmo", prices777_exmo, exmo_supports, exmo_trade }, {"quadriga", prices777_quadriga, quadriga_supports, quadriga_trade },
         {"truefx", 0 }, {"ecb", 0 }, {"instaforex", 0 }, {"fxcm", 0 }, {"yahoo", 0 },
     };
-    int32_t i,rellen; char basebuf[64],relbuf[64],base[64],rel[64]; struct exchange_info *exchangeptr;
+    int32_t i,rellen; char basebuf[64],relbuf[64],base[64],rel[64],name[64]; struct exchange_info *exchangeptr;
     struct prices777 *prices;
     safecopy(base,_base,sizeof(base));
     safecopy(rel,_rel,sizeof(rel));
+    safecopy(name,_name,sizeof(name));
     if ( needfunc < 0 )
     {
         for (i=0; i<sizeof(pairs)/sizeof(*pairs); i++)
@@ -775,12 +776,6 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     }
     prices = calloc(1,sizeof(*prices) + basketsize*sizeof(*prices->basket));
    // printf("new prices %ld\n",sizeof(*prices));
-    if ( base == 0 )
-        base = "";
-    if ( rel == 0 )
-        rel = "";
-    if ( name == 0 )
-        name = "";
     strcpy(prices->exchange,exchange), strcpy(prices->contract,name), strcpy(prices->base,base), strcpy(prices->rel,rel);
     prices->baseid = baseid, prices->relid = relid;
     prices->contractnum = InstantDEX_name(prices->key,&prices->keysize,exchange,prices->contract,prices->base,&prices->baseid,prices->rel,&prices->relid);
@@ -813,7 +808,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         safecopy(prices->lbase,base,sizeof(prices->lbase)), tolowercase(prices->lbase);
         if ( rel == 0 && prices777_ispair(basebuf,relbuf,base) >= 0 )
         {
-            base = basebuf, rel = relbuf;
+            strcpy(base,basebuf), strcpy(rel,relbuf);
             //printf("(%s) is a pair (%s)+(%s)\n",base,basebuf,relbuf);
         }
         if ( rel != 0 && rel[0] != 0 )

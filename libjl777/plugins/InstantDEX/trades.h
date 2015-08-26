@@ -821,7 +821,10 @@ char *offer_statemachine(struct pending_trade *pend)
                     pending++;
             }
             if ( pending == 0 )
+            {
+                delete_iQ(pend->orderid);
                 return(clonestr("{\"status\":\"success\",\"trade sequence completed\"}"));
+            }
         }
     }
     else
