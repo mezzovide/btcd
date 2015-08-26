@@ -490,7 +490,7 @@ uint64_t InstantDEX_swapstr(uint64_t *txidp,char *triggertx,char *txbytes,char *
     swapstr[0] = triggertx[0] = txbytes[0] = 0;
     *txidp = 0;
     printf("genNXTtx.(%llu/%llu)\n",(long long)orderid,(long long)order->s.quoteid);
-    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,triggerhash,0,0);
+    gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,order->s.quoteid,deadline,triggerhash,0,0);
     strcpy(triggertx,fee.txbytes);
     if ( order->s.baseamount < 0 )
         assetidbits = order->s.baseid, qty = -order->s.baseamount, otherassetbits = order->s.relid, otherqty = order->s.relamount;
