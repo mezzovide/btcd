@@ -341,16 +341,19 @@ int32_t InstantDEX_inithistory(int32_t firsti,int32_t endi)
 cJSON *InstantDEX_tradeitem(struct pending_trade *pend)
 {
     // struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type; };
-    char str[64]; cJSON *json = cJSON_CreateObject();
+    struct InstantDEX_quote *iQ; char str[64]; cJSON *json = cJSON_CreateObject();
     str[0] = (pend->type == 0) ? '0' : pend->type;
     str[1] = 0;
     jaddstr(json,"type",str);
     jaddnum(json,"timestamp",pend->timestamp);
     jadd64bits(json,"orderid",pend->orderid), jadd64bits(json,"quoteid",pend->quoteid);
-    if ( pend->iQ.s.baseid != 0 && pend->iQ.s.relid != 0 )
-        jadd64bits(json,"baseid",pend->iQ.s.baseid), jadd64bits(json,"relid",pend->iQ.s.relid);
-    if ( pend->iQ.s.baseamount != 0 && pend->iQ.s.relamount != 0 )
-        jaddnum(json,"baseqty",pend->iQ.s.baseamount), jaddnum(json,"relqty",pend->iQ.s.relamount);
+    if ( (iQ= find_iQ(pend->quoteid)) != 0 )
+    {
+        if ( iQ->s.baseid != 0 && iQ->s.relid != 0 )
+            jadd64bits(json,"baseid",iQ->s.baseid), jadd64bits(json,"relid",iQ->s.relid);
+        if ( iQ->s.baseamount != 0 && iQ->s.relamount != 0 )
+            jaddnum(json,"baseqty",iQ->s.baseamount), jaddnum(json,"relqty",iQ->s.relamount);
+    } else printf("tradeitem cant find quoteid.%llu\n",(long long)pend->quoteid);
     if ( pend->dir != 0 )
         jaddnum(json,"dir",pend->dir);
     if ( pend->price > SMALLVAL && pend->volume > SMALLVAL )
@@ -554,7 +557,6 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
     } else iQ = create_iQ(iQ);
     iQ->s.pending = 1;
     pend->quoteid = iQ->s.quoteid;
-    pend->iQ = *iQ;
     if ( order != 0 )
         pend->order = *order;
     else pend->order.s = iQ->s;
@@ -575,7 +577,7 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         pend->tradesjson = cJSON_Parse(swapbuf);
         pend->type = 'T';
         iQ->s.swap = 1;
-        printf("quoteid.%llu SWAP and pending.%d\n",(long long)iQ->s.quoteid,iQ->s.pending);
+        printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
         if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
             free(str);
         InstantDEX_history(0,pend,swapbuf);
@@ -755,7 +757,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
         return(0);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
-        printf("match unconfirmed %llu/%llu feepaid.%d responded.%d sender.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ->s.feepaid,iQ->s.responded,sender,SUPERNET.NXTADDR);
+        printf("match unconfirmed %llu/%llu %p swap.%d feepaid.%d responded.%d sender.(%s) me.(%s)\n",(long long)orderid,(long long)quoteid,iQ,iQ->s.swap,iQ->s.feepaid,iQ->s.responded,sender,SUPERNET.NXTADDR);
         if ( iQ->s.swap != 0 )
         {
             if ( iQ->s.feepaid == 0 )
@@ -766,7 +768,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
                     printf("FEE DETECTED\n");
                 } else printf("notfee: dest.%s src.%s amount.%llu qty.%llu assetid.%llu\n",recipient,sender,(long long)amount,(long long)qty,(long long)assetid);
             }
-            else if ( iQ->s.responded == 0 )
+            if ( iQ->s.responded == 0 )
             {
                 if ( iQ->s.isask != 0 )
                 {
