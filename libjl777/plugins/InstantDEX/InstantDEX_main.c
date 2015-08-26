@@ -496,7 +496,7 @@ printf("got (%s)\n",origargstr);
             return(InstantDEX_placebidask(sender,j64bits(json,"orderid"),exchangestr,name,base,rel,&iQ,jstr(json,"extra")));
         else printf("error with incoming bidask\n");
     } else fprintf(stderr,"got my bidask from network (%s)\n",origargstr);
-    return(0);
+    return(clonestr("{\"result\":\"got loopback bidask\"}"));
 }
 
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)

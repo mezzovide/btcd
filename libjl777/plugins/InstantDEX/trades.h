@@ -606,7 +606,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
     char offerNXT[MAX_JSON_FIELD],UTX[MAX_JSON_FIELD],calchash[256],*triggerhash,*utx,*sighash,*jsonstr,*parsed,*fullhash,*cmpstr;
     cJSON *json,*txobj; uint64_t otherbits,otherqty,quoteid,orderid,recvasset; int64_t recvqty; uint32_t i,j,deadline,timestamp,now,finishheight; struct InstantDEX_quote *iQ,_iQ;
     copy_cJSON(offerNXT,jobj(origjson,"offerNXT"));
-    printf("swap_func got (%s)\n",origargstr);
+    //printf("swap_func got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT) != 0 )
     {
         orderid = j64bits(origjson,"orderid");
@@ -709,7 +709,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
             free(jsonstr);
         } else fprintf(stderr,"calchash.(%s)\n",jsonstr);
     } else fprintf(stderr,"got my swap from network (%s)\n",origargstr);
-    return(0);
+    return(clonestr("{\"result\":\"processed swap\"}"));
 }
 
 int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quoteid,int32_t err)

@@ -340,7 +340,7 @@ uint32_t issue_getTime()
     if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
     {
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
-            timestamp = juint(json,"timestamp"), free_json(json);
+            timestamp = juint(json,"time"), free_json(json);
         free(jsonstr);
     }
     return(timestamp);

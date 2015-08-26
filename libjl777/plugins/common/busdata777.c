@@ -830,7 +830,7 @@ char *busdata_deref(char *tokenstr,char *forwarder,char *sender,int32_t valid,ch
         copy_cJSON(method,cJSON_GetObjectItem(argjson,"submethod"));
         copy_cJSON(buf,cJSON_GetObjectItem(argjson,"method"));
         copy_cJSON(servicename,cJSON_GetObjectItem(argjson,"servicename"));
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             printf("relay.%d buf.(%s) method.(%s) servicename.(%s) token.(%s)\n",SUPERNET.iamrelay,buf,method,servicename,tokenstr!=0?tokenstr:"");
         if ( SUPERNET.iamrelay != 0 && ((strcmp(buf,"busdata") == 0 && strcmp(method,"serviceprovider") == 0) || servicename[0] != 0) ) //
         {
@@ -843,7 +843,7 @@ printf("bypass deref (%s) (%s) (%s)\n",buf,method,servicename);
         cJSON_DeleteItemFromObject(argjson,"submethod");
         cJSON_DeleteItemFromObject(argjson,"destplugin");
         str = cJSON_Print(argjson), _stripwhite(str,' ');
-       // if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             printf("call (%s %s) (%s)\n",plugin,method,str);
         retstr = plugin_method(-1,0,0,plugin,method,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2,tokenstr);
         free_json(origjson);
@@ -1233,7 +1233,7 @@ int32_t busdata_poll()
             {
                 jsonstr = clonestr(msg);
                 nn_freemsg(msg);
-                //if ( Debuglevel > 2 )
+                if ( Debuglevel > 2 )
                     printf("RECV.%d (%s)\n",sock,jsonstr);
                 n++;
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
