@@ -447,6 +447,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             {
                 if ( prices != 0 )
                 {
+                    if ( strcmp(prices->exchange,"unconf") == 0 )
+                        return(clonestr("{\"error\":\"cannot disable unconf\"}"));
                     prices->disabled = 1;
                     return(clonestr("{\"result\":\"success\"}"));
                 }
