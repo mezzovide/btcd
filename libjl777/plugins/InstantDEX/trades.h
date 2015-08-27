@@ -755,7 +755,8 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
     deadline = juint(txobj,"deadline");
     timestamp = juint(txobj,"timestamp");
     now = issue_getTime();
-    if ( deadline < INSTANTDEX_TRIGGERDEADLINE/2 || (now - timestamp) > 60*2 )
+    printf("deadline.%u now.%u timestamp.%u lag %ld\n",deadline,now,timestamp,((long)now - timestamp));
+    if ( deadline < INSTANTDEX_TRIGGERDEADLINE/2 || ((long)now - timestamp) > 60*2 )
         return(0);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
