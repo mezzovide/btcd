@@ -25,7 +25,7 @@ struct prices777 *prices777_find(int32_t *invertedp,uint64_t baseid,uint64_t rel
     {
         if ( (prices= BUNDLE.ptrs[i]) != 0 && strcmp(prices->exchange,exchange) == 0 )
         {
-            printf("FOUND.(%s)\n",exchange);
+            //printf("FOUND.(%s)\n",exchange);
             if ( prices777_equiv(prices->baseid) == prices777_equiv(baseid) && prices777_equiv(prices->relid) == prices777_equiv(relid) )
                 return(prices);
             else if ( prices777_equiv(prices->relid) == prices777_equiv(baseid) && prices777_equiv(prices->baseid) == prices777_equiv(relid) )
@@ -33,7 +33,7 @@ struct prices777 *prices777_find(int32_t *invertedp,uint64_t baseid,uint64_t rel
                 *invertedp = 1;
                 return(prices);
             }
-            else printf("(%llu/%llu) != (%llu/%llu)\n",(long long)baseid,(long long)relid,(long long)prices->baseid,(long long)prices->relid);
+            //else printf("(%llu/%llu) != (%llu/%llu)\n",(long long)baseid,(long long)relid,(long long)prices->baseid,(long long)prices->relid);
         } else fprintf(stderr,"(%s).%d ",prices->exchange,i);
     }
     printf("CANTFIND.(%s)\n",exchange);
@@ -53,6 +53,7 @@ struct prices777 *prices777_createbasket(int32_t addbasket,char *name,char *base
             {
                 feature->dependents = realloc(feature->dependents,sizeof(*feature->dependents) * (feature->numdependents + 1));
                 feature->dependents[feature->numdependents++] = &prices->changed;
+                printf("addlink (%s -> %s)\n",feature->contract,prices->contract);
             }
             if ( basket[i].groupid > max )
                 max = basket[i].groupid;
@@ -1237,16 +1238,20 @@ double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth)
 char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,uint64_t relid,int32_t maxdepth,int32_t allflag,int32_t tradeable)
 {
     cJSON *basketjson,*array,*item,*item2; struct prices777 *active;
-    uint64_t mgwbase,mgwrel,tmp; int32_t inverted,exchangeid,isasset,keysize; char tmpstr[64],numstr[64],base[64],rel[64],key[512],*retstr = 0;
+    uint64_t mgwbase,mgwrel,tmp; int32_t inverted,exchangeid,isasset,keysize; char *str,*symbol,exchangestr[64],numstr[64],base[64],rel[64],key[512],*retstr = 0;
     strcpy(base,_base), strcpy(rel,_rel);
     if ( baseid == 0 && is_decimalstr(base) != 0 )
         baseid = calc_nxt64bits(base);
     if ( relid == 0 && is_decimalstr(rel) != 0 )
         relid = calc_nxt64bits(rel);
-    InstantDEX_name(key,&keysize,(tradeable != 0) ? "active" : "basket",name,base,&baseid,rel,&relid);
-    if ( (active= prices777_find(&inverted,baseid,relid,(tradeable != 0) ? "active" : "basket")) == 0 )
+    mgwbase = is_MGWcoin(base), mgwrel = is_MGWcoin(rel);
+    if ( mgwbase == 0 && (str= is_MGWasset(&tmp,baseid)) != 0 )
+        strcpy(base,str);
+    if ( mgwrel == 0 && (str= is_MGWasset(&tmp,relid)) != 0 )
+        strcpy(rel,str);
+    InstantDEX_name(key,&keysize,"active",name,base,&baseid,rel,&relid);
+    if ( (active= prices777_find(&inverted,baseid,relid,"active")) == 0 )
     {
-        mgwbase = is_MGWcoin(base), mgwrel = is_MGWcoin(rel);
         basketjson = cJSON_CreateObject(), array = cJSON_CreateArray();
         jaddstr(basketjson,"name",name), jaddstr(basketjson,"base",base), jaddstr(basketjson,"rel",rel);
         item = cJSON_CreateObject(), jaddstr(item,"exchange",INSTANTDEX_NAME), jaddi(array,item);
@@ -1255,33 +1260,43 @@ char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,ui
         sprintf(numstr,"%llu",(long long)relid), jaddstr(basketjson,"relid",numstr);
         if ( strcmp(base,"NXT") == 0 || strcmp(rel,"NXT") == 0 )
         {
-            //if ( mgwbase != 0 || mgwrel != 0 )
+            item = cJSON_CreateObject(), jaddstr(item,"exchange",INSTANTDEX_NXTAENAME), jaddstr(item,"rel","NXT");
+            item2 = cJSON_CreateObject(), jaddstr(item2,"exchange",INSTANTDEX_NXTAEUNCONF), jaddstr(item2,"rel","NXT");
+            if ( strcmp(base,"NXT") == 0 )
             {
-                item = cJSON_CreateObject(), jaddstr(item,"exchange",INSTANTDEX_NXTAENAME), jaddstr(item,"rel","NXT");
-                item2 = cJSON_CreateObject(), jaddstr(item2,"exchange",INSTANTDEX_NXTAEUNCONF), jaddstr(item2,"rel","NXT");
-                if ( strcmp(base,"NXT") == 0 )
-                {
-                    if ( mgwrel == 0 )
-                        mgwrel = relid;
-                    jaddnum(item,"wt",-1), jaddnum(item2,"wt",-1);
-                    jaddstr(item,"base",rel), jaddstr(item2,"base",rel);
-                    jaddstr(item,"rel",base), jaddstr(item2,"rel",base);
-                    sprintf(numstr,"%llu",(long long)mgwrel), jaddstr(item,"baseid",numstr), jaddstr(item2,"baseid",numstr);
-                }
-                else
-                {
-                    if ( mgwbase == 0 )
-                        mgwbase = baseid;
-                    jaddstr(item,"base",base), jaddstr(item2,"base",base);
-                    jaddstr(item,"rel",rel), jaddstr(item2,"rel",rel);
-                    sprintf(numstr,"%llu",(long long)mgwbase), jaddstr(item,"baseid",numstr), jaddstr(item2,"baseid",numstr);
-                }
-                sprintf(numstr,"%llu",(long long)NXT_ASSETID), jaddstr(item,"relid",numstr), jaddstr(item2,"relid",numstr);
-                jaddi(array,item), jaddi(array,item2);
+                if ( mgwrel == 0 )
+                    mgwrel = relid;
+                jaddnum(item,"wt",-1), jaddnum(item2,"wt",-1);
+                jaddstr(item,"base",rel), jaddstr(item2,"base",rel);
+                jaddstr(item,"rel",base), jaddstr(item2,"rel",base);
+                sprintf(numstr,"%llu",(long long)mgwrel), jaddstr(item,"baseid",numstr), jaddstr(item2,"baseid",numstr);
             }
+            else
+            {
+                if ( mgwbase == 0 )
+                    mgwbase = baseid;
+                jaddstr(item,"base",base), jaddstr(item2,"base",base);
+                jaddstr(item,"rel",rel), jaddstr(item2,"rel",rel);
+                sprintf(numstr,"%llu",(long long)mgwbase), jaddstr(item,"baseid",numstr), jaddstr(item2,"baseid",numstr);
+            }
+            sprintf(numstr,"%llu",(long long)NXT_ASSETID), jaddstr(item,"relid",numstr), jaddstr(item2,"relid",numstr);
+            jaddi(array,item), jaddi(array,item2);
             isasset = 1;
             printf("%llu isasset (%s)\n",(long long)baseid,jprint(array,0));
-        } else isasset = 0;
+        }
+        else
+        {
+            expand_nxt64bits(numstr,baseid);
+            if ( (symbol= is_tradedasset(exchangestr,numstr)) != 0 )
+            {
+                
+            }
+            expand_nxt64bits(numstr,relid);
+            if ( (symbol= is_tradedasset(exchangestr,numstr)) != 0 )
+            {
+                
+            }
+        }
         for (exchangeid=4; exchangeid<MAX_EXCHANGES; exchangeid++)
         {
             if ( isasset != 0 )
@@ -1301,7 +1316,7 @@ char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,ui
         }
         jadd(basketjson,"basket",array);
         printf("BASKETMAKE.(%s)\n",jprint(basketjson,0));
-        if ( (active= prices777_makebasket(0,basketjson,1,(tradeable != 0) ? "active" : "basket")) != 0 )
+        if ( (active= prices777_makebasket(0,basketjson,1,"active")) != 0 )
         {
             prices777_basket(active,maxdepth);
             retstr = prices777_orderbook_jsonstr(0,SUPERNET.my64bits,active,&active->O,maxdepth,allflag);

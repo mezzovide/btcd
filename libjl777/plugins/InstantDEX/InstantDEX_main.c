@@ -525,6 +525,8 @@ void init_exchanges(cJSON *json)
         for (i=0; i<n; i++)
             prices777_makebasket(0,jitem(array,i),1,"basket");
     }
+    void prices777_basketsloop(void *ptr);
+    portable_thread_create((void *)prices777_basketsloop,0);
     //prices777_makebasket("{\"name\":\"NXT/BTC\",\"base\":\"NXT\",\"rel\":\"BTC\",\"basket\":[{\"exchange\":\"bittrex\"},{\"exchange\":\"poloniex\"},{\"exchange\":\"btc38\"}]}",0);
 }
 
