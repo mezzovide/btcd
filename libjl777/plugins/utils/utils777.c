@@ -335,7 +335,9 @@ int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex)
     {
         bytes[0] = unhex(hex[0]);
         printf("decode_hex n.%d hex[0] (%c) -> %d (%s)\n",n,hex[0],bytes[0],hex);
-        //while ( 1 ) portable_sleep(1);
+#ifdef __APPLE__
+        getchar();
+#endif
         bytes++;
         hex++;
         adjust = 1;

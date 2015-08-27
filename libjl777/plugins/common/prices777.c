@@ -720,7 +720,8 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     struct exchange_pair { char *exchange; double (*updatefunc)(struct prices777 *prices,int32_t maxdepth); int32_t (*supports)(char *base,char *rel); uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume); } pairs[] =
     {
         {"nxtae", prices777_NXT, NXT_supports, NXT_tradestub }, {"unconf", prices777_unconfNXT, NXT_supports, NXT_tradestub },
-        {"InstantDEX", prices777_InstantDEX, InstantDEX_supports, InstantDEX_tradestub }, {"basket", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
+        {"InstantDEX", prices777_InstantDEX, InstantDEX_supports, InstantDEX_tradestub },
+        {"basket", prices777_basket, InstantDEX_supports, InstantDEX_tradestub }, {"active", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
         {"poloniex", prices777_poloniex, poloniex_supports, poloniex_trade }, {"bitfinex", prices777_bitfinex, bitfinex_supports, bitfinex_trade },
         {"btc38", prices777_btc38, btc38_supports, btc38_trade }, //{"bter", prices777_bter, bter_supports, bter_trade },
         {"btce", prices777_btce, btce_supports, btce_trade }, {"bitstamp", prices777_bitstamp, bitstamp_supports, bitstamp_trade },
@@ -914,7 +915,7 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
                 }
                 if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
                 {
-                    if ( strcmp(exchangestr,"basket") != 0 )
+                    if ( strcmp(exchangestr,"basket") != 0 && strcmp(exchangestr,"active") != 0 )
                         prices777_addbundle(&valid,1,prices,0,0,0);
                     if ( firstprices == 0 )
                         firstprices = prices;

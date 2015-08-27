@@ -429,7 +429,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         else if ( strcmp(method,"placebid") == 0 || strcmp(method,"placeask") == 0 )
             return(InstantDEX_placebidask(0,sequenceid,exchangestr,name,base,rel,&iQ,jstr(json,"extra")));
         else if ( strcmp(exchangestr,"active") == 0 && strcmp(method,"orderbook") == 0 )
-            retstr = prices777_activebooks(name,base,rel,iQ.s.baseid,iQ.s.relid,maxdepth,allfields,juint(json,"tradeable"));
+            retstr = prices777_activebooks(name,base,rel,iQ.s.baseid,iQ.s.relid,maxdepth,allfields,strcmp(exchangestr,"active") == 0 || juint(json,"tradeable"));
         else if ( (prices= prices777_find(&invert,iQ.s.baseid,iQ.s.relid,exchangestr)) == 0 )
         {
             if ( (prices= prices777_poll(exchangestr,name,base,iQ.s.baseid,rel,iQ.s.relid)) != 0 )
