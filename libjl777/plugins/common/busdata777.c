@@ -1347,7 +1347,7 @@ int32_t init_SUPERNET_pullsock(int32_t sendtimeout,int32_t recvtimeout)
     for (iter=0; iter<2; iter++)
     {
         transportstr = (iter == 0) ? "ipc" : "inproc";
-        sprintf(bindaddr,"%s://SuperNET",transportstr);
+        sprintf(bindaddr,"%s://SuperNET.agents",transportstr);
         if ( nn_bind(SUPERNET.pullsock,bindaddr) < 0 )
         {
             printf("error binding pullsock to (%s) %s\n",bindaddr,nn_strerror(nn_errno()));
