@@ -985,22 +985,25 @@ void prices777_basketsloop(void *ptr)
         for (i=n=0; i<BUNDLE.num; i++)
         {
             updated = (uint32_t)time(NULL);
-            if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->changed != 0 )
+            if ( (prices= BUNDLE.ptrs[i]) != 0 && prices->disabled == 0 && prices->basketsize != 0 )
             {
-                prices->pollnxtblock = prices777_NXTBLOCK;
-                n++;
-                //if ( Debuglevel > 2 )
-                printf("updating basket(%s) lastprice %.8f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
-                prices->lastupdate = updated;
-                if ( (prices->lastprice= prices777_basket(prices,MAX_DEPTH)) != 0. )
+                if ( prices->changed != 0 )
                 {
-                    if ( prices->O.numbids > 0 || prices->O.numasks > 0 )
+                    //if ( Debuglevel > 2 )
+                    printf("updating basket(%s) lastprice %.8f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
+                    prices->pollnxtblock = prices777_NXTBLOCK;
+                    n++;
+                    prices->lastupdate = updated;
+                    if ( (prices->lastprice= prices777_basket(prices,MAX_DEPTH)) != 0. )
                     {
-                        prices777_jsonstrs(prices,&prices->O);
-                        prices777_updated += prices777_propagate(prices);
+                        if ( prices->O.numbids > 0 || prices->O.numasks > 0 )
+                        {
+                            prices777_jsonstrs(prices,&prices->O);
+                            prices777_updated += prices777_propagate(prices);
+                        }
                     }
+                    prices->changed = 0;
                 }
-                prices->changed = 0;
             }
         }
         if ( prices777_updated == 0 )
@@ -1127,7 +1130,6 @@ int32_t prices777_init(char *jsonstr)
         if ( exchangeptr->refcount > 0 || strcmp(exchangeptr->name,"unconf") == 0 )
             portable_thread_create((void *)prices777_exchangeloop,exchangeptr);
     }
-    portable_thread_create((void *)prices777_basketsloop,0);
     return(0);
 }
 
