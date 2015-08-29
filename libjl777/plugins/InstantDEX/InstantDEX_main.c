@@ -62,7 +62,7 @@ cJSON *InstantDEX_lottostats();
 #include "quotes.h"
 //#include "atomic.h"
 
-uint32_t prices777_NXTBLOCK;
+uint32_t prices777_NXTBLOCK,FIRST_EXTERNAL = 5;
 int32_t InstantDEX_idle(struct plugin_info *plugin) { return(0); }
 
 void idle()
@@ -170,6 +170,22 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         strcpy(base,"NXT");
     if ( strcmp(rel,"5527630") == 0 || relid == 5527630 )
         strcpy(rel,"NXT");
+    if ( relid == 0 && rel[0] != 0 )
+    {
+        if ( is_decimalstr(rel) != 0 )
+            relid = calc_nxt64bits(rel);
+        else relid = is_MGWcoin(rel);
+    }
+    else if ( (str= is_MGWasset(0,relid)) != 0 )
+        strcpy(rel,str);
+    if ( baseid == 0 && base[0] != 0 )
+    {
+        if ( is_decimalstr(base) != 0 )
+            baseid = calc_nxt64bits(base);
+        else baseid = is_MGWcoin(base);
+    }
+    else if ( (str= is_MGWasset(0,baseid)) != 0 )
+        strcpy(base,str);
     if ( strcmp("InstantDEX",exchange) == 0 || strcmp("nxtae",exchange) == 0 || strcmp("unconf",exchange) == 0 || (baseid != 0 && relid != 0) )
     {
         if ( strcmp(rel,"NXT") == 0 )
@@ -177,22 +193,6 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
         else if ( strcmp(base,"NXT") == 0 )
             s = "-", baseid = stringbits("NXT"), strcpy(base,"NXT");
         else s = "";
-        if ( relid == 0 && rel[0] != 0 )
-        {
-            if ( is_decimalstr(rel) != 0 )
-                relid = calc_nxt64bits(rel);
-            else relid = is_MGWcoin(rel);
-        }
-        else if ( (str= is_MGWasset(0,relid)) != 0 )
-            strcpy(rel,str);
-        if ( baseid == 0 && base[0] != 0 )
-        {
-            if ( is_decimalstr(base) != 0 )
-                baseid = calc_nxt64bits(base);
-            else baseid = is_MGWcoin(base);
-        }
-        else if ( (str= is_MGWasset(0,baseid)) != 0 )
-            strcpy(base,str);
         if ( base[0] == 0 )
         {
             get_assetname(base,baseid);
@@ -231,7 +231,10 @@ uint64_t InstantDEX_name(char *key,int32_t *keysizep,char *exchange,char *name,c
             else if ( baseid != 0 && base[0] == 0 )
                 sprintf(base,"%llu",(long long)baseid);
             if ( relid == 0 && rel[0] != 0 )
+            {
                 relid = stringbits(rel);
+                printf("set relid.%llu <- (%s)\n",(long long)relid,rel);
+            }
             else if ( relid != 0 && rel[0] == 0 )
                 sprintf(rel,"%llu",(long long)relid);
             if ( name[0] == 0 )
@@ -411,7 +414,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         }
         else if ( strcmp(method,"makebasket") == 0 )
         {
-            if ( (prices= prices777_makebasket(0,json,1,"basket")) != 0 )
+            if ( (prices= prices777_makebasket(0,json,1,"basket",0,0)) != 0 )
                 retstr = clonestr("{\"result\":\"basket made\"}");
             else retstr = clonestr("{\"error\":\"couldnt make basket\"}");
         }
@@ -519,13 +522,14 @@ void init_exchanges(cJSON *json)
     find_exchange(0,INSTANTDEX_NXTAENAME);
     find_exchange(0,INSTANTDEX_BASKETNAME);
     find_exchange(0,INSTANTDEX_ACTIVENAME);
+    FIRST_EXTERNAL = 5;
     for (i=0; i<sizeof(Supported_exchanges)/sizeof(*Supported_exchanges); i++)
         find_exchange(0,Supported_exchanges[i]);
     prices777_initpair(-1,0,0,0,0,0.,0,0,0,0);
     if ( (array= jarray(&n,json,"baskets")) != 0 )
     {
         for (i=0; i<n; i++)
-            prices777_makebasket(0,jitem(array,i),1,"basket");
+            prices777_makebasket(0,jitem(array,i),1,"basket",0,0);
     }
     void prices777_basketsloop(void *ptr);
     portable_thread_create((void *)prices777_basketsloop,0);
