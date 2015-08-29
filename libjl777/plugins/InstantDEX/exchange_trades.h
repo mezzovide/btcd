@@ -262,6 +262,11 @@ uint64_t btce_trade(char **retstrp,struct exchange_info *exchange,char *_base,ch
     return(txid);
 }
 
+uint64_t kraken_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
+{
+    return(0);
+}
+
 uint64_t bitfinex_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     /* POST https://api.bitfinex.com/v1/order/new
