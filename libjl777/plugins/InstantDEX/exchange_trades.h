@@ -351,7 +351,7 @@ uint64_t bitfinex_trade(char **retstrp,struct exchange_info *exchange,char *_bas
     return(txid);
 }
 
-uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     /* $ Stamp = $ date-> getTimestamp ();
      type, 1 for the purchase of Entry, 2 entry order to sell, can not be empty / the type of the order
@@ -368,9 +368,57 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *base,ch
      curl_setopt ($ ch, CURLOPT_POSTFIELDS, $ data);
      curl_setopt ($ ch, CURLOPT_RETURNTRANSFER, 1);
      curl_setopt ($ ch, CURLOPT_HEADER, 0);  */
+    char *cnypairs[] = { "BTC", "LTC", "DOGE", "XRP", "BTS", "STR", "NXT", "BLK", "YBC", "BILS", "BOST", "PPC", "APC", "ZCC", "XPM", "DGC", "MEC", "WDC", "QRK", "BEC", "ANC", "UNC", "RIC", "SRC", "TAG" };
+    char *btcpairs[] = { "TMC", "LTC", "DOGE", "XRP", "BTS", "STR", "NXT", "BLK", "XEM", "VPN", "BILS", "BOST", "WDC", "ANC", "XCN", "VOOT", "SYS", "NRS", "NAS", "SYNC", "MED", "EAC" };
+
     static CURL *cHandle;
- 	char *data,*path,url[1024],cmdbuf[8192],buf[512],digest[33],market[16],coinname[16],fmtstr[512],*pricefmt,*volfmt = "%.3f";
-    cJSON *json,*resultobj; uint64_t nonce,txid = 0;
+ 	char *data,*path,url[1024],cmdbuf[8192],buf[512],digest[33],market[16],base[64],rel[64],coinname[16],fmtstr[512],*pricefmt,*volfmt = "%.3f";
+    cJSON *json,*resultobj; int32_t i,good = 0; uint64_t nonce,txid = 0;
+    strcpy(base,_base), strcpy(rel,_rel);
+    touppercase(base), touppercase(rel);
+    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"CNY") == 0) || (strcmp(base,"CNY") == 0 && strcmp(rel,"BTC") == 0) )
+        good = 1;
+    else if ( strcmp(base,"BTC") == 0 )
+    {
+        for (i=0; i<sizeof(btcpairs)/sizeof(*btcpairs); i++)
+            if ( strcmp(btcpairs[i],rel) == 0 )
+            {
+                good = 1;
+                break;
+            }
+    }
+    else if ( strcmp(rel,"BTC") == 0 )
+    {
+        for (i=0; i<sizeof(btcpairs)/sizeof(*btcpairs); i++)
+            if ( strcmp(btcpairs[i],base) == 0 )
+            {
+                good = 1;
+                break;
+            }
+    }
+    else if ( strcmp(base,"CNY") == 0 )
+    {
+        for (i=0; i<sizeof(cnypairs)/sizeof(*cnypairs); i++)
+            if ( strcmp(cnypairs[i],rel) == 0 )
+            {
+                good = 1;
+                break;
+            }
+    }
+    else if ( strcmp(rel,"CNY") == 0 )
+    {
+        for (i=0; i<sizeof(cnypairs)/sizeof(*cnypairs); i++)
+            if ( strcmp(cnypairs[i],base) == 0 )
+            {
+                good = 1;
+                break;
+            }
+    }
+    if ( good == 0 )
+    {
+        *retstrp = clonestr("{\"error\":\"invalid contract pair\"}");
+        return(0);
+    }
     nonce = time(NULL);
     sprintf(buf,"%s_%s_%s_%llu",exchange->apikey,exchange->userid,exchange->apisecret,(long long)nonce);
     //printf("MD5.(%s)\n",buf);
