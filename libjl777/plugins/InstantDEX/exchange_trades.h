@@ -490,7 +490,7 @@ uint64_t huobi_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
         {
             printf("cant find baserel (%s/%s)\n",base,rel);
             return(0);
-        }
+        } else printf("FOUND (%s/%s)\n",base,rel);
         if ( extra != 0 && strcmp(extra,"market") == 0 )
             method = (dir > 0) ? "buy_market" : "sell_market";
         else method = (dir > 0) ? "buy" : "sell", sprintf(pricestr,"&price=%.2f",price);
