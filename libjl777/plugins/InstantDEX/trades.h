@@ -459,7 +459,7 @@ uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uin
             sprintf(cmd+strlen(cmd),"&referencedTransactionFullHash=%s",reftx);
         if ( phaselink != 0 && phaselink[0] != 0 )
             sprintf(cmd+strlen(cmd),"&phased=true&phasingFinishHeight=%u&phasingVotingModel=4&phasingQuorum=1&phasingLinkedFullHash=%s",finishheight,phaselink);
-printf("generated cmd.(%s)\n",cmd);
+//printf("generated cmd.(%s)\n",cmd);
         if ( (retstr= issue_NXTPOST(cmd)) != 0 )
         {
 printf("(%s)\n",retstr);
@@ -755,7 +755,7 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
     deadline = juint(txobj,"deadline");
     timestamp = juint(txobj,"timestamp");
     now = issue_getTime();
-    printf("deadline.%u now.%u timestamp.%u lag %ld\n",deadline,now,timestamp,((long)now - timestamp));
+    //printf("deadline.%u now.%u timestamp.%u lag %ld\n",deadline,now,timestamp,((long)now - timestamp));
     if ( deadline < INSTANTDEX_TRIGGERDEADLINE/2 || ((long)now - timestamp) > 60*2 )
         return(0);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )

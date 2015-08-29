@@ -721,7 +721,12 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     {
         {"nxtae", prices777_NXT, NXT_supports, NXT_tradestub }, {"unconf", prices777_unconfNXT, NXT_supports, NXT_tradestub },
         {"InstantDEX", prices777_InstantDEX, InstantDEX_supports, InstantDEX_tradestub },
-        {"basket", prices777_basket, InstantDEX_supports, InstantDEX_tradestub }, {"active", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
+        {"basket", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
+        {"basketNXT", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
+        {"basketBTC", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
+        {"basketUSD", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
+        {"basketCNY", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
+        {"active", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
         {"poloniex", prices777_poloniex, poloniex_supports, poloniex_trade }, {"bitfinex", prices777_bitfinex, bitfinex_supports, bitfinex_trade },
         {"btc38", prices777_btc38, btc38_supports, btc38_trade }, //{"bter", prices777_bter, bter_supports, bter_trade },
         {"btce", prices777_btce, btce_supports, btce_trade }, {"bitstamp", prices777_bitstamp, bitstamp_supports, bitstamp_trade },
@@ -863,8 +868,8 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
 
 struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint64_t refbaseid,char *_rel,uint64_t refrelid)
 {
-    char exchangestr[64],base[64],rel[64],name[64],key[1024]; uint64_t assetids[8192],baseid,relid,mult;
-    int32_t keysize,iter,i,n,exchangeid,basenum,valid; struct exchange_info *exchange; struct prices777 *prices,*firstprices = 0;
+    char exchangestr[64],base[64],rel[64],name[64],key[1024]; uint64_t baseid,relid;
+    int32_t keysize,exchangeid,valid; struct exchange_info *exchange; struct prices777 *prices;
     baseid = refbaseid, relid = refrelid;
     strcpy(exchangestr,_exchangestr), strcpy(base,_base), strcpy(rel,_rel), strcpy(name,_name);
     InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
@@ -873,92 +878,14 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
         printf("found (%s/%s).%s %llu %llu in slot-> %p\n",base,rel,exchangestr,(long long)baseid,(long long)relid,prices);
         return(prices);
     }
-    for (iter=0; iter<2; iter++)
+    if ( (exchange= find_exchange(&exchangeid,exchangestr)) == 0 )
     {
-        n = 0;
-        if ( (exchange= find_exchange(&exchangeid,exchangestr)) == 0 )
-        {
-            printf("cant add exchange.(%s)\n",exchangestr);
-            return(0);
-        }
-        if ( strcmp(exchangestr,"nxtae") == 0 || strcmp(exchangestr,"unconf") == 0 || strcmp(exchangestr,"InstantDEX") == 0 )
-        {
-            if ( refbaseid == NXT_ASSETID )
-                assetids[n*4] = refrelid, assetids[n*4+1] = NXT_ASSETID, strncpy((char *)&assetids[n*4+2],rel,14), n++;
-            else if ( refrelid == NXT_ASSETID )
-                assetids[n*4] = refbaseid, assetids[n*4+1] = NXT_ASSETID, strncpy((char *)&assetids[n*4+2],base,14), n++;
-            else
-            {
-                assetids[n*4] = refbaseid, assetids[n*4+1] = NXT_ASSETID, strncpy((char *)&assetids[n*4+2],base,14), n++;
-                assetids[n*4] = refrelid, assetids[n*4+1] = NXT_ASSETID, strncpy((char *)&assetids[n*4+2],rel,14), n++;
-            }
-            strcpy(rel,"NXT");
-        }
-        else
-        {
-            if ( strcmp(base,"BTC") == 0 && ((basenum= prices777_basenum(rel)) < 0 || basenum > RUB) )
-                assetids[n*4] = stringbits(rel), assetids[n*4+1] = stringbits(base), strcpy(base,rel), strcpy(rel,"BTC"), n++;
-            else assetids[n*4] = stringbits(base), assetids[n*4+1] = stringbits(rel), n++;
-        }
-        if ( n > 0 )
-        {
-            for (i=0; i<n; i++)
-            {
-                baseid = assetids[i*4], relid = assetids[i*4 + 1];
-                if ( relid == NXT_ASSETID )
-                {
-                    _set_assetname(&mult,base,0,baseid);
-                    strcpy(name,base), strcat(name,"/"), strcat(name,"NXT");
-                    strcpy(rel,"NXT");
-                    if ( Debuglevel > 2 )
-                        printf("i.%d override base.(%s) <- %s rel.(%s) baseid.%llu relid.%llu\n",i,base,name,rel,(long long)baseid,(long long)relid);
-                }
-                if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
-                {
-                    if ( strcmp(exchangestr,"basket") != 0 && strcmp(exchangestr,"active") != 0 )
-                        prices777_addbundle(&valid,1,prices,0,0,0);
-                    if ( firstprices == 0 )
-                        firstprices = prices;
-                    else
-                    {
-                        if ( strcmp(exchangestr,"unconf") == 0 )
-                        {
-                            prices->dependents = realloc(prices->dependents,sizeof(*prices->dependents) * (prices->numdependents + 1));
-                            prices->dependents[prices->numdependents++] = &firstprices->changed;
-                        }
-                        else if ( (strcmp(exchangestr,"InstantDEX") == 0 || strcmp(exchangestr,"nxtae") == 0) && refbaseid != NXT_ASSETID && refrelid != NXT_ASSETID )
-                        {
-                            struct prices777_basket basket[2]; int32_t valid;
-                            basket[0].prices = firstprices, basket[1].prices = prices;
-                            basket[0].wt = 1., basket[1].wt = -1.;
-                            basket[0].groupid = 0, basket[1].groupid = 1;
-                            strcpy(basket[0].base,firstprices->base), strcpy(basket[0].rel,firstprices->rel);
-                            strcpy(basket[1].base,prices->base), strcpy(basket[1].rel,prices->rel);
-                            prices = prices777_addbundle(&valid,1,0,"basket",refbaseid,refrelid);
-                            if ( valid >= 0 )
-                            {
-                                _set_assetname(&mult,name,0,refbaseid), strcat(name,"/"), _set_assetname(&mult,name+strlen(name),0,refrelid);
-                                BUNDLE.ptrs[BUNDLE.num] = prices = prices777_createbasket(1,name,_base,_rel,refbaseid,refrelid,basket,2,"basket");
-                                prices->lastprice = prices777_basket(prices,MAX_DEPTH);
-                                printf("updating basket(%s) lastprice %f changed.%p %d\n",prices->contract,prices->lastprice,&prices->changed,prices->changed);
-                                printf("B total polling.%d added.(%s) (%s/%s) {%s && %s}\n",BUNDLE.num,prices->contract,_base,_rel,firstprices->contract,basket[1].prices->contract);
-                                BUNDLE.num++;
-                            } else //if ( Debuglevel > 2 )
-                                printf("basket.(%s) already there\n",prices->contract);
-                            return(prices);
-                        }
-                    }
-                }
-            }
-        }
-        if ( strcmp(exchangestr,"nxtae") == 0 && (refrelid == NXT_ASSETID || refbaseid == NXT_ASSETID) )
-        {
-            //printf("check unconf\n");
-            strcpy(exchangestr,"unconf");
-        }
-        else break;
+        printf("cant add exchange.(%s)\n",exchangestr);
+        return(0);
     }
-    return(firstprices);
+    if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
+        prices777_addbundle(&valid,1,prices,0,0,0);
+    return(prices);
 }
 
 int32_t prices777_propagate(struct prices777 *prices)
