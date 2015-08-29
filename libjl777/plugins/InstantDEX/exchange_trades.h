@@ -70,7 +70,7 @@ uint64_t bittrex_trade(char **retstrp,struct exchange_info *exchange,char *base,
     else
     {
         dir = flip_for_exchange(pairstr,"%s-%s","BTC",dir,&price,&volume,base,rel);
-        sprintf(urlbuf,"https://bittrex.com/api/v1.1/market/%slimit?apikey=%s&nonce=%llu&market=%s&rate=%.8f&amount=%.8f",dir>0?"buy":"sell",exchange->apikey,(long long)nonce,pairstr,price,volume);
+        sprintf(urlbuf,"https://bittrex.com/api/v1.1/market/%slimit?apikey=%s&nonce=%llu&market=%s&rate=%.8f&quantity=%.8f",dir>0?"buy":"sell",exchange->apikey,(long long)nonce,pairstr,price,volume);
     }
     if ( (sig = hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),urlbuf)) != 0 )
         sprintf(hdr,"apisign:%s",sig);
