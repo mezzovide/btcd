@@ -92,6 +92,8 @@ int32_t protocols_init(int32_t sock,struct endpoint *connections,char *protocol)
 #undef DEFINES_ONLY
 #endif
 
+double milliseconds();
+
 static int32_t init_pluginsocks(struct plugin_info *plugin,int32_t permanentflag,uint64_t instanceid,uint64_t daemonid,int32_t timeout)
 {
 //#ifdef _WIN32
