@@ -318,8 +318,7 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
     _stripwhite(jsonstr,' ');
     strcpy(retbuf,jsonstr), free(jsonstr);
     append_stdfields(retbuf,max,plugin,0,1);
-    if ( Debuglevel > 2 )
-        printf(">>>>>>>>>>> register return.(%s)\n",retbuf);
+   //printf(">>>>>>>>>>> register return.(%s)\n",retbuf);
     return((int32_t)strlen(retbuf) + (retbuf[0] != 0));
 }
 
@@ -342,8 +341,7 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
     int32_t valid = -11,len = (int32_t)strlen(jsonstr); cJSON *json,*obj,*tokenobj; uint64_t tag = 0;
     struct destbuf name,destname,forwarder,tokenstr,sender;
     retbuf[0] = *sendflagp = 0;
-    if ( Debuglevel > 2 )
-        printf("PLUGIN.(%s) process_plugin_json (%s)\n",plugin->name,jsonstr);
+    //printf("PLUGIN.(%s) process_plugin_json (%s)\n",plugin->name,jsonstr);
     if ( (json= cJSON_Parse(jsonstr)) != 0 )
     {
         if ( is_cJSON_Array(json) != 0 )
@@ -370,8 +368,6 @@ static int32_t process_plugin_json(char *retbuf,int32_t max,int32_t *sendflagp,s
             if ( retbuf[0] == 0 )
                 sprintf(retbuf,"{\"result\":\"no response\"}");
             append_stdfields(retbuf,max,plugin,tag,0);
-            if ( Debuglevel > 2 )
-                printf("return.(%s)\n",retbuf);
             return((int32_t)strlen(retbuf));
         } //else printf("(%s) -> no return.%d (%s) vs (%s):(%s) len.%d\n",jsonstr,strcmp(name,plugin->name),name,destname,plugin->name,len);
     }

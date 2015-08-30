@@ -452,45 +452,48 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
     static CURL *cHandle;
  	char *data,*path,url[1024],cmdbuf[8192],buf[512],digest[33],market[16],base[64],rel[64],coinname[16],fmtstr[512],*pricefmt,*volfmt = "%.3f";
     cJSON *json,*resultobj; int32_t i,good = 0; uint64_t nonce,txid = 0;
-    strcpy(base,_base), strcpy(rel,_rel);
-    touppercase(base), touppercase(rel);
-    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"CNY") == 0) || (strcmp(base,"CNY") == 0 && strcmp(rel,"BTC") == 0) )
-        good = 1;
-    else if ( strcmp(base,"BTC") == 0 )
+    if ( _base != 0 && _rel != 0 )
     {
-        for (i=0; i<sizeof(btcpairs)/sizeof(*btcpairs); i++)
-            if ( strcmp(btcpairs[i],rel) == 0 )
-            {
-                good = 1;
-                break;
-            }
-    }
-    else if ( strcmp(rel,"BTC") == 0 )
-    {
-        for (i=0; i<sizeof(btcpairs)/sizeof(*btcpairs); i++)
-            if ( strcmp(btcpairs[i],base) == 0 )
-            {
-                good = 1;
-                break;
-            }
-    }
-    else if ( strcmp(base,"CNY") == 0 )
-    {
-        for (i=0; i<sizeof(cnypairs)/sizeof(*cnypairs); i++)
-            if ( strcmp(cnypairs[i],rel) == 0 )
-            {
-                good = 1;
-                break;
-            }
-    }
-    else if ( strcmp(rel,"CNY") == 0 )
-    {
-        for (i=0; i<sizeof(cnypairs)/sizeof(*cnypairs); i++)
-            if ( strcmp(cnypairs[i],base) == 0 )
-            {
-                good = 1;
-                break;
-            }
+        strcpy(base,_base), strcpy(rel,_rel);
+        touppercase(base), touppercase(rel);
+        if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"CNY") == 0) || (strcmp(base,"CNY") == 0 && strcmp(rel,"BTC") == 0) )
+            good = 1;
+        else if ( strcmp(base,"BTC") == 0 )
+        {
+            for (i=0; i<sizeof(btcpairs)/sizeof(*btcpairs); i++)
+                if ( strcmp(btcpairs[i],rel) == 0 )
+                {
+                    good = 1;
+                    break;
+                }
+        }
+        else if ( strcmp(rel,"BTC") == 0 )
+        {
+            for (i=0; i<sizeof(btcpairs)/sizeof(*btcpairs); i++)
+                if ( strcmp(btcpairs[i],base) == 0 )
+                {
+                    good = 1;
+                    break;
+                }
+        }
+        else if ( strcmp(base,"CNY") == 0 )
+        {
+            for (i=0; i<sizeof(cnypairs)/sizeof(*cnypairs); i++)
+                if ( strcmp(cnypairs[i],rel) == 0 )
+                {
+                    good = 1;
+                    break;
+                }
+        }
+        else if ( strcmp(rel,"CNY") == 0 )
+        {
+            for (i=0; i<sizeof(cnypairs)/sizeof(*cnypairs); i++)
+                if ( strcmp(cnypairs[i],base) == 0 )
+                {
+                    good = 1;
+                    break;
+                }
+        }
     }
     if ( good == 0 )
     {
