@@ -32,6 +32,7 @@ bits320 Unit;
 int32_t init_hexbytes_noT(char *hexbytes,uint8_t *message,long len);
 int32_t safecopy(char *dest,char *src,long len);
 char *clonestr(char *str);
+int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
 
 #include "../../utils/curve25519.h"
 
@@ -77,24 +78,30 @@ bits256 keypair(bits256 *pubkeyp)
     return(privkey);
 }
 
-STRUCTNAME
-{
-    int32_t bus,mode;
-    char bind[128],connect[128];
-    // this will be at the end of the plugins structure and will be called with all zeros to _init
-} DCNET;
-
 struct dcnode
 {
+    bits320 pubexp,pubexp2;
+};
+
+STRUCTNAME
+{
+    int32_t bus,mode,num;
+    char bind[128],connect[128];
     bits256 privkey,privkey2;
     bits320 pubexp,pubexp2;
-} DC;
+    struct dcnode group[64];
+} DCNET;
 
-void dcinit(struct dcnode *node)
+void dcinit()
 {
     bits256 pubkey,pubkey2;
-    node->privkey = keypair(&pubkey), node->privkey2 = keypair(&pubkey2);
-    node->pubexp = fexpand(pubkey), node->pubexp2 = fexpand(pubkey2);
+    DCNET.privkey = keypair(&pubkey), DCNET.privkey2 = keypair(&pubkey2);
+    DCNET.pubexp = fexpand(pubkey), DCNET.pubexp2 = fexpand(pubkey2);
+}
+
+void set_dcnode(struct dcnode *node,bits320 pubexp,bits320 pubexp2)
+{
+    node->pubexp = pubexp, node->pubexp2 = pubexp2;
 }
 
 bits320 dcround(bits320 *commitp,int32_t i,struct dcnode *nodes,int32_t n,bits256 G,bits256 H)
@@ -107,8 +114,8 @@ bits320 dcround(bits320 *commitp,int32_t i,struct dcnode *nodes,int32_t n,bits25
         memset(c.bytes,0,sizeof(c));
         if ( i != j )
         {
-            cmult(&x,&z,nodes[i].privkey,nodes[j].pubexp);
-            cmult(&x2,&z2,nodes[i].privkey2,nodes[j].pubexp2);
+            cmult(&x,&z,DCNET.privkey,nodes[j].pubexp);
+            cmult(&x2,&z2,DCNET.privkey2,nodes[j].pubexp2);
             if ( i < j )
                 shared = fmul(x,crecip(z)), shared2 = fmul(x2,crecip(z2));
             else shared = fmul(z,crecip(x)), shared2 = fmul(z2,crecip(x2));
@@ -148,18 +155,54 @@ bits320 dcround(bits320 *commitp,int32_t i,struct dcnode *nodes,int32_t n,bits25
  printf("-> %16llx totalsum %llx G.%llx H.%llx\n",total.txid,totalsum.txid,G.txid,H.txid);
  }*/
 
+void dcnet(char *dccmd,char *pubkeystr,char *pubkey2str)
+{
+    printf("dcnet.(%s) P.(%s) P2.(%s)\n",dccmd,pubkeystr,pubkey2str);
+    int32_t i,j; bits256 pubkey,pubkey2; bits320 pubexp,pubexp2;
+    decode_hex(pubkey.bytes,sizeof(pubkey),pubkeystr), pubexp = fexpand(pubkey);
+    decode_hex(pubkey2.bytes,sizeof(pubkey2),pubkey2str), pubexp2 = fexpand(pubkey2);
+    if ( strcmp(dccmd,"join") == 0 )
+    {
+        for (i=0; i<DCNET.num; i++)
+        {
+            if ( pubexp.txid == DCNET.group[i].pubexp.txid )
+            {
+                printf("duplicate %llx, %d of DCNET.num %d\n",(long long)pubexp.txid,i,DCNET.num);
+                return;
+            }
+            if ( pubexp.txid > DCNET.group[i].pubexp.txid )
+            {
+                for (j=DCNET.num; j>i; j--)
+                    DCNET.group[j] = DCNET.group[j-1];
+                break;
+            }
+        }
+        set_dcnode(&DCNET.group[i],pubexp,pubexp2);
+        DCNET.num++;
+        for (i=0; i<DCNET.num; i++)
+            printf("%llx ",(long long)DCNET.group[i].pubexp.txid);
+        printf("DCNET.num %d\n",DCNET.num);
+    }
+}
+
 int32_t dcnet_idle(struct plugin_info *plugin)
 {
-    int32_t len; char *msg,*jsonstr; cJSON *json;
+    int32_t len; char *msg,*jsonstr,*pubkey,*pubkey2,*dccmd; cJSON *json;
     if ( DCNET.bus >= 0 )
     {
         if ( (len= nn_recv(DCNET.bus,&msg,NN_MSG,0)) > 0 )
         {
             jsonstr = clonestr(msg);
             nn_freemsg(msg);
+            printf("DCRECV.(%s)\n",jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
-                printf("DCRECV.(%s)\n",jprint(json,0));
+                if ( (dccmd= jstr(json,"dcnet")) != 0 )
+                {
+                    pubkey = jstr(json,"pubkey"), pubkey2 = jstr(json,"pubkey2");
+                    if ( pubkey != 0 && pubkey2 != 0 )
+                        dcnet(dccmd,pubkey,pubkey2);
+                }
                 free_json(json);
             }
             free(jsonstr);
@@ -197,7 +240,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         z = fexpand(tmp);
         zmone = crecip(z);
         Unit = fmul(z,zmone);
-        dcinit(&DC);
+        dcinit();
         DCNET.bus = -1;
         DCNET.mode = juint(json,"dchost");
         myip = jstr(json,"myipaddr");
@@ -219,16 +262,20 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             } else strcpy(plugin->ipaddr,"127.0.0.1");
             if ( DCNET.bus < 0 && (DCNET.bus= nn_socket(AF_SP,NN_BUS)) != 0 )
             {
+                if ( nn_settimeouts2(DCNET.bus,sendtimeout,recvtimeout) != 0 )
+                    printf("error setting timeouts\n");
+            }
+            if ( DCNET.bus >= 0 )
+            {
                 for (i=0; i<sizeof(ipaddrs)/sizeof(*ipaddrs); i++)
                 {
                     if ( strcmp(ipaddrs[i],myip) != 0 )
                     {
                         sprintf(connectaddr,"tcp://%s:9999",ipaddrs[i]);
-                        nn_connect(DCNET.bus,connectaddr);
+                        if ( nn_connect(DCNET.bus,connectaddr) >= 0 )
+                            printf("+%s ",connectaddr);
                     }
                 }
-                if ( nn_settimeouts2(DCNET.bus,sendtimeout,recvtimeout) != 0 )
-                    printf("error setting timeouts\n");
             }
         }
         printf("ipaddr.%s bindaddr.%s\n",plugin->ipaddr,DCNET.bind);
@@ -255,16 +302,13 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         else if ( strcmp(methodstr,"join") == 0 )
         {
             bits256 pubkey,pubkey2; char pubhex[65],pubhex2[65];
-            pubkey = fcontract(DC.pubexp), pubkey2 = fcontract(DC.pubexp2);
+            pubkey = fcontract(DCNET.pubexp), pubkey2 = fcontract(DCNET.pubexp2);
             init_hexbytes_noT(pubhex,pubkey.bytes,sizeof(pubkey));
             init_hexbytes_noT(pubhex2,pubkey2.bytes,sizeof(pubkey2));
-            sprintf(retbuf,"{\"result\":\"success\",\"join\":\"ok\",\"pubkey\":\"%s\",\"pubkey2\":\"%s\",\"done\":1,\"bind\":\"%s\",\"connect\":\"%s\"}",pubhex,pubhex2,DCNET.bind,DCNET.connect);
+            sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"join\",\"pubkey\":\"%s\",\"pubkey2\":\"%s\",\"done\":1,\"bind\":\"%s\",\"connect\":\"%s\"}",pubhex,pubhex2,DCNET.bind,DCNET.connect);
             len = (int32_t)strlen(retbuf);
             if ( DCNET.mode > 0 && DCNET.bus >= 0 )
-            {
-                printf("DCSEND.(%s)\n",retbuf);
                 nn_send(DCNET.bus,retbuf,len,0);
-            }
             return(len);
         }
     }
