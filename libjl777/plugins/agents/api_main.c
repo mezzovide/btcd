@@ -93,14 +93,14 @@ int32_t setnxturl(struct destbuf *urlbuf)
         {
             if ( (json= cJSON_Parse(buf)) != 0 )
             {
-                copy_cJSON(&urlbuf,cJSON_GetObjectItem(json,"NXTAPIURL"));
-fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf.buf);
+                copy_cJSON(urlbuf,cJSON_GetObjectItem(json,"NXTAPIURL"));
+fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf->buf);
                 free_json(json);
             } else fprintf(stderr,"setnxturl parse error.(%s)\n",buf);
         } else fprintf(stderr,"setnxturl error reading.(%s)\n",confname);
         fclose(fp);
     } else fprintf(stderr,"setnxturl cant open.(%s)\n",confname);
-    return((int32_t)strlen(urlbuf.buf));
+    return((int32_t)strlen(urlbuf->buf));
 }
 
 int main(int argc, char **argv)
@@ -200,7 +200,7 @@ int main(int argc, char **argv)
                         else
                         {
                             if ( portflag != 0 && strncmp(name,"port",strlen("port")) == 0 )
-                                sprintf(urlbuf,"%s:%s",url,value[i]), url = urlbuf, portflag = 0;
+                                sprintf(urlbuf,"%s:%s",url,value[i]), url = urlbuf.buf, portflag = 0;
                             else sprintf(postbuf + strlen(postbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
                         }
                     }
