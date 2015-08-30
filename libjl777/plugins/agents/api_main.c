@@ -106,8 +106,8 @@ fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf.buf);
 int main(int argc, char **argv)
 {
     void portable_OS_init();
-    CGI_varlist *varlist; const char *name; char urlbuf[512],namebuf[512],postbuf[65536],*remoteaddr,*str=0,*retstr,*delim,*url = 0;
-    int i,j,iter,localaccess=0,doneflag=0,portflag = 0; cJSON *json; long offset; CGI_value  *value;
+    CGI_varlist *varlist; const char *name; char namebuf[512],postbuf[65536],*remoteaddr,*str=0,*retstr,*delim,*url = 0;
+    int i,j,iter,localaccess=0,doneflag=0,portflag = 0; cJSON *json; long offset; CGI_value  *value; struct destbuf urlbuf;
     portable_OS_init();
     setenv("CONTENT_TYPE", "application/x-www-form-urlencoded", 1);
     json = cJSON_CreateObject();
@@ -139,8 +139,8 @@ int main(int argc, char **argv)
     }
     if ( strcmp("nxt",namebuf) == 0 )
     {
-        if ( setnxturl(urlbuf) != 0 )
-            url = urlbuf;
+        if ( setnxturl(&urlbuf) != 0 )
+            url = urlbuf.buf;
         else url = "http://127.0.0.1:7876/nxt";
     }
     else if ( strcmp("nxts",namebuf) == 0 )
