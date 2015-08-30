@@ -79,7 +79,7 @@ bits256 keypair(bits256 *pubkeyp)
 
 STRUCTNAME
 {
-    int32_t bus;
+    int32_t bus,mode;
     char bind[128],connect[128];
     // this will be at the end of the plugins structure and will be called with all zeros to _init
 } DCNET;
@@ -182,7 +182,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char connectaddr[64],*resultstr,*methodstr,*myip,*retstr = 0; bits256 tmp; bits320 z,zmone; int32_t mode,i,sendtimeout = 10,recvtimeout = 1;
+    char connectaddr[64],*resultstr,*methodstr,*myip,*retstr = 0; bits256 tmp; bits320 z,zmone; int32_t i,len,sendtimeout = 10,recvtimeout = 1;
     retbuf[0] = 0;
     plugin->allowremote = 1;
     if ( initflag > 0 )
@@ -199,18 +199,21 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         Unit = fmul(z,zmone);
         dcinit(&DC);
         DCNET.bus = -1;
-        mode = juint(json,"dchost");
+        DCNET.mode = juint(json,"dchost");
         myip = jstr(json,"myipaddr");
-        if ( mode != 0 )
+        if ( DCNET.mode != 0 )
         {
-            if ( mode > 1 && myip != 0 )
+            if ( DCNET.mode > 1 && myip != 0 )
             {
                 safecopy(plugin->ipaddr,myip,sizeof(plugin->ipaddr));
                 if ( (DCNET.bus= nn_socket(AF_SP,NN_BUS)) != 0 )
                 {
                     sprintf(DCNET.bind,"tcp://%s:9999",myip);
-                    if ( nn_settimeouts2(DCNET.bus,sendtimeout,recvtimeout) != 0 )
-                        printf("error setting timeouts\n");
+                    if ( nn_bind(DCNET.bus,DCNET.bind) == 0 )
+                    {
+                        if ( nn_settimeouts2(DCNET.bus,sendtimeout,recvtimeout) != 0 )
+                            printf("error setting timeouts\n");
+                    }
                 }
             } else strcpy(plugin->ipaddr,"127.0.0.1");
             if ( DCNET.bus < 0 && (DCNET.bus= nn_socket(AF_SP,NN_BUS)) != 0 )
@@ -255,7 +258,13 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             init_hexbytes_noT(pubhex,pubkey.bytes,sizeof(pubkey));
             init_hexbytes_noT(pubhex2,pubkey2.bytes,sizeof(pubkey2));
             sprintf(retbuf,"{\"result\":\"success\",\"join\":\"ok\",\"pubkey\":\"%s\",\"pubkey2\":\"%s\",\"done\":1,\"bind\":\"%s\",\"connect\":\"%s\"}",pubhex,pubhex2,DCNET.bind,DCNET.connect);
-            return((int32_t)strlen(retbuf));
+            len = (int32_t)strlen(retbuf);
+            if ( DCNET.mode > 0 && DCNET.bus >= 0 )
+            {
+                printf("DCSEND.(%s)\n",retbuf);
+                nn_send(DCNET.bus,retbuf,len,0);
+            }
+            return(len);
         }
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));
