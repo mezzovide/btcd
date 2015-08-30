@@ -82,7 +82,7 @@ void process_json(cJSON *json,char *remoteaddr,int32_t localaccess)
     free(jsonstr);
 }
 
-int32_t setnxturl(char *urlbuf)
+int32_t setnxturl(struct destbuf *urlbuf)
 {
     FILE *fp; cJSON *json; char confname[512],buf[65536];
     strcpy(confname,"../../SuperNET.conf"), os_compatible_path(confname);
@@ -93,14 +93,14 @@ int32_t setnxturl(char *urlbuf)
         {
             if ( (json= cJSON_Parse(buf)) != 0 )
             {
-                copy_cJSON(urlbuf,cJSON_GetObjectItem(json,"NXTAPIURL"));
-fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf);
+                copy_cJSON(&urlbuf,cJSON_GetObjectItem(json,"NXTAPIURL"));
+fprintf(stderr,"set NXTAPIURL.(%s)\n",urlbuf.buf);
                 free_json(json);
             } else fprintf(stderr,"setnxturl parse error.(%s)\n",buf);
         } else fprintf(stderr,"setnxturl error reading.(%s)\n",confname);
         fclose(fp);
     } else fprintf(stderr,"setnxturl cant open.(%s)\n",confname);
-    return((int32_t)strlen(urlbuf));
+    return((int32_t)strlen(urlbuf.buf));
 }
 
 int main(int argc, char **argv)
