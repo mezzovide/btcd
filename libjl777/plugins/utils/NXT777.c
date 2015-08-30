@@ -547,9 +547,9 @@ char *issue_signTransaction(char *txbytes,char *NXTACCTSECRET)
 
 uint32_t _get_NXTheight(uint32_t *firsttimep)
 {
-    static uint32_t last,lastheight;
+    static uint32_t last,lastheight,lastNXTtime;
     cJSON *json; uint32_t height = 0; char cmd[256],*jsonstr;
-    if ( (time(NULL) - NXT_GENESISTIME) > last+10 )
+    if ( time(NULL) > last+10 )
     {
         sprintf(cmd,"requestType=getState");
         if ( (jsonstr= issue_NXTPOST(cmd)) != 0 )
@@ -558,7 +558,7 @@ uint32_t _get_NXTheight(uint32_t *firsttimep)
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 if ( firsttimep != 0 )
-                    last = *firsttimep = (uint32_t)get_cJSON_int(json,"time");
+                    lastNXTtime = *firsttimep = (uint32_t)get_cJSON_int(json,"time");
                 height = (int32_t)get_cJSON_int(json,"numberOfBlocks");
                 if ( height > 0 )
                     height--;
@@ -567,12 +567,13 @@ uint32_t _get_NXTheight(uint32_t *firsttimep)
             }
             free(jsonstr);
         }
+        last = (uint32_t)time(NULL);
     }
     else
     {
         height = lastheight;
         if ( firsttimep != 0 )
-            *firsttimep = last;
+            *firsttimep = lastNXTtime;
     }
     return(height);
 }
