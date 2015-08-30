@@ -209,12 +209,12 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 if ( (DCNET.bus= nn_socket(AF_SP,NN_BUS)) != 0 )
                 {
                     sprintf(DCNET.bind,"tcp://%s:9999",myip);
-                    if ( nn_bind(DCNET.bus,DCNET.bind) == 0 )
+                    if ( nn_bind(DCNET.bus,DCNET.bind) >= 0 )
                     {
                         if ( nn_settimeouts2(DCNET.bus,sendtimeout,recvtimeout) != 0 )
                             printf("error setting timeouts\n");
                         else printf("DCBIND.(%s) -> NN_BUS\n",DCNET.bind);
-                    }
+                    } else printf("error with DCBIND.(%s)\n",DCNET.bind);
                 }
             } else strcpy(plugin->ipaddr,"127.0.0.1");
             if ( DCNET.bus < 0 && (DCNET.bus= nn_socket(AF_SP,NN_BUS)) != 0 )
