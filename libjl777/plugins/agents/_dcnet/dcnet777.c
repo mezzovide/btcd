@@ -213,6 +213,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     {
                         if ( nn_settimeouts2(DCNET.bus,sendtimeout,recvtimeout) != 0 )
                             printf("error setting timeouts\n");
+                        else printf("DCBIND.(%s) -> NN_BUS\n",DCNET.bind);
                     }
                 }
             } else strcpy(plugin->ipaddr,"127.0.0.1");
