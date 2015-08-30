@@ -167,7 +167,7 @@ void dcnet(char *dccmd,char *pubkeystr,char *pubkey2str)
         {
             if ( pubexp.txid == DCNET.group[i].pubexp.txid )
             {
-                printf("duplicate %llx, DCNET.num %d\n",(long long)pubexp.txid,DCNET.num);
+                printf("duplicate %llx, %d of DCNET.num %d\n",(long long)pubexp.txid,i,DCNET.num);
                 return;
             }
             if ( pubexp.txid > DCNET.group[i].pubexp.txid )
@@ -194,6 +194,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
         {
             jsonstr = clonestr(msg);
             nn_freemsg(msg);
+            printf("DCRECV.(%s)\n",jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
             {
                 if ( (dccmd= jstr(json,"dcnet")) != 0 )
@@ -263,6 +264,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             {
                 if ( nn_settimeouts2(DCNET.bus,sendtimeout,recvtimeout) != 0 )
                     printf("error setting timeouts\n");
+            }
+            if ( DCNET.bus >= 0 )
+            {
                 for (i=0; i<sizeof(ipaddrs)/sizeof(*ipaddrs); i++)
                 {
                     if ( strcmp(ipaddrs[i],myip) != 0 )
@@ -304,10 +308,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"join\",\"pubkey\":\"%s\",\"pubkey2\":\"%s\",\"done\":1,\"bind\":\"%s\",\"connect\":\"%s\"}",pubhex,pubhex2,DCNET.bind,DCNET.connect);
             len = (int32_t)strlen(retbuf);
             if ( DCNET.mode > 0 && DCNET.bus >= 0 )
-            {
-                printf("DCSEND.(%s)\n",retbuf);
                 nn_send(DCNET.bus,retbuf,len,0);
-            }
             return(len);
         }
     }
