@@ -258,8 +258,8 @@ static void append_stdfields(char *retbuf,int32_t max,struct plugin_info *plugin
             sprintf(tagstr+strlen(tagstr),",\"NXT\":\"%s\"",plugin->NXTADDR);
         if ( allfields != 0 )
         {
-             if ( SUPERNET.iamrelay != 0 )
-                 sprintf(retbuf+strlen(retbuf)-1,",\"myipaddr\":\"%s\"}",plugin->ipaddr);
+            //if ( SUPERNET.iamrelay != 0 )
+            //    sprintf(retbuf+strlen(retbuf)-1,",\"myipaddr\":\"%s\"}",plugin->ipaddr);
             sprintf(retbuf+strlen(retbuf)-1,",\"allowremote\":%d%s}",plugin->allowremote,tagstr);
             sprintf(retbuf+strlen(retbuf)-1,",\"permanentflag\":%d,\"daemonid\":\"%llu\",\"myid\":\"%llu\",\"plugin\":\"%s\",\"endpoint\":\"%s\",\"millis\":%.2f,\"sent\":%u,\"recv\":%u}",plugin->permanentflag,(long long)plugin->daemonid,(long long)plugin->myid,plugin->name,plugin->bindaddr[0]!=0?plugin->bindaddr:plugin->connectaddr,milliseconds(),plugin->numsent,plugin->numrecv);
          }
@@ -306,7 +306,7 @@ static int32_t registerAPI(char *retbuf,int32_t max,struct plugin_info *plugin,c
     cJSON_AddItemToObject(json,"pluginrequest",cJSON_CreateString("SuperNET"));
     cJSON_AddItemToObject(json,"requestType",cJSON_CreateString("register"));
     if ( plugin->sleepmillis == 0 )
-        plugin->sleepmillis = get_API_int(cJSON_GetObjectItem(json,"sleepmillis"),SUPERNET.APISLEEP);
+        plugin->sleepmillis = get_API_int(cJSON_GetObjectItem(json,"sleepmillis"),25);//SUPERNET.APISLEEP);
     cJSON_AddItemToObject(json,"sleepmillis",cJSON_CreateNumber(plugin->sleepmillis));
     if ( cJSON_GetObjectItem(json,"NXT") == 0 )
         cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(plugin->NXTADDR));
@@ -384,6 +384,9 @@ printf("process_plugin_json: couldnt parse.(%s)\n",jsonstr);
     return((int32_t)strlen(retbuf));
 }
 
+#define OFFSET_ENABLED (bundledflag == 0)
+static char *get_localtransport(int32_t bundledflag) { return(OFFSET_ENABLED ? "ipc" : "inproc"); }
+
 #ifdef BUNDLED
 int32_t PLUGNAME(_main)
 #else
@@ -436,8 +439,7 @@ int32_t main
         argjson = cJSON_Parse(jsonargs);
         if ( (len= registerAPI(registerbuf,sizeof(registerbuf)-1,plugin,argjson)) > 0 )
         {
-            if ( Debuglevel > 2 )
-                fprintf(stderr,">>>>>>>>>>>>>>> plugin.(%s) sends REGISTER SEND.(%s)\n",plugin->name,registerbuf);
+            //fprintf(stderr,">>>>>>>>>>>>>>> plugin.(%s) sends REGISTER SEND.(%s)\n",plugin->name,registerbuf);
             nn_local_broadcast(plugin->pushsock,0,0,(uint8_t *)registerbuf,(int32_t)strlen(registerbuf)+1), plugin->numsent++;
         } else printf("error register API\n");
         if ( argjson != 0 )
@@ -449,8 +451,7 @@ int32_t main
         if ( (len= nn_recv(plugin->pullsock,&line,NN_MSG,0)) > 0 )
         {
             len = (int32_t)strlen(line);
-            if ( Debuglevel > 2 )
-                printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
+            //printf("(s%d r%d) <<<<<<<<<<<<<< %s.RECEIVED (%s).%d -> bind.(%s) connect.(%s) %s\n",plugin->numsent,plugin->numrecv,plugin->name,line,len,plugin->bindaddr,plugin->connectaddr,plugin->permanentflag != 0 ? "PERMANENT" : "WEBSOCKET"), fflush(stdout);
             if ( (len= process_plugin_json(retbuf,max,&sendflag,plugin,plugin->permanentflag,plugin->daemonid,plugin->myid,line)) > 0 )
             {
                 if ( plugin->bundledflag == 0 )
@@ -458,8 +459,7 @@ int32_t main
                 if ( sendflag != 0 )
                 {
                     nn_local_broadcast(plugin->pushsock,0,0,(uint8_t *)retbuf,(int32_t)strlen(retbuf)+1), plugin->numsent++;
-                    if ( Debuglevel > 2 )
-                        fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
+                    //fprintf(stderr,">>>>>>>>>>>>>> returned.(%s)\n",retbuf);
                 }
             } //else printf("null return from process_plugin_json\n");
             nn_freemsg(line);
