@@ -335,6 +335,57 @@ double prices777_poloniex(struct prices777 *prices,int32_t maxdepth)
     return(prices777_standard("poloniex",prices->url,prices,0,0,maxdepth,0));
 }
 
+int32_t kraken_supports(char *_base,char *_rel)
+{
+    char *supports[] = { "BTC", "ETH", "LTC", "NMC", "STR", "DOGE", "XVN", "XRP", "USD", "CAD", "JPY", "GBP", "KRW" };
+    int32_t i,j; char base[64],rel[64];
+    strcpy(base,_base), strcpy(rel,_rel);
+    touppercase(base), touppercase(rel);
+    for (i=0; i<sizeof(supports)/sizeof(*supports); i++)
+        if ( strcmp(base,supports[i]) == 0 )
+        {
+            for (j=0; j<sizeof(supports)/sizeof(*supports); j++)
+                if ( strcmp(rel,supports[j]) == 0 )
+                    return(1);
+            break;
+        }
+    return(0);
+}
+
+double prices777_kraken(struct prices777 *prices,int32_t maxdepth)
+{
+    char market[128],field[64],base[64],rel[64],*jsonstr; cJSON *json; double hbla = 0.;
+    strcpy(base,prices->base), strcpy(rel,prices->rel);
+    touppercase(base), touppercase(rel);
+    if ( strcmp(base,"BTC") == 0 )
+        strcpy(base,"XBT");
+    if ( strcmp(rel,"BTC") == 0 )
+        strcpy(rel,"XBT");
+    if ( strcmp(base,"DOGE") == 0 )
+        strcpy(base,"XDG");
+    if ( strcmp(rel,"DOGE") == 0 )
+        strcpy(rel,"XDG");
+    sprintf(field,"X%sZ%s",base,rel);
+    if ( prices->url[0] == 0 )
+    {
+        sprintf(market,"%s%s",base,rel);
+        sprintf(prices->url,"https://api.kraken.com/0/public/Depth?pair=%s&count=%d",market,maxdepth);
+    }
+    if ( (jsonstr= issue_curl(prices->url)) != 0 )
+    {
+//{"error":[],"result":{"XXBTZUSD":{"asks":[["230.31677","1.438",1440886427],["230.31678","7.229",1440886068],["230.77732","0.012",1440876801],["230.77833","9.642",1440885707],["231.24081","9.719",1440884428]],"bids":[["228.04086","3.052",1440886443],["228.04085","0.590",1440886446],["228.04076","9.550",1440886434],["227.58559","10.214",1440800610],["227.56018","5.000",1440881811]]}}}
+        if ( (json= cJSON_Parse(jsonstr)) != 0 )
+        {
+            printf("got.(%s)\n",jsonstr);
+            hbla = prices777_json_orderbook("kraken",prices,maxdepth,jobj(json,"result"),field,"bids","asks",0,0);
+            free_json(json);
+        }
+        free(jsonstr);
+    }
+    return(hbla);
+}
+
+
 int32_t bitfinex_supports(char *base,char *rel)
 {
     if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"DASH") == 0 && strcmp(rel,"BTC") == 0) || (strcmp(base,"DASH") == 0 && strcmp(rel,"USD") == 0) )
@@ -631,7 +682,7 @@ uint64_t prices777_truefx(uint64_t *millistamps,double *bids,double *asks,double
 
 double prices777_fxcm(double lhlogmatrix[8][8],double logmatrix[8][8],double bids[64],double asks[64],double highs[64],double lows[64])
 {
-    char numstr[64],name[64],*xmlstr,*str; cJSON *json,*obj; int32_t i,j,c,flag,k,n = 0; double bid,ask,high,low;
+    char name[64],*xmlstr,*str; cJSON *json,*obj; int32_t i,j,c,flag,k,n = 0; double bid,ask,high,low; struct destbuf numstr;
     memset(bids,0,sizeof(*bids) * NUM_CONTRACTS), memset(asks,0,sizeof(*asks) * NUM_CONTRACTS);
     if ( (xmlstr= issue_curl("http://rates.fxcm.com/RatesXML")) != 0 )
     {
@@ -708,10 +759,10 @@ double prices777_fxcm(double lhlogmatrix[8][8],double logmatrix[8][8],double bid
                         strcpy(name,str);
                         if ( strcmp(name,"USDCNH") == 0 )
                             strcpy(name,"USDCNY");
-                        copy_cJSON(numstr,jobj(obj,"Bid")), bid = atof(numstr);
-                        copy_cJSON(numstr,jobj(obj,"Ask")), ask = atof(numstr);
-                        copy_cJSON(numstr,jobj(obj,"High")), high = atof(numstr);
-                        copy_cJSON(numstr,jobj(obj,"Low")), low = atof(numstr);
+                        copy_cJSON(&numstr,jobj(obj,"Bid")), bid = atof(numstr.buf);
+                        copy_cJSON(&numstr,jobj(obj,"Ask")), ask = atof(numstr.buf);
+                        copy_cJSON(&numstr,jobj(obj,"High")), high = atof(numstr.buf);
+                        copy_cJSON(&numstr,jobj(obj,"Low")), low = atof(numstr.buf);
                         if ( (c= prices777_contractnum(name,0)) >= 0 )
                         {
                             bids[c] = bid, asks[c] = ask, highs[c] = high, lows[c] = low;
@@ -739,7 +790,7 @@ double prices777_fxcm(double lhlogmatrix[8][8],double logmatrix[8][8],double bid
 double prices777_instaforex(double logmatrix[8][8],uint32_t timestamps[NUM_COMBINED+1],double bids[128],double asks[128])
 {
     //{"NZDUSD":{"symbol":"NZDUSD","lasttime":1437580206,"digits":4,"change":"-0.0001","bid":"0.6590","ask":"0.6593"},
-    char numstr[64],*jsonstr,*str; cJSON *json,*item; int32_t i,c;
+    char *jsonstr,*str; cJSON *json,*item; int32_t i,c; struct destbuf numstr;
     memset(timestamps,0,sizeof(*timestamps) * (NUM_COMBINED + 1)), memset(bids,0,sizeof(*bids) * (NUM_COMBINED + 1)), memset(asks,0,sizeof(*asks) * (NUM_COMBINED + 1));
     if ( (jsonstr= issue_curl("https://quotes.instaforex.com/get_quotes.php?q=NZDUSD,NZDCHF,NZDCAD,NZDJPY,GBPNZD,EURNZD,AUDNZD,CADJPY,CADCHF,USDCAD,EURCAD,GBPCAD,AUDCAD,USDCHF,CHFJPY,EURCHF,GBPCHF,AUDCHF,EURUSD,EURAUD,EURJPY,EURGBP,GBPUSD,GBPJPY,GBPAUD,USDJPY,AUDJPY,AUDUSD,XAUUSD&m=json")) != 0 )
     {
@@ -754,8 +805,8 @@ double prices777_instaforex(double logmatrix[8][8],uint32_t timestamps[NUM_COMBI
                 if ( (item= jobj(json,str)) != 0 )
                 {
                     timestamps[c] = juint(item,"lasttime");
-                    copy_cJSON(numstr,jobj(item,"bid")), bids[c] = atof(numstr);
-                    copy_cJSON(numstr,jobj(item,"ask")), asks[c] = atof(numstr);
+                    copy_cJSON(&numstr,jobj(item,"bid")), bids[c] = atof(numstr.buf);
+                    copy_cJSON(&numstr,jobj(item,"ask")), asks[c] = atof(numstr.buf);
                     //if ( c < NUM_CONTRACTS && Contract_rel[c] == JPY )
                     //    bids[i] /= 100., asks[i] /= 100.;
                     if ( Debuglevel > 2 )
@@ -773,14 +824,14 @@ double prices777_instaforex(double logmatrix[8][8],uint32_t timestamps[NUM_COMBI
 
 int32_t prices777_ecbparse(char *date,double *prices,char *url,int32_t basenum)
 {
-    char *jsonstr,*relstr,*basestr; int32_t count=0,i,relnum; cJSON *json,*ratesobj,*item;
+    char *jsonstr,*relstr,*basestr; int32_t count=0,i,relnum; cJSON *json,*ratesobj,*item; struct destbuf tmp;
     if ( (jsonstr= issue_curl(url)) != 0 )
     {
         if ( Debuglevel > 2 )
             printf("(%s)\n",jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            copy_cJSON(date,jobj(json,"date"));
+            copy_cJSON(&tmp,jobj(json,"date")), safecopy(date,tmp.buf,64);
             if ( (basestr= jstr(json,"base")) != 0 && strcmp(basestr,CURRENCIES[basenum]) == 0 && (ratesobj= jobj(json,"rates")) != 0 && (item= ratesobj->child) != 0 )
             {
                 while ( item != 0 )

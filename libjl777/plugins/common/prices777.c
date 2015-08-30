@@ -727,13 +727,20 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         {"basketUSD", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
         {"basketCNY", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
         {"active", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
-        {"poloniex", prices777_poloniex, poloniex_supports, poloniex_trade }, {"bitfinex", prices777_bitfinex, bitfinex_supports, bitfinex_trade },
+        {"poloniex", prices777_poloniex, poloniex_supports, poloniex_trade },
+        {"kraken", prices777_kraken, kraken_supports, kraken_trade },
+        {"bitfinex", prices777_bitfinex, bitfinex_supports, bitfinex_trade },
         {"btc38", prices777_btc38, btc38_supports, btc38_trade }, //{"bter", prices777_bter, bter_supports, bter_trade },
-        {"btce", prices777_btce, btce_supports, btce_trade }, {"bitstamp", prices777_bitstamp, bitstamp_supports, bitstamp_trade },
-        {"bittrex", prices777_bittrex, bittrex_supports, bittrex_trade }, {"okcoin", prices777_okcoin, okcoin_supports, okcoin_trade },
-        {"huobi", prices777_huobi, huobi_supports, huobi_trade }, {"bityes", prices777_bityes, bityes_supports, bityes_trade },
-        {"coinbase", prices777_coinbase, coinbase_supports, coinbase_trade }, {"lakebtc", prices777_lakebtc, lakebtc_supports, lakebtc_trade },
-        {"exmo", prices777_exmo, exmo_supports, exmo_trade }, {"quadriga", prices777_quadriga, quadriga_supports, quadriga_trade },
+        {"btce", prices777_btce, btce_supports, btce_trade },
+        {"bitstamp", prices777_bitstamp, bitstamp_supports, bitstamp_trade },
+        {"bittrex", prices777_bittrex, bittrex_supports, bittrex_trade },
+        {"okcoin", prices777_okcoin, okcoin_supports, okcoin_trade },
+        {"huobi", prices777_huobi, huobi_supports, huobi_trade },
+        {"bityes", prices777_bityes, bityes_supports, bityes_trade },
+        {"coinbase", prices777_coinbase, coinbase_supports, coinbase_trade },
+        {"lakebtc", prices777_lakebtc, lakebtc_supports, lakebtc_trade },
+        {"exmo", prices777_exmo, exmo_supports, exmo_trade },
+        {"quadriga", prices777_quadriga, quadriga_supports, quadriga_trade },
         {"truefx", 0 }, {"ecb", 0 }, {"instaforex", 0 }, {"fxcm", 0 }, {"yahoo", 0 },
     };
     int32_t i,rellen; char basebuf[64],relbuf[64],base[64],rel[64],name[64]; struct exchange_info *exchangeptr;
@@ -866,12 +873,31 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     return(prices);
 }
 
+int32_t is_pair(char *base,char *rel,char *refbase,char *refrel)
+{
+    if ( strcmp(base,refbase) == 0 && strcmp(rel,refrel) == 0 )
+        return(1);
+    else if ( strcmp(rel,refbase) == 0 && strcmp(base,refrel) == 0 )
+        return(-1);
+    return(0);
+}
+
 struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint64_t refbaseid,char *_rel,uint64_t refrelid)
 {
     char exchangestr[64],base[64],rel[64],name[64],key[1024]; uint64_t baseid,relid;
     int32_t keysize,exchangeid,valid; struct exchange_info *exchange; struct prices777 *prices;
     baseid = refbaseid, relid = refrelid;
     strcpy(exchangestr,_exchangestr), strcpy(base,_base), strcpy(rel,_rel), strcpy(name,_name);
+    if ( (strcmp(exchangestr,"huobi") == 0 && is_pair(base,rel,"BTC","CNY") == 0 && is_pair(base,rel,"LTC","CNY") == 0) ||
+        ((strcmp(exchangestr,"bityes") == 0 || strcmp(exchangestr,"okcoin") == 0) && is_pair(base,rel,"BTC","USD") == 0 && is_pair(base,rel,"LTC","USD") == 0) ||
+        ((strcmp(exchangestr,"bitstamp") == 0 || strcmp(exchangestr,"coinbase") == 0) && is_pair(base,rel,"BTC","USD") == 0) ||
+        (strcmp(exchangestr,"lakebtc") == 0 && is_pair(base,rel,"BTC","CNY") == 0 && is_pair(base,rel,"BTC","USD") == 0) ||
+        (strcmp(exchangestr,"quadriga") == 0 && is_pair(base,rel,"BTC","CAD") == 0 && is_pair(base,rel,"BTC","USD") == 0) ||
+        0 )
+    {
+        printf("%s (%s/%s) is not a supported trading pair\n",exchangestr,base,rel);
+        return(0);
+    }
     InstantDEX_name(key,&keysize,exchangestr,name,base,&baseid,rel,&relid);
     if ( (prices= prices777_addbundle(&valid,0,0,exchangestr,baseid,relid)) != 0 )
     {
@@ -986,7 +1012,7 @@ int32_t prices777_init(char *jsonstr)
 {
     char *btcdexchanges[] = { "poloniex", "bittrex" };//, "bter" };
     char *btcusdexchanges[] = { "bityes", "bitfinex", "bitstamp", "itbit", "okcoin", "coinbase", "btce", "lakebtc", "exmo" };
-    cJSON *json=0,*item,*exchanges; int32_t i,n; char *exchange,*base,*rel,*contract; struct exchange_info *exchangeptr;
+    cJSON *json=0,*item,*exchanges; int32_t i,n; char *exchange,*base,*rel,*contract; struct exchange_info *exchangeptr; struct destbuf tmp;
     if ( BUNDLE.ptrs[0] != 0 )
         return(0);
     if ( (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,"unconf","NXT","BTC",0,"NXT/BTC",NXT_ASSETID,calc_nxt64bits("12659653638116877017"),0)) != 0 )
@@ -1037,8 +1063,8 @@ int32_t prices777_init(char *jsonstr)
             }
             if ( strcmp(exchange,"truefx") == 0 )
             {
-                copy_cJSON(BUNDLE.truefxuser,jobj(item,"truefxuser"));
-                copy_cJSON(BUNDLE.truefxpass,jobj(item,"truefxpass"));
+                copy_cJSON(&tmp,jobj(item,"truefxuser")), safecopy(BUNDLE.truefxuser,tmp.buf,sizeof(BUNDLE.truefxuser));
+                copy_cJSON(&tmp,jobj(item,"truefxpass")), safecopy(BUNDLE.truefxpass,tmp.buf,sizeof(BUNDLE.truefxpass));;
                 printf("truefx.(%s %s)\n",BUNDLE.truefxuser,BUNDLE.truefxpass);
             }
             else if ( base != 0 && rel != 0 && base[0] != 0 && rel[0] != 0 && (BUNDLE.ptrs[BUNDLE.num]= prices777_initpair(1,0,exchange,base,rel,jdouble(item,"decay"),contract,stringbits(base),stringbits(rel),0)) != 0 )
