@@ -86,7 +86,7 @@ int32_t setnxturl(struct destbuf *urlbuf)
 {
     FILE *fp; cJSON *json; char confname[512],buf[65536];
     strcpy(confname,"../../SuperNET.conf"), os_compatible_path(confname);
-    urlbuf[0] = 0;
+    urlbuf->buf[0] = 0;
     if ( (fp= fopen(confname,"rb")) != 0 )
     {
         if ( fread(buf,1,sizeof(buf),fp) > 0 )
@@ -200,7 +200,7 @@ int main(int argc, char **argv)
                         else
                         {
                             if ( portflag != 0 && strncmp(name,"port",strlen("port")) == 0 )
-                                sprintf(urlbuf,"%s:%s",url,value[i]), url = urlbuf.buf, portflag = 0;
+                                sprintf(urlbuf.buf,"%s:%s",url,value[i]), url = urlbuf.buf, portflag = 0;
                             else sprintf(postbuf + strlen(postbuf),"%s%s=%s",delim,name,value[i]), delim = "&";
                         }
                     }
