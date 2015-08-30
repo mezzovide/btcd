@@ -225,7 +225,8 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char connectaddr[64],*resultstr,*methodstr,*myip,*retstr = 0; bits256 tmp; bits320 z,zmone; int32_t i,len,sendtimeout = 10,recvtimeout = 1;
+    char connectaddr[64],pubhex[65],pubhex2[65],*resultstr,*methodstr,*myip,*arraystr,*retstr = 0; bits256 tmp,pubkey,pubkey2; cJSON *array;
+    bits320 z,zmone; int32_t i,len,sendtimeout = 10,recvtimeout = 1;
     retbuf[0] = 0;
     plugin->allowremote = 1;
     if ( initflag > 0 )
@@ -301,14 +302,28 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(methodstr,"join") == 0 )
         {
-            bits256 pubkey,pubkey2; char pubhex[65],pubhex2[65];
             pubkey = fcontract(DCNET.pubexp), pubkey2 = fcontract(DCNET.pubexp2);
             init_hexbytes_noT(pubhex,pubkey.bytes,sizeof(pubkey));
             init_hexbytes_noT(pubhex2,pubkey2.bytes,sizeof(pubkey2));
-            sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"join\",\"pubkey\":\"%s\",\"pubkey2\":\"%s\",\"done\":1,\"bind\":\"%s\",\"connect\":\"%s\"}",pubhex,pubhex2,DCNET.bind,DCNET.connect);
+            sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"join\",\"pubkey\":\"%s\",\"pubkey2\":\"%s\",\"done\":1,\"bind\":\"%s\",\"connect\":\"%s\",\"dcnum\":%d}",pubhex,pubhex2,DCNET.bind,DCNET.connect,DCNET.num);
             len = (int32_t)strlen(retbuf);
             if ( DCNET.mode > 0 && DCNET.bus >= 0 )
-                nn_send(DCNET.bus,retbuf,len,0);
+                nn_send(DCNET.bus,retbuf,len+1,0);
+            return(len);
+        }
+        else if ( strcmp(methodstr,"round") == 0 )
+        {
+            pubkey = rand256(1), pubkey2 = rand256(1);
+            init_hexbytes_noT(pubhex,pubkey.bytes,sizeof(pubkey));
+            init_hexbytes_noT(pubhex2,pubkey2.bytes,sizeof(pubkey2));
+            array = cJSON_CreateArray();
+            for (i=0; i<DCNET.num; i++)
+                jaddi64bits(array,fcontract(DCNET.group[i].pubexp).txid);
+            arraystr = jprint(array,1);
+            sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"round\",\"G\":\"%s\",\"H\":\"%s\",\"done\":1,\"bind\":\"%s\",\"connect\":\"%s\",\"dcnum\":%d,\"group\":%s}",pubhex,pubhex2,DCNET.bind,DCNET.connect,DCNET.num,arraystr);
+            len = (int32_t)strlen(retbuf);
+            if ( DCNET.mode > 0 && DCNET.bus >= 0 )
+                nn_send(DCNET.bus,retbuf,len+1,0);
             return(len);
         }
     }
