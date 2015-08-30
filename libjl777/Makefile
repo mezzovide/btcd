@@ -97,7 +97,6 @@ agents: plugins/agents/echodemo plugins/cgi/api plugins/agents/nxt plugins/agent
 	cd plugins; \
     $(_echodemo); \
     $(_api); \
-    $(_dcnet); \
     cd ..
 
 rps: plugins/agents/rps; \
