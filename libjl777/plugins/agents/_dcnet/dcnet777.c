@@ -416,7 +416,7 @@ void dcnet(char *dccmd,cJSON *json)
                 else
                 {
                     for (i=0; i<MAXGROUPS; i++)
-                        if ( DCNET.groups[i].groupid == 0 || DCNET.groups[i].finished != 0 )
+                        if ( DCNET.groups[i].id == 0 || DCNET.groups[i].finished != 0 )
                             break;
                     if ( i == MAXGROUPS )
                     {
