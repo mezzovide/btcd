@@ -270,6 +270,8 @@ uint64_t dcnet_grouparray(int32_t *nump,cJSON *array)
             jaddi64bits(array,txid);
             groupid ^= txid;
             n++;
+            if ( n >= MAXNODES )
+                break;
         }
     *nump = n;
     return(groupid);
@@ -278,7 +280,6 @@ uint64_t dcnet_grouparray(int32_t *nump,cJSON *array)
 void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit)
 {
     int32_t i,j,x,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H;
-    //printf("dcround_update groupid.%llu from %llu\n",(long long)group->id,(long long)sender);
     for (i=0; i<group->n; i++)
     {
         if ( (node= group->nodes[i]) != 0 && node->id == sender )
@@ -319,7 +320,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
             return;
         }
     }
-    printf("dcround_update: couldnt find match\n");
+    printf("dcround_update groupid.%llu from %llu\n",(long long)group->id,(long long)sender);
 }
 
 void dcnet_updategroup(struct dcitem *ptr)
@@ -386,7 +387,8 @@ void dcnet(char *dccmd,cJSON *json)
                 }
             }
             set_dcnode(&DCNET.nodes[i],pubexp,pubexp2);
-            DCNET.num++;
+            if ( DCNET.num < MAXNODES-1 )
+                DCNET.num++;
             for (i=0; i<DCNET.num; i++)
                 printf("%llx.%u ",(long long)DCNET.nodes[i].pubexp.txid,DCNET.nodes[i].lastcontact);
             printf("DCNET.num %d\n",DCNET.num);
@@ -432,7 +434,7 @@ void dcnet(char *dccmd,cJSON *json)
             group->prodcommit = group->prodOi = Unit;
             decode_hex(pubkey.bytes,sizeof(pubkey),pubkeystr), pubexp = fexpand(pubkey);
             decode_hex(pubkey2.bytes,sizeof(pubkey2),pubkey2str), pubexp2 = fexpand(pubkey2);
-            for (i=0; i<n; i++)
+            for (group->n=i=0; i<n; i++)
             {
                 txid = j64bits(jitem(array,i),0);
                 if ( (node= find_dcnode(txid)) != 0 )
@@ -448,7 +450,7 @@ void dcnet(char *dccmd,cJSON *json)
                     return;
                 }
             }
-            msgelement = dcnet_message(group,n);
+            msgelement = dcnet_message(group,group->n);
             Oi = dcround(&commit,myind,group,pubkey,pubkey2,msgelement);
             dcround_update(group,DCNET.myid,fcontract(Oi),fcontract(commit));//,&ptr->data[datalen],ptr->size - datalen);
             datalen = serialize_data(data,datalen,groupid,sizeof(groupid));
@@ -534,7 +536,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
-        else if ( DCNET.numgroups > 3 && time(NULL) > lastsent+10 )
+        else if ( DCNET.num > 2 && time(NULL) > lastsent+10 )
         {
             dcnet_startround(retbuf);
             lastsent = (uint32_t)time(NULL);
