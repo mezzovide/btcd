@@ -489,7 +489,7 @@ void dcnet(char *dccmd,cJSON *json)
                 nn_send(DCNET.bus,data,datalen,0);
             dcnet_scanqueue(groupid);
             //printf("dcnet.(%s) G.(%s) H.(%s) -> (%llx, %llx)\n",dccmd,pubkeystr,pubkey2str,(long long)Oi.txid,(long long)commit.txid);
-            printf("dcnet.(%s) -> (%llx, %llx)\n",dccmd,(long long)Oi.txid,(long long)commit.txid);
+            //printf("dcnet.(%s) -> (%llx, %llx)\n",dccmd,(long long)Oi.txid,(long long)commit.txid);
         }
     }
 }
@@ -567,7 +567,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
-        else if ( DCNET.num > 2 && milliseconds() > lastsent+25 )
+        else if ( DCNET.num > 2 && milliseconds() > lastsent+50 )
         {
             dcnet_startround(retbuf);
             lastsent = milliseconds();
