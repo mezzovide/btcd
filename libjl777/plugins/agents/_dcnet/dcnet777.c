@@ -665,9 +665,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             return(0);
         }
         else if ( strcmp(methodstr,"join") == 0 )
-            return(dcnet_join(retstr));
+            return(dcnet_join(retbuf));
         else if ( strcmp(methodstr,"round") == 0 )
-            return(dcnet_startround(retstr));
+            return(dcnet_startround(retbuf));
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));
 }
