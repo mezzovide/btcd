@@ -125,18 +125,19 @@ bits256 keypair(bits256 *pubkeyp)
     return(privkey);
 }
 
+void set_dcnode(struct dcnode *node,bits320 pubexp,bits320 pubexp2)
+{
+    node->pubexp = pubexp, node->pubexp2 = pubexp2, node->lastcontact = (uint32_t)time(NULL);
+    node->id = fcontract(pubexp).txid;
+}
+
 void dcinit()
 {
     bits256 pubkey,pubkey2;
     DCNET.privkey = keypair(&pubkey), DCNET.privkey2 = keypair(&pubkey2);
     DCNET.myid = pubkey.txid;
     DCNET.pubexp = fexpand(pubkey), DCNET.pubexp2 = fexpand(pubkey2);
-}
-
-void set_dcnode(struct dcnode *node,bits320 pubexp,bits320 pubexp2)
-{
-    node->pubexp = pubexp, node->pubexp2 = pubexp2, node->lastcontact = (uint32_t)time(NULL);
-    node->id = fcontract(pubexp).txid;
+    set_dcnode(&DCNET.nodes[DCNET.num++],DCNET.pubexp,DCNET.pubexp2);
 }
 
 struct dcnode *find_dcnode(uint64_t txid)
@@ -357,7 +358,7 @@ void dcnet(char *dccmd,cJSON *json)
     else if ( strcmp(dccmd,"round") == 0 )
     {
         pubkeystr = jstr(json,"G"), pubkey2str = jstr(json,"H");
-        if ( pubkeystr != 0 && pubkey2str != 0 && (array= jarray(&n,json,"group")) != 0 && (groupid= j64bits(json,"groupid")) != 0 && n <= MAXNODES && n > 3 )
+        if ( pubkeystr != 0 && pubkey2str != 0 && (array= jarray(&n,json,"group")) != 0 && (groupid= j64bits(json,"groupid")) != 0 && n <= MAXNODES && n > 2 )
         {
             if ( (group= find_dcgroup(groupid)) != 0 )
             {
