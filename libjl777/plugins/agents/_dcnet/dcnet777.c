@@ -232,7 +232,7 @@ int32_t deserialize_data256(uint8_t *databuf,int32_t datalen,bits256 *data)
 bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 {
     int32_t desti,i; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
-    if ( (rand() % (groupsize)) == 0 )
+    if ( group->myind == 0 )//(rand() % (groupsize)) == 0 )
     {
         memset(msgstr,0,sizeof(msgstr));
         strcpy(msgstr,"hello world");
@@ -252,7 +252,7 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit,void *packet,int32_t len)
 {
     int32_t i,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H;
-    printf("dcround_update groupid.%llu from %llu\n",(long long)group->id,(long long)sender);
+    //printf("dcround_update groupid.%llu from %llu\n",(long long)group->id,(long long)sender);
     for (i=0; i<group->n; i++)
     {
         if ( (node= group->nodes[i]) != 0 && node->id == sender )
@@ -288,7 +288,7 @@ void dcnet_updategroup(struct dcitem *ptr)
 {
     int32_t datalen = 0; uint64_t groupid,sender; struct dcgroup *group = 0; bits256 Oi,commit;
     datalen = deserialize_data((void *)ptr->data,0,&groupid,sizeof(groupid));
-    printf("RECV.groupid %llu %p len.%d\n",(long long)ptr->groupid,find_dcgroup(groupid),ptr->size);
+    //printf("RECV.groupid %llu %p len.%d\n",(long long)ptr->groupid,find_dcgroup(groupid),ptr->size);
     if ( ptr->groupid == groupid && (group= find_dcgroup(groupid)) != 0 )
     {
         if ( ptr->size >= sizeof(ptr->groupid)+sizeof(sender)+sizeof(Oi)+sizeof(commit) )
@@ -393,6 +393,7 @@ void dcnet(char *dccmd,cJSON *json)
             datalen = serialize_data256(data,datalen,fcontract(commit));
             if ( DCNET.mode > 0 && DCNET.bus >= 0 )
                 nn_send(DCNET.bus,data,datalen,0);
+            dcnet_scanqueue(groupid);
             printf("dcnet.(%s) G.(%s) H.(%s) -> (%llx, %llx)\n",dccmd,pubkeystr,pubkey2str,(long long)Oi.txid,(long long)commit.txid);
         }
     }
