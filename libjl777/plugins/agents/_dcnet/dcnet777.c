@@ -243,7 +243,7 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
         for (i=0; i<30&&msgstr[i]!=0; i++)
             hwrite(msgstr[i],8,&H);
         msg.bytes[31] |= (desti & 0x3f);
-        printf(">>>>>>>>>>>>>>>> %llu node.%d sending msg to %d\n",(long long)DCNET.myid,group->myind,desti);
+        printf(">>>>>>>>>>>>>>>> %llu node.%d sending msg.(%s) to %d %llx\n",(long long)DCNET.myid,group->myind,msgstr,desti,(long long)msg.txid);
         msgelement = fexpand(msg);
     }
     return(msgelement);
@@ -259,7 +259,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
         {
             if ( group->Ois[i].txid == 0 )
             {
-                printf("MATCHED ind.%d\n",i);
+                printf("MATCHED.%llu ind.%d Oi.%016llx commit.%016llx\n",(long long)sender,i,(long long)Oi.txid,(long long)commit.txid);
                 group->Ois[i] = Oi, group->commits[i] = commit;
                 group->prodOi = fmul(group->prodOi,fexpand(Oi));
                 group->prodcommit = fmul(group->prodcommit,fexpand(commit));
@@ -275,7 +275,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                         for (i=numbits=0; i<30&&msgstr[i]!=0; i++)
                             msgstr[i] = hread(&numbits,8,&H);
                     } else strcpy(msgstr,"no message");
-                    printf("node %llu received prod (Oi.%llx commit.%llx) -> msg.(%s) desti.%d\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,msgstr,desti);
+                    printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti);
                 }
             } //else printf("DUPLICATE.%d\n",i);
             return;
