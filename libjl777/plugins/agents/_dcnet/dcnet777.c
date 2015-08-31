@@ -341,7 +341,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                             }
                         }
                     } else strcpy(msgstr,"no message");
-                    printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d crc %04x:%04x | good %u %.3f/sec\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti,crc16,checkval,good,(double)(good * strlen(msgstr))/(time(NULL) - DCNET.starttime + 1));
+                    printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d crc %04x:%04x | good %u %ld %.3f/sec\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti,crc16,checkval,good,good * strlen(msgstr),(double)(good * strlen(msgstr))/(time(NULL) - DCNET.starttime + 1));
                     memset(group,0,sizeof(*group));
                 }
             } //else printf("DUPLICATE.%d\n",i);
@@ -567,7 +567,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
-        else if ( DCNET.num > 2 && milliseconds() > lastsent+500 )
+        else if ( DCNET.num > 2 && milliseconds() > lastsent+100 )
         {
             dcnet_startround(retbuf);
             lastsent = milliseconds();
