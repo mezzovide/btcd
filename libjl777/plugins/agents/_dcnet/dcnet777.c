@@ -73,6 +73,7 @@ int32_t safecopy(char *dest,char *src,long len);
 char *clonestr(char *str);
 int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
 int32_t init_pingpong_queue(struct pingpong_queue *ppq,char *name,int32_t (*action)(),queue_t *destq,queue_t *errorq);
+uint32_t _crc32(uint32_t crc,const void *buf,size_t size);
 
 #include "../../utils/curve25519.h"
 bits320 Unit;
@@ -89,7 +90,7 @@ bits256 rand256(int32_t privkeyflag)
 int32_t huff256(HUFF *hp,bits256 *data)
 {
     // 0, 1, 2, ... 254, 255
-    _init_HUFF(hp,sizeof(*data)-1,data->bytes); // 6 bits available in last byte used for desti, ie nodes position in group
+    _init_HUFF(hp,sizeof(*data)-3,data->bytes); // 6 bits available in last byte used for desti, ie nodes position in group
     return(hseek(hp,3,SEEK_SET));
 }
 
@@ -231,9 +232,18 @@ int32_t deserialize_data256(uint8_t *databuf,int32_t datalen,bits256 *data)
     return(datalen);
 }
 
+uint16_t dcnet_crc16(uint8_t *buf,int32_t len)
+{
+    uint32_t crc; uint16_t crc16;
+    crc = _crc32(0,buf,len);
+    crc16 = (crc & 0xffff);
+    crc16 ^= (crc >> 16) & 0xffff;
+    return(crc16);
+}
+
 bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 {
-    int32_t desti,i,j; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
+    int32_t desti,i,j; uint16_t crc16; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
     if ( (rand() % (groupsize * 2)) == 0 )
     {
         memset(msgstr,0,sizeof(msgstr));
@@ -242,7 +252,7 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
         huff256(&H,&msg);
         while ( (desti= (rand() % groupsize)) == group->myind )
             ;
-        for (i=0; i<30; i++)
+        for (i=0; i<29; i++)
         {
             for (j=0; j<8; j++)
             {
@@ -255,6 +265,9 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
                 break;
         }
         msg.bytes[31] |= (desti & 0x3f);
+        crc16 = dcnet_crc16(msg.bytes,sizeof(msg));
+        msg.bytes[29] = (crc16 & 0xff);
+        msg.bytes[30] = (crc16 >> 8) & 0xff;
         printf(">>>>>>>>>>>>>>>> %llu node.%d sending msg.(%s) to %d %llx\n",(long long)DCNET.myid,group->myind,msgstr,desti,(long long)msg.txid);
         msgelement = fexpand(msg);
     }
@@ -280,7 +293,7 @@ uint64_t dcnet_grouparray(int32_t *nump,cJSON *array)
 
 void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit)
 {
-    int32_t i,j,x,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H;
+    int32_t i,j,x,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H; uint16_t checkval=0,crc16=0;
     for (i=0; i<group->n; i++)
     {
         if ( (node= group->nodes[i]) != 0 && node->id == sender )
@@ -301,7 +314,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                         msg = fcontract(group->prodOi);
                         desti = (msg.bytes[31] & 0x3f);
                         huff256(&H,&msg), H.endpos = 243;
-                        for (i=numbits=0; i<30; i++)
+                        for (i=numbits=0; i<29; i++)
                         {
                             for (j=x=0; j<8; j++)
                             {
@@ -312,10 +325,20 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                             msgstr[i] = x;
                             fprintf(stderr,".%02x ",x&0xff);
                             if ( x == 0 )
+                            {
+                                crc16 = ((uint16_t)msg.bytes[30] << 8) | msg.bytes[29];
+                                msg.bytes[30] = msg.bytes[29] = 0;
+                                checkval = dcnet_crc16(msg.bytes,sizeof(msg));
+                                if ( checkval != crc16 )
+                                {
+                                    printf("crc16 mismatch %u vs %u\n",checkval,crc16);
+                                    strcpy(msgstr,"crc16 error");
+                                }
                                 break;
+                            }
                         }
                     } else strcpy(msgstr,"no message");
-                    printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti);
+                    printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d crc %04x:%04x\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti,crc16,checkval);
                     memset(group,0,sizeof(*group));
                 }
             } //else printf("DUPLICATE.%d\n",i);
@@ -427,8 +450,8 @@ void dcnet(char *dccmd,cJSON *json)
                         {
                             printf("no slot available\n");
                             return;
-                        }
-                    }
+                        } else group = &DCNET.groups[i];
+                    } else group = &DCNET.groups[i];
                 }
                 memset(group,0,sizeof(*group));
             }
@@ -564,7 +587,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             huff256(&H,&msg);
             while ( (desti= (rand() % 8)) == 0 )
                 ;
-            for (i=0; i<30; i++)
+            for (i=0; i<29; i++)
             {
                 for (j=0; j<8; j++)
                 {
@@ -582,7 +605,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 printf("%02x ",msg.bytes[i]);
             printf("msg\n");
             huff256(&H,&msg), H.endpos = 243;
-            for (i=numbits=0; i<30; i++)
+            for (i=numbits=0; i<29; i++)
             {
                 for (j=x=0; j<8; j++)
                 {
