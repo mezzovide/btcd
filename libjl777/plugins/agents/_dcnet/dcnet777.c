@@ -293,6 +293,7 @@ uint64_t dcnet_grouparray(int32_t *nump,cJSON *array)
 
 void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit)
 {
+    static uint32_t good;
     int32_t i,j,x,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H; uint16_t checkval=0,crc16=0;
     for (i=0; i<group->n; i++)
     {
@@ -334,11 +335,13 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                                     printf("crc16 mismatch %u vs %u\n",checkval,crc16);
                                     strcpy(msgstr,"crc16 error");
                                 }
+                                else if ( strcmp("hello world",msgstr) == 0 )
+                                    good++;
                                 break;
                             }
                         }
                     } else strcpy(msgstr,"no message");
-                    printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d crc %04x:%04x\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti,crc16,checkval);
+                    printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d crc %04x:%04x | good %u\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti,crc16,checkval,good);
                     memset(group,0,sizeof(*group));
                 }
             } //else printf("DUPLICATE.%d\n",i);
@@ -562,7 +565,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
-        else if ( DCNET.num > 2 && time(NULL) > lastsent+10 )
+        else if ( DCNET.num > 2 )//&& time(NULL) > lastsent+10 )
         {
             dcnet_startround(retbuf);
             lastsent = (uint32_t)time(NULL);
