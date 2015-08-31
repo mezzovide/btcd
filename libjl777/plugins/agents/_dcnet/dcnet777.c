@@ -342,6 +342,8 @@ void dcnet(char *dccmd,cJSON *json)
             datalen = serialize_data(data,datalen,DCNET.myid,sizeof(DCNET.myid));
             datalen = serialize_data256(data,datalen,fcontract(Oi));
             datalen = serialize_data256(data,datalen,fcontract(commit));
+            if ( DCNET.mode > 0 && DCNET.bus >= 0 )
+                nn_send(DCNET.bus,data,datalen,0);
             printf("dcnet.(%s) G.(%s) H.(%s) -> (%llx, %llx)\n",dccmd,pubkeystr,pubkey2str,(long long)Oi.txid,(long long)commit.txid);
         }
     }
