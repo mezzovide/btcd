@@ -36,7 +36,7 @@ typedef union _bits256 bits256;
 union _bits320 { uint8_t bytes[40]; uint16_t ushorts[20]; uint32_t uints[10]; uint64_t ulongs[5]; uint64_t txid; };
 typedef union _bits320 bits320;*/
 
-#define DCNET_MAXAGE 3
+#define DCNET_MAXAGE 33
 #define MAXNODES 64
 #define MAXGROUPS 64
 struct dcitem { struct queueitem DL; uint64_t groupid; int32_t size; uint8_t data[]; };
