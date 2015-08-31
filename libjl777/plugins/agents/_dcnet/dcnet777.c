@@ -316,6 +316,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                         }
                     } else strcpy(msgstr,"no message");
                     printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti);
+                    memset(group,0,sizeof(*group));
                 }
             } //else printf("DUPLICATE.%d\n",i);
             return;
@@ -415,7 +416,7 @@ void dcnet(char *dccmd,cJSON *json)
                 else
                 {
                     for (i=0; i<MAXGROUPS; i++)
-                        if ( DCNET.groups[i].finished != 0 )
+                        if ( DCNET.groups[i].groupid == 0 || DCNET.groups[i].finished != 0 )
                             break;
                     if ( i == MAXGROUPS )
                     {
