@@ -244,7 +244,7 @@ uint16_t dcnet_crc16(uint8_t *buf,int32_t len)
 bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 {
     int32_t desti,i,j; uint16_t crc16; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
-    if ( group->myind == 0 )//(rand() % (groupsize * 2)) == 0 )
+    if ( (rand() % (groupsize * 2)) == 0 )
     {
         memset(msgstr,0,sizeof(msgstr));
         strcpy(msgstr,"hello world");
@@ -567,7 +567,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
-        else if ( DCNET.num > 2 && milliseconds() > lastsent+50 )
+        else if ( DCNET.num > 2 && milliseconds() > lastsent+150 )
         {
             dcnet_startround(retbuf);
             lastsent = milliseconds();
