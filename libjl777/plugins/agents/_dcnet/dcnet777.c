@@ -431,7 +431,7 @@ void dcnet(char *dccmd,cJSON *json)
             {
                 if ( group->created != 0 && group->finished == 0 && group->created < time(NULL)+60 )
                 {
-                    printf("groupid.%llx already exists\n",(long long)groupid);
+                    //printf("groupid.%llx already exists\n",(long long)groupid);
                     return;
                 }
             }
@@ -565,7 +565,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
-        else if ( DCNET.num > 2 )//&& time(NULL) > lastsent+10 )
+        else if ( DCNET.num > 2 && time(NULL) > lastsent+1 )
         {
             dcnet_startround(retbuf);
             lastsent = (uint32_t)time(NULL);
