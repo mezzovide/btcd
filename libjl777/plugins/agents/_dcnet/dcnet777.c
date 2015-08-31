@@ -186,7 +186,7 @@ int32_t serialize_data(uint8_t *databuf,int32_t datalen,uint64_t val,int32_t siz
     int32_t i;
     if ( databuf != 0 )
         for (i=0; i<size; i++,val>>=8)
-            databuf[datalen++] = (val & 0xff);
+             databuf[datalen++] = (val & 0xff);
     return(datalen);
 }
 
@@ -194,8 +194,8 @@ int32_t deserialize_data(uint8_t *databuf,int32_t datalen,uint64_t *valp,int32_t
 {
     int32_t i; uint64_t val = 0;
     if ( databuf != 0 )
-        for (i=0; i<size; i++)
-            val |= ((uint64_t)databuf[datalen++] << ((size-i-1)<<3));
+        for (i=0; i<size; i++,datalen++)
+            val |= ((uint64_t)databuf[datalen] & 0xff) << (i*8);
     *valp = val;
     return(datalen);
 }
@@ -357,9 +357,9 @@ int32_t dcnet_idle(struct plugin_info *plugin)
         if ( (len= nn_recv(DCNET.bus,&msg,NN_MSG,0)) > 0 )
         {
             datalen = deserialize_data((void *)msg,0,&groupid,sizeof(groupid));
-            printf("RECV.groupid %llu %p len.%d\n",(long long)groupid,find_dcgroup(groupid),len);
             if ( (group= find_dcgroup(groupid)) != 0 )
             {
+                printf("RECV.groupid %llu %p len.%d\n",(long long)groupid,find_dcgroup(groupid),len);
                 if ( len >= sizeof(groupid)+sizeof(sender)+sizeof(Oi)+sizeof(commit) )
                 {
                     datalen = deserialize_data((void *)msg,datalen,&sender,sizeof(sender));
@@ -371,6 +371,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             }
             else
             {
+                printf("RECV.groupid %llu %p len.%d\n",(long long)groupid,find_dcgroup(groupid),len);
                 jsonstr = clonestr(msg);
                 nn_freemsg(msg);
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -395,6 +396,14 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     plugin->allowremote = 1;
     if ( initflag > 0 )
     {
+        {
+            uint8_t msg[128]; uint64_t sgroupid = 0x0123456789;
+            int32_t sdatalen = serialize_data(msg,0,sgroupid,sizeof(sgroupid));
+            int32_t rdatalen = deserialize_data((void *)msg,0,&groupid,sizeof(groupid));
+            printf("deser sdatalen.%d %llu/%llx -> rdatalen.%d %llu/%llx\n",sdatalen,(long long)sgroupid,(long long)sgroupid,rdatalen,(long long)groupid,(long long)groupid);
+            getchar();
+        }
+
         char *ipaddrs[] = { "5.9.56.103", "5.9.102.210", "89.248.160.237", "89.248.160.238", "89.248.160.239", "89.248.160.240", "89.248.160.241", "89.248.160.242" };
         fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
         for (i=0; i<1000; i++)
