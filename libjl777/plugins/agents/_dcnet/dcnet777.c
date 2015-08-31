@@ -244,7 +244,7 @@ uint16_t dcnet_crc16(uint8_t *buf,int32_t len)
 bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 {
     int32_t desti,i,j; uint16_t crc16; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
-    if ( (rand() % (groupsize * 2)) == 0 )
+    if ( (rand() % (groupsize + 1)) == 0 )
     {
         memset(msgstr,0,sizeof(msgstr));
         strcpy(msgstr,"hello world");
@@ -293,7 +293,7 @@ uint64_t dcnet_grouparray(int32_t *nump,cJSON *array)
 
 void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit)
 {
-    static uint32_t good;
+    static uint32_t good,bad;
     int32_t i,j,x,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H; uint16_t checkval=0,crc16=0;
     for (i=0; i<group->n; i++)
     {
@@ -330,10 +330,11 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                                 crc16 = ((uint16_t)msg.bytes[30] << 8) | msg.bytes[29];
                                 msg.bytes[30] = msg.bytes[29] = 0;
                                 checkval = dcnet_crc16(msg.bytes,sizeof(msg));
-                                if ( checkval != crc16 )
+                                if ( crc16 == 0 || checkval != crc16 )
                                 {
                                     printf("crc16 mismatch %u vs %u\n",checkval,crc16);
                                     strcpy(msgstr,"crc16 error");
+                                    bad++;
                                 }
                                 else if ( strcmp("hello world",msgstr) == 0 )
                                     good++;
@@ -341,7 +342,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                             }
                         }
                     } else strcpy(msgstr,"no message");
-                    printf("node %llu recv (Oi.%llx commit.%llx) -> %llx msg.(%s).%d crc %04x:%04x | good %u %ld/%ld %.3f/sec\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti,crc16,checkval,good,good * strlen(msgstr),(time(NULL) - DCNET.starttime + 1),(double)(good * strlen(msgstr))/(time(NULL) - DCNET.starttime + 1));
+                    printf("node %llu recv (Oi.%llx commit.%llx) -> %llx msg.(%s).%d crc %04x:%04x | bad.%u good.%u %ld/%ld %.3f/sec\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti,crc16,checkval,bad,good,good * strlen(msgstr),(time(NULL) - DCNET.starttime + 1),(double)(good * strlen(msgstr))/(time(NULL) - DCNET.starttime + 1));
                     memset(group,0,sizeof(*group));
                 }
             } //else printf("DUPLICATE.%d\n",i);
@@ -567,7 +568,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
-        else if ( DCNET.num > 2 && milliseconds() > lastsent+150 )
+        else if ( DCNET.num > 2 && milliseconds() > lastsent+10 )
         {
             dcnet_startround(retbuf);
             lastsent = milliseconds();
