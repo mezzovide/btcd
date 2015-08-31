@@ -259,7 +259,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
         {
             if ( group->Ois[i].txid == 0 )
             {
-                printf("MATCHED.%llu ind.%d Oi.%016llx commit.%016llx\n",(long long)sender,i,(long long)Oi.txid,(long long)commit.txid);
+                printf("MATCHED.%-23llu ind.%d Oi.%016llx commit.%016llx\n",(long long)sender,i,(long long)Oi.txid,(long long)commit.txid);
                 group->Ois[i] = Oi, group->commits[i] = commit;
                 group->prodOi = fmul(group->prodOi,fexpand(Oi));
                 group->prodcommit = fmul(group->prodcommit,fexpand(commit));
