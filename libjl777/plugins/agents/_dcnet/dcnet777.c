@@ -375,10 +375,12 @@ void dcnet(char *dccmd,cJSON *json)
             for (i=0; i<n; i++)
             {
                 txid = j64bits(jitem(array,i),0);
-                if ( txid == DCNET.myid )
-                    myind = i, group->myind = i;
-                else if ( (node= find_dcnode(txid)) != 0 )
+                if ( (node= find_dcnode(txid)) != 0 )
+                {
+                    if ( txid == DCNET.myid )
+                        myind = i, group->myind = i;
                     group->nodes[group->n++] = node;
+                }
                 else
                 {
                     printf("cant find array[%d] %llx\n",i,(long long)txid);
