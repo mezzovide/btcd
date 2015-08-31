@@ -56,7 +56,7 @@ STRUCTNAME
     char bind[128],connect[128];
     bits256 privkey,privkey2;
     bits320 pubexp,pubexp2;
-    int32_t bus,mode,num,numgroups;
+    int32_t bus,mode,num,numgroups; uint32_t starttime;
     struct pingpong_queue Q;
     struct dcgroup groups[MAXGROUPS];
     struct dcnode nodes[MAXNODES];
@@ -187,9 +187,9 @@ bits320 dcround(bits320 *commitp,int32_t i,struct dcgroup *group,bits256 G,bits2
             commit = fmul(commit,c);
             prod = fmul(shared,prod);
         }
-        if ( i == 0 && j == 0 )
-            printf("%016llx ",prod.txid);
-        else printf("%016llx ",c.txid);
+        //if ( i == 0 && j == 0 )
+        //    printf("%016llx ",prod.txid);
+        //else printf("%016llx ",c.txid);
     }
     *commitp = commit;
     return(prod);
@@ -257,10 +257,10 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
             for (j=0; j<8; j++)
             {
                 if ( (msgstr[i] & (1<<j)) != 0 )
-                    hputbit(&H,1), printf("1");
-                else hputbit(&H,0), printf("0");
+                    hputbit(&H,1);//, printf("1");
+                else hputbit(&H,0);//, printf("0");
             }
-            fprintf(stderr,".%02x ",msgstr[i]);
+            //fprintf(stderr,".%02x ",msgstr[i]);
             if ( msgstr[i] == 0 )
                 break;
         }
@@ -302,7 +302,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
             node->lastcontact = (uint32_t)time(NULL);
             if ( group->Ois[i].txid == 0 )
             {
-                printf("MATCHED.%-23llu ind.%d Oi.%016llx commit.%016llx\n",(long long)sender,i,(long long)Oi.txid,(long long)commit.txid);
+                //printf("MATCHED.%-23llu ind.%d Oi.%016llx commit.%016llx\n",(long long)sender,i,(long long)Oi.txid,(long long)commit.txid);
                 group->Ois[i] = Oi, group->commits[i] = commit;
                 group->prodOi = fmul(group->prodOi,fexpand(Oi));
                 group->prodcommit = fmul(group->prodcommit,fexpand(commit));
@@ -320,11 +320,11 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                             for (j=x=0; j<8; j++)
                             {
                                 if ( hgetbit(&H) != 0 )
-                                    x |= (1 << j), printf("1");
-                                else printf("0");
+                                    x |= (1 << j);//, printf("1");
+                                //else printf("0");
                             }
                             msgstr[i] = x;
-                            fprintf(stderr,".%02x ",x&0xff);
+                            //fprintf(stderr,".%02x ",x&0xff);
                             if ( x == 0 )
                             {
                                 crc16 = ((uint16_t)msg.bytes[30] << 8) | msg.bytes[29];
@@ -341,7 +341,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                             }
                         }
                     } else strcpy(msgstr,"no message");
-                    printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d crc %04x:%04x | good %u\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti,crc16,checkval,good);
+                    printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d crc %04x:%04x | good %u %.3f/sec\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti,crc16,checkval,good,(double)(good * strlen(msgstr))/(time(NULL) - DCNET.starttime + 1));
                     memset(group,0,sizeof(*group));
                 }
             } //else printf("DUPLICATE.%d\n",i);
@@ -502,6 +502,8 @@ int32_t dcnet_startround(char *retbuf)
     init_hexbytes_noT(pubhex2,pubkey2.bytes,sizeof(pubkey2));
     array = cJSON_CreateArray();
     groupid = dcnet_grouparray(&n,array);
+    groupid ^= pubkey.txid;
+    groupid ^= pubkey2.txid;
     arraystr = jprint(array,1);
     sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"round\",\"G\":\"%s\",\"H\":\"%s\",\"done\":1,\"dcnum\":%d,\"groupid\":\"%llu\",\"group\":%s}",pubhex,pubhex2,DCNET.num,(long long)groupid,arraystr);
     len = (int32_t)strlen(retbuf) + 1;
@@ -532,7 +534,7 @@ int32_t dcnet_join(char *retbuf)
 
 int32_t dcnet_idle(struct plugin_info *plugin)
 {
-    static uint32_t lastsent;
+    static double lastsent;
     int32_t len,datalen = 0; uint64_t groupid; struct dcgroup *group; cJSON *json; char retbuf[4096],*msg,*dccmd; struct dcitem *ptr;
     if ( DCNET.bus >= 0 )
     {
@@ -565,10 +567,10 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
-        else if ( DCNET.num > 2 && time(NULL) > lastsent+1 )
+        else if ( DCNET.num > 2 && milliseconds() > lastsent+500 )
         {
             dcnet_startround(retbuf);
-            lastsent = (uint32_t)time(NULL);
+            lastsent = milliseconds();
         }
     }
     return(0);
@@ -636,6 +638,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         Unit = fmul(z,zmone);
         dcinit();
         DCNET.bus = -1;
+        DCNET.starttime = (uint32_t)time(NULL);
         DCNET.mode = juint(json,"dchost");
         myip = jstr(json,"myipaddr");
         init_pingpong_queue(&DCNET.Q,"DCNET",0,0,0);
