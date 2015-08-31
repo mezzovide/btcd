@@ -233,7 +233,7 @@ int32_t deserialize_data256(uint8_t *databuf,int32_t datalen,bits256 *data)
 bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 {
     int32_t desti,i,j; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
-    if ( group->myind == 0 )//(rand() % (groupsize)) == 0 )
+    if ( (rand() % (groupsize * 2)) == 0 )
     {
         memset(msgstr,0,sizeof(msgstr));
         strcpy(msgstr,"hello world");
@@ -260,7 +260,22 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
     return(msgelement);
 }
 
-void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit)//,void *packet,int32_t len)
+uint64_t dcnet_grouparray(int32_t *nump,cJSON *array)
+{
+    int32_t i,n; uint64_t groupid,txid;
+    for (groupid=i=n=0; i<DCNET.num; i++)
+        if ( (time(NULL) - DCNET.nodes[i].lastcontact) < 333 )
+        {
+            txid = fcontract(DCNET.nodes[i].pubexp).txid;
+            jaddi64bits(array,txid);
+            groupid ^= txid;
+            n++;
+        }
+    *nump = n;
+    return(groupid);
+}
+
+void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit)
 {
     int32_t i,j,x,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H;
     //printf("dcround_update groupid.%llu from %llu\n",(long long)group->id,(long long)sender);
@@ -268,6 +283,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
     {
         if ( (node= group->nodes[i]) != 0 && node->id == sender )
         {
+            node->lastcontact = (uint32_t)time(NULL);
             if ( group->Ois[i].txid == 0 )
             {
                 printf("MATCHED.%-23llu ind.%d Oi.%016llx commit.%016llx\n",(long long)sender,i,(long long)Oi.txid,(long long)commit.txid);
@@ -388,7 +404,30 @@ void dcnet(char *dccmd,cJSON *json)
                     printf("groupid.%llx already exists\n",(long long)groupid);
                     return;
                 }
-            } else group = &DCNET.groups[DCNET.numgroups++], memset(group,0,sizeof(*group));
+            }
+            else
+            {
+                if ( DCNET.numgroups < MAXGROUPS-1 )
+                    group = &DCNET.groups[DCNET.numgroups++];
+                else
+                {
+                    for (i=0; i<MAXGROUPS; i++)
+                        if ( DCNET.groups[i].finished != 0 )
+                            break;
+                    if ( i == MAXGROUPS )
+                    {
+                        for (i=0; i<MAXGROUPS; i++)
+                            if ( DCNET.groups[i].created > (time(NULL) - 60) )
+                                break;
+                        if ( i == MAXGROUPS )
+                        {
+                            printf("no slot available\n");
+                            return;
+                        }
+                    }
+                }
+                memset(group,0,sizeof(*group));
+            }
             group->id = groupid, group->created = (uint32_t)time(NULL);
             group->prodcommit = group->prodOi = Unit;
             decode_hex(pubkey.bytes,sizeof(pubkey),pubkeystr), pubexp = fexpand(pubkey);
@@ -424,9 +463,46 @@ void dcnet(char *dccmd,cJSON *json)
     }
 }
 
+int32_t dcnet_startround(char *retbuf)
+{
+    cJSON *array,*arg; int32_t len,n; char pubhex[65],pubhex2[65],*arraystr; bits256 pubkey,pubkey2; uint64_t groupid;
+    pubkey = rand256(1), pubkey2 = rand256(1);
+    init_hexbytes_noT(pubhex,pubkey.bytes,sizeof(pubkey));
+    init_hexbytes_noT(pubhex2,pubkey2.bytes,sizeof(pubkey2));
+    array = cJSON_CreateArray();
+    groupid = dcnet_grouparray(&n,array);
+    arraystr = jprint(array,1);
+    sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"round\",\"G\":\"%s\",\"H\":\"%s\",\"done\":1,\"dcnum\":%d,\"groupid\":\"%llu\",\"group\":%s}",pubhex,pubhex2,DCNET.num,(long long)groupid,arraystr);
+    len = (int32_t)strlen(retbuf) + 1;
+    if ( DCNET.mode > 0 && DCNET.bus >= 0 )
+    {
+        nn_send(DCNET.bus,retbuf,len,0);
+        if ( (arg= cJSON_Parse(retbuf)) != 0 )
+        {
+            dcnet("round",arg);
+            free_json(arg);
+        }
+    }
+    return(len);
+}
+
+int32_t dcnet_join(char *retbuf)
+{
+    int32_t len; char pubhex[65],pubhex2[65]; bits256 pubkey,pubkey2;
+    pubkey = fcontract(DCNET.pubexp), pubkey2 = fcontract(DCNET.pubexp2);
+    init_hexbytes_noT(pubhex,pubkey.bytes,sizeof(pubkey));
+    init_hexbytes_noT(pubhex2,pubkey2.bytes,sizeof(pubkey2));
+    sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"join\",\"pubkey\":\"%s\",\"pubkey2\":\"%s\",\"done\":1,\"dcnum\":%d}",pubhex,pubhex2,DCNET.num);
+    len = (int32_t)strlen(retbuf) + 1;
+    if ( DCNET.mode > 0 && DCNET.bus >= 0 )
+        nn_send(DCNET.bus,retbuf,len,0);
+    return(len);
+}
+
 int32_t dcnet_idle(struct plugin_info *plugin)
 {
-    int32_t len,datalen = 0; uint64_t groupid; struct dcgroup *group; cJSON *json; char *msg,*dccmd; struct dcitem *ptr;
+    static uint32_t lastsent;
+    int32_t len,datalen = 0; uint64_t groupid; struct dcgroup *group; cJSON *json; char retbuf[4096],*msg,*dccmd; struct dcitem *ptr;
     if ( DCNET.bus >= 0 )
     {
         if ( (len= nn_recv(DCNET.bus,&msg,NN_MSG,0)) > 0 )
@@ -458,14 +534,18 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
+        else if ( DCNET.numgroups > 3 && time(NULL) > lastsent+10 )
+        {
+            dcnet_startround(retbuf);
+            lastsent = (uint32_t)time(NULL);
+        }
     }
     return(0);
 }
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char connectaddr[64],pubhex[65],pubhex2[65],*resultstr,*methodstr,*myip,*arraystr,*retstr = 0; bits256 tmp,pubkey,pubkey2; cJSON *array,*arg;
-    bits320 z,zmone; uint64_t groupid,txid; int32_t i,n,len,sendtimeout = 10,recvtimeout = 1;
+    char connectaddr[64],*resultstr,*methodstr,*myip,*retstr = 0; bits256 tmp; bits320 z,zmone; int32_t i,sendtimeout = 10,recvtimeout = 1;
     retbuf[0] = 0;
     plugin->allowremote = 1;
     if ( initflag > 0 )
@@ -585,44 +665,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             return(0);
         }
         else if ( strcmp(methodstr,"join") == 0 )
-        {
-            pubkey = fcontract(DCNET.pubexp), pubkey2 = fcontract(DCNET.pubexp2);
-            init_hexbytes_noT(pubhex,pubkey.bytes,sizeof(pubkey));
-            init_hexbytes_noT(pubhex2,pubkey2.bytes,sizeof(pubkey2));
-            sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"join\",\"pubkey\":\"%s\",\"pubkey2\":\"%s\",\"done\":1,\"dcnum\":%d}",pubhex,pubhex2,DCNET.num);
-            len = (int32_t)strlen(retbuf) + 1;
-            if ( DCNET.mode > 0 && DCNET.bus >= 0 )
-                nn_send(DCNET.bus,retbuf,len,0);
-            return(len);
-        }
+            return(dcnet_join(retstr));
         else if ( strcmp(methodstr,"round") == 0 )
-        {
-            pubkey = rand256(1), pubkey2 = rand256(1);
-            init_hexbytes_noT(pubhex,pubkey.bytes,sizeof(pubkey));
-            init_hexbytes_noT(pubhex2,pubkey2.bytes,sizeof(pubkey2));
-            array = cJSON_CreateArray();
-            for (groupid=i=n=0; i<DCNET.num; i++)
-                if ( (time(NULL) - DCNET.nodes[i].lastcontact) < 333 )
-                {
-                    txid = fcontract(DCNET.nodes[i].pubexp).txid;
-                    jaddi64bits(array,txid);
-                    groupid ^= txid;
-                    n++;
-                }
-            arraystr = jprint(array,1);
-            sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"round\",\"G\":\"%s\",\"H\":\"%s\",\"done\":1,\"dcnum\":%d,\"groupid\":\"%llu\",\"group\":%s}",pubhex,pubhex2,DCNET.num,(long long)groupid,arraystr);
-            len = (int32_t)strlen(retbuf) + 1;
-            if ( DCNET.mode > 0 && DCNET.bus >= 0 )
-            {
-                nn_send(DCNET.bus,retbuf,len,0);
-                if ( (arg= cJSON_Parse(retbuf)) != 0 )
-                {
-                    dcnet("round",arg);
-                    free_json(arg);
-                }
-            }
-            return(len);
-        }
+            return(dcnet_startround(retstr));
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));
 }
