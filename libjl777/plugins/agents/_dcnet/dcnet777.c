@@ -434,7 +434,7 @@ void dcnet(char *dccmd,cJSON *json)
             group->prodcommit = group->prodOi = Unit;
             decode_hex(pubkey.bytes,sizeof(pubkey),pubkeystr), pubexp = fexpand(pubkey);
             decode_hex(pubkey2.bytes,sizeof(pubkey2),pubkey2str), pubexp2 = fexpand(pubkey2);
-            for (i=0; i<n; i++)
+            for (group->n=i=0; i<n; i++)
             {
                 txid = j64bits(jitem(array,i),0);
                 if ( (node= find_dcnode(txid)) != 0 )
@@ -450,7 +450,7 @@ void dcnet(char *dccmd,cJSON *json)
                     return;
                 }
             }
-            msgelement = dcnet_message(group,n);
+            msgelement = dcnet_message(group,group->n);
             Oi = dcround(&commit,myind,group,pubkey,pubkey2,msgelement);
             dcround_update(group,DCNET.myid,fcontract(Oi),fcontract(commit));//,&ptr->data[datalen],ptr->size - datalen);
             datalen = serialize_data(data,datalen,groupid,sizeof(groupid));
