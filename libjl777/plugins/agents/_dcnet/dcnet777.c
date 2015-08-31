@@ -22,6 +22,7 @@
 
 #define DEFINES_ONLY
 #include "../../utils/huffstream.c"
+#include "../../includes/portable777.h"
 #include "../plugin777.c"
 #undef DEFINES_ONLY
 
@@ -30,15 +31,23 @@ char *PLUGNAME(_methods)[] = { DCNET_API };
 char *PLUGNAME(_pubmethods)[] = { DCNET_API };
 char *PLUGNAME(_authmethods)[] = { "" };
 
-union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
+/*union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
 typedef union _bits256 bits256;
 union _bits320 { uint8_t bytes[40]; uint16_t ushorts[20]; uint32_t uints[10]; uint64_t ulongs[5]; uint64_t txid; };
-typedef union _bits320 bits320;
+typedef union _bits320 bits320;*/
 
 #define MAXNODES 64
 #define MAXGROUPS 64
+struct dcitem { struct queueitem DL; uint64_t groupid; int32_t size; uint8_t data[]; };
 struct dcnode { bits320 pubexp,pubexp2; uint64_t id; uint32_t lastcontact; };
-struct dcgroup { bits256 Ois[MAXNODES],commits[MAXNODES]; struct dcnode *nodes[MAXNODES]; bits320 prodOi,prodcommit; uint64_t id; uint32_t n,created,nonz,myind; };
+struct dcgroup
+{
+    bits256 Ois[MAXNODES],commits[MAXNODES];
+    struct dcnode *nodes[MAXNODES];
+    bits320 prodOi,prodcommit;
+    uint64_t id;
+    uint32_t n,created,finished,nonz,myind;
+};
 
 STRUCTNAME
 {
@@ -47,6 +56,7 @@ STRUCTNAME
     bits256 privkey,privkey2;
     bits320 pubexp,pubexp2;
     int32_t bus,mode,num,numgroups;
+    struct pingpong_queue Q;
     struct dcgroup groups[MAXGROUPS];
     struct dcnode nodes[MAXNODES];
 } DCNET;
@@ -61,6 +71,7 @@ int32_t init_hexbytes_noT(char *hexbytes,uint8_t *message,long len);
 int32_t safecopy(char *dest,char *src,long len);
 char *clonestr(char *str);
 int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
+int32_t init_pingpong_queue(struct pingpong_queue *ppq,char *name,int32_t (*action)(),queue_t *destq,queue_t *errorq);
 
 #include "../../utils/curve25519.h"
 bits320 Unit;
@@ -221,7 +232,7 @@ int32_t deserialize_data256(uint8_t *databuf,int32_t datalen,bits256 *data)
 bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 {
     int32_t desti,i; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
-    if ( (rand() % (groupsize*2)) == 0 )
+    if ( (rand() % (groupsize)) == 0 )
     {
         memset(msgstr,0,sizeof(msgstr));
         strcpy(msgstr,"hello world");
@@ -232,7 +243,7 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
         for (i=0; i<30&&msgstr[i]!=0; i++)
             hwrite(msgstr[i],8,&H);
         msg.bytes[31] |= (desti & 0x3f);
-        printf("%llu node.%d sending msg to %d\n",(long long)DCNET.myid,group->myind,desti);
+        printf(">>>>>>>>>>>>>>>> %llu node.%d sending msg to %d\n",(long long)DCNET.myid,group->myind,desti);
         msgelement = fexpand(msg);
     }
     return(msgelement);
@@ -255,6 +266,7 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                 memset(msgstr,0,sizeof(msgstr));
                 if ( ++group->nonz >= group->n )
                 {
+                    group->finished = (uint32_t)time(NULL);
                     if ( group->prodOi.txid != Unit.txid )
                     {
                         msg = fcontract(group->prodOi);
@@ -265,11 +277,46 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                     } else strcpy(msgstr,"no message");
                     printf("node %llu received prod (Oi.%llx commit.%llx) -> msg.(%s) desti.%d\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,msgstr,desti);
                 }
-            } else printf("DUPLICATE.%d\n",i);
+            } //else printf("DUPLICATE.%d\n",i);
             return;
         }
     }
     printf("dcround_update: couldnt find match\n");
+}
+
+void dcnet_updategroup(struct dcitem *ptr)
+{
+    int32_t datalen = 0; uint64_t groupid,sender; struct dcgroup *group = 0; bits256 Oi,commit;
+    datalen = deserialize_data((void *)ptr->data,0,&groupid,sizeof(groupid));
+    printf("RECV.groupid %llu %p len.%d\n",(long long)ptr->groupid,find_dcgroup(groupid),ptr->size);
+    if ( ptr->groupid == groupid && (group= find_dcgroup(groupid)) != 0 )
+    {
+        if ( ptr->size >= sizeof(ptr->groupid)+sizeof(sender)+sizeof(Oi)+sizeof(commit) )
+        {
+            datalen = deserialize_data((void *)ptr->data,datalen,&sender,sizeof(sender));
+            datalen = deserialize_data256((void *)ptr->data,datalen,&Oi);
+            datalen = deserialize_data256((void *)ptr->data,datalen,&commit);
+            dcround_update(group,sender,Oi,commit,&ptr->data[datalen],ptr->size - datalen);
+        } else printf("RECV len.%d too small for %ld\n",ptr->size,sizeof(groupid)+sizeof(sender)+sizeof(Oi)+sizeof(commit));
+    } else printf("groupid mismatch %llu vs %llu or group.%p\n",(long long)groupid,(long long)ptr->groupid,group);
+}
+
+void dcnet_scanqueue(uint64_t groupid)
+{
+    int32_t iter; struct dcitem *pend;
+    for (iter=0; iter<2; iter++)
+    {
+        while ( (pend= queue_dequeue(&DCNET.Q.pingpong[iter],0)) != 0 )
+        {
+            if ( pend->groupid == groupid )
+            {
+                printf("dequeued\n");
+                dcnet_updategroup(pend);
+                free(pend);
+            }
+            else queue_enqueue("dcnet requeue",&DCNET.Q.pingpong[iter ^ 1],&pend->DL);
+        }
+    }
 }
 
 void dcnet(char *dccmd,cJSON *json)
@@ -312,12 +359,14 @@ void dcnet(char *dccmd,cJSON *json)
         pubkeystr = jstr(json,"G"), pubkey2str = jstr(json,"H");
         if ( pubkeystr != 0 && pubkey2str != 0 && (array= jarray(&n,json,"group")) != 0 && (groupid= j64bits(json,"groupid")) != 0 && n <= MAXNODES && n > 3 )
         {
-            if ( find_dcgroup(groupid) != 0 )
+            if ( (group= find_dcgroup(groupid)) != 0 )
             {
-                printf("groupid.%llx already exists\n",(long long)groupid);
-                return;
-            }
-            group = &DCNET.groups[DCNET.numgroups++], memset(group,0,sizeof(*group));
+                if ( group->created != 0 && group->finished == 0 && group->created < time(NULL)+60 )
+                {
+                    printf("groupid.%llx already exists\n",(long long)groupid);
+                    return;
+                }
+            } else group = &DCNET.groups[DCNET.numgroups++], memset(group,0,sizeof(*group));
             group->id = groupid, group->created = (uint32_t)time(NULL);
             group->prodcommit = group->prodOi = Unit;
             decode_hex(pubkey.bytes,sizeof(pubkey),pubkeystr), pubexp = fexpand(pubkey);
@@ -351,38 +400,37 @@ void dcnet(char *dccmd,cJSON *json)
 
 int32_t dcnet_idle(struct plugin_info *plugin)
 {
-    int32_t len,datalen = 0; uint64_t groupid,sender; struct dcgroup *group; char *msg,*jsonstr,*dccmd; cJSON *json; bits256 Oi,commit;
+    int32_t len,datalen = 0; uint64_t groupid; struct dcgroup *group; cJSON *json; char *msg,*dccmd; struct dcitem *ptr;
     if ( DCNET.bus >= 0 )
     {
         if ( (len= nn_recv(DCNET.bus,&msg,NN_MSG,0)) > 0 )
         {
-            datalen = deserialize_data((void *)msg,0,&groupid,sizeof(groupid));
+            ptr = calloc(1,sizeof(*ptr) + len + 1);
+            ptr->size = len;
+            memcpy(ptr->data,msg,len);
+            nn_freemsg(msg);
+            datalen = deserialize_data((void *)ptr->data,0,&groupid,sizeof(groupid));
+            ptr->groupid = groupid;
             if ( (group= find_dcgroup(groupid)) != 0 )
-            {
-                printf("RECV.groupid %llu %p len.%d\n",(long long)groupid,find_dcgroup(groupid),len);
-                if ( len >= sizeof(groupid)+sizeof(sender)+sizeof(Oi)+sizeof(commit) )
-                {
-                    datalen = deserialize_data((void *)msg,datalen,&sender,sizeof(sender));
-                    datalen = deserialize_data256((void *)msg,datalen,&Oi);
-                    datalen = deserialize_data256((void *)msg,datalen,&commit);
-                    dcround_update(group,sender,Oi,commit,&msg[datalen],len - datalen);
-                } else printf("RECV len.%d too small for %ld\n",len,sizeof(groupid)+sizeof(sender)+sizeof(Oi)+sizeof(commit));
-                nn_freemsg(msg);
-            }
+                dcnet_updategroup(ptr);
             else
             {
-                printf("RECV.groupid %llu %p len.%d\n",(long long)groupid,find_dcgroup(groupid),len);
-                jsonstr = clonestr(msg);
-                nn_freemsg(msg);
-                if ( (json= cJSON_Parse(jsonstr)) != 0 )
+                if ( (json= cJSON_Parse((void *)ptr->data)) != 0 )
                 {
-                    printf("DCRECV.(%s)\n",jsonstr);
+                    printf("DCRECV.(%s)\n",ptr->data);
                     if ( (dccmd= jstr(json,"dcnet")) != 0 )
                         dcnet(dccmd,json);
                     free_json(json);
                 }
-                free(jsonstr);
+                else
+                {
+                    queue_enqueue("DCNET",&DCNET.Q.pingpong[0],&ptr->DL);
+                    printf("queued for group.%llu\n",(long long)groupid);
+                    ptr = 0;
+                }
             }
+            if ( ptr != 0 )
+                free(ptr);
         }
     }
     return(0);
@@ -390,20 +438,12 @@ int32_t dcnet_idle(struct plugin_info *plugin)
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char connectaddr[64],pubhex[65],pubhex2[65],*resultstr,*methodstr,*myip,*arraystr,*retstr = 0; bits256 tmp,pubkey,pubkey2; cJSON *array;
+    char connectaddr[64],pubhex[65],pubhex2[65],*resultstr,*methodstr,*myip,*arraystr,*retstr = 0; bits256 tmp,pubkey,pubkey2; cJSON *array,*arg;
     bits320 z,zmone; uint64_t groupid,txid; int32_t i,n,len,sendtimeout = 10,recvtimeout = 1;
     retbuf[0] = 0;
     plugin->allowremote = 1;
     if ( initflag > 0 )
     {
-        {
-            uint8_t msg[128]; uint64_t sgroupid = 0x0123456789;
-            int32_t sdatalen = serialize_data(msg,0,sgroupid,sizeof(sgroupid));
-            int32_t rdatalen = deserialize_data((void *)msg,0,&groupid,sizeof(groupid));
-            printf("deser sdatalen.%d %llu/%llx -> rdatalen.%d %llu/%llx\n",sdatalen,(long long)sgroupid,(long long)sgroupid,rdatalen,(long long)groupid,(long long)groupid);
-            getchar();
-        }
-
         char *ipaddrs[] = { "5.9.56.103", "5.9.102.210", "89.248.160.237", "89.248.160.238", "89.248.160.239", "89.248.160.240", "89.248.160.241", "89.248.160.242" };
         fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
         for (i=0; i<1000; i++)
@@ -418,6 +458,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         DCNET.bus = -1;
         DCNET.mode = juint(json,"dchost");
         myip = jstr(json,"myipaddr");
+        init_pingpong_queue(&DCNET.Q,"DCNET",0,0,0);
+        DCNET.Q.offset = 0;
         if ( DCNET.mode != 0 )
         {
             if ( DCNET.mode > 1 && myip != 0 )
@@ -502,7 +544,14 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             sprintf(retbuf,"{\"result\":\"success\",\"dcnet\":\"round\",\"G\":\"%s\",\"H\":\"%s\",\"done\":1,\"dcnum\":%d,\"groupid\":\"%llu\",\"group\":%s}",pubhex,pubhex2,DCNET.num,(long long)groupid,arraystr);
             len = (int32_t)strlen(retbuf) + 1;
             if ( DCNET.mode > 0 && DCNET.bus >= 0 )
+            {
                 nn_send(DCNET.bus,retbuf,len,0);
+                if ( (arg= cJSON_Parse(retbuf)) != 0 )
+                {
+                    dcnet("round",arg);
+                    free_json(arg);
+                }
+            }
             return(len);
         }
     }
