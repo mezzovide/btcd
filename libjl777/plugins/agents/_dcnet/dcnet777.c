@@ -250,7 +250,7 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
     return(msgelement);
 }
 
-void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit,void *packet,int32_t len)
+void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit)//,void *packet,int32_t len)
 {
     int32_t i,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H;
     //printf("dcround_update groupid.%llu from %llu\n",(long long)group->id,(long long)sender);
@@ -297,7 +297,7 @@ void dcnet_updategroup(struct dcitem *ptr)
             datalen = deserialize_data((void *)ptr->data,datalen,&sender,sizeof(sender));
             datalen = deserialize_data256((void *)ptr->data,datalen,&Oi);
             datalen = deserialize_data256((void *)ptr->data,datalen,&commit);
-            dcround_update(group,sender,Oi,commit,&ptr->data[datalen],ptr->size - datalen);
+            dcround_update(group,sender,Oi,commit);//,&ptr->data[datalen],ptr->size - datalen);
         } else printf("RECV len.%d too small for %ld\n",ptr->size,sizeof(groupid)+sizeof(sender)+sizeof(Oi)+sizeof(commit));
     } else printf("groupid mismatch %llu vs %llu or group.%p\n",(long long)groupid,(long long)ptr->groupid,group);
 }
@@ -390,6 +390,7 @@ void dcnet(char *dccmd,cJSON *json)
             }
             msgelement = dcnet_message(group,n);
             Oi = dcround(&commit,myind,group,pubkey,pubkey2,msgelement);
+            dcround_update(group,DCNET.myid,fcontract(Oi),fcontract(commit));//,&ptr->data[datalen],ptr->size - datalen);
             datalen = serialize_data(data,datalen,groupid,sizeof(groupid));
             datalen = serialize_data(data,datalen,DCNET.myid,sizeof(DCNET.myid));
             datalen = serialize_data256(data,datalen,fcontract(Oi));
