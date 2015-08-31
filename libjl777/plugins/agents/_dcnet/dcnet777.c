@@ -244,7 +244,7 @@ uint16_t dcnet_crc16(uint8_t *buf,int32_t len)
 bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 {
     int32_t desti,i,j; uint16_t crc16; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
-    if ( (rand() % (groupsize * 2)) == 0 )
+    if ( group->myind == 0 )//(rand() % (groupsize * 2)) == 0 )
     {
         memset(msgstr,0,sizeof(msgstr));
         strcpy(msgstr,"hello world");
@@ -268,7 +268,7 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
         crc16 = dcnet_crc16(msg.bytes,sizeof(msg));
         msg.bytes[29] = (crc16 & 0xff);
         msg.bytes[30] = (crc16 >> 8) & 0xff;
-        printf(">>>>>>>>>>>>>>>> %llu node.%d sending msg.(%s) to %d %llx\n",(long long)DCNET.myid,group->myind,msgstr,desti,(long long)msg.txid);
+        printf(">>>>>>>>>>>>>>>> %llu node.%d sending msg.(%s) to %d %llx crc16.%04x\n",(long long)DCNET.myid,group->myind,msgstr,desti,(long long)msg.txid,crc16);
         msgelement = fexpand(msg);
     }
     return(msgelement);
