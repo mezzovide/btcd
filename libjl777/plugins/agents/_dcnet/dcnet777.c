@@ -36,6 +36,7 @@ typedef union _bits256 bits256;
 union _bits320 { uint8_t bytes[40]; uint16_t ushorts[20]; uint32_t uints[10]; uint64_t ulongs[5]; uint64_t txid; };
 typedef union _bits320 bits320;*/
 
+#define DCNET_MAXAGE 33
 #define MAXNODES 64
 #define MAXGROUPS 64
 struct dcitem { struct queueitem DL; uint64_t groupid; int32_t size; uint8_t data[]; };
@@ -264,7 +265,7 @@ uint64_t dcnet_grouparray(int32_t *nump,cJSON *array)
 {
     int32_t i,n; uint64_t groupid,txid;
     for (groupid=i=n=0; i<DCNET.num; i++)
-        if ( (time(NULL) - DCNET.nodes[i].lastcontact) < 333 )
+        if ( (time(NULL) - DCNET.nodes[i].lastcontact) < DCNET_MAXAGE )
         {
             txid = fcontract(DCNET.nodes[i].pubexp).txid;
             jaddi64bits(array,txid);
@@ -369,7 +370,7 @@ void dcnet(char *dccmd,cJSON *json)
         {
             decode_hex(pubkey.bytes,sizeof(pubkey),pubkeystr), pubexp = fexpand(pubkey);
             decode_hex(pubkey2.bytes,sizeof(pubkey2),pubkey2str), pubexp2 = fexpand(pubkey2);
-            printf("dcnet.(%s) P.(%s) P2.(%s)\n",dccmd,pubkeystr,pubkey2str);
+            //printf("dcnet.(%s) P.(%s) P2.(%s)\n",dccmd,pubkeystr,pubkey2str);
             for (i=0; i<DCNET.num; i++)
             {
                 node = &DCNET.nodes[i];
@@ -460,7 +461,8 @@ void dcnet(char *dccmd,cJSON *json)
             if ( DCNET.mode > 0 && DCNET.bus >= 0 )
                 nn_send(DCNET.bus,data,datalen,0);
             dcnet_scanqueue(groupid);
-            printf("dcnet.(%s) G.(%s) H.(%s) -> (%llx, %llx)\n",dccmd,pubkeystr,pubkey2str,(long long)Oi.txid,(long long)commit.txid);
+            //printf("dcnet.(%s) G.(%s) H.(%s) -> (%llx, %llx)\n",dccmd,pubkeystr,pubkey2str,(long long)Oi.txid,(long long)commit.txid);
+            printf("dcnet.(%s) -> (%llx, %llx)\n",dccmd,(long long)Oi.txid,(long long)commit.txid);
         }
     }
 }
@@ -521,7 +523,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             {
                 if ( (json= cJSON_Parse((void *)ptr->data)) != 0 )
                 {
-                    printf("DCRECV.(%s)\n",ptr->data);
+                    //printf("DCRECV.(%s)\n",ptr->data);
                     if ( (dccmd= jstr(json,"dcnet")) != 0 )
                         dcnet(dccmd,json);
                     free_json(json);
