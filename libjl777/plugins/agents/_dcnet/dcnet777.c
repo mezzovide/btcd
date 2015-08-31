@@ -13,6 +13,10 @@
  *                                                                            *
  ******************************************************************************/
 
+// add coinshuffle
+// retries and connections
+// regen pubexp
+
 #define BUNDLED
 #define PLUGINSTR "dcnet"
 #define PLUGNAME(NAME) dcnet ## NAME
@@ -568,7 +572,7 @@ int32_t dcnet_idle(struct plugin_info *plugin)
             if ( ptr != 0 )
                 free(ptr);
         }
-        else if ( DCNET.num > 2 && milliseconds() > lastsent+50 )
+        else if ( DCNET.num > 2 && milliseconds() > lastsent+1000 )
         {
             dcnet_startround(retbuf);
             lastsent = milliseconds();
