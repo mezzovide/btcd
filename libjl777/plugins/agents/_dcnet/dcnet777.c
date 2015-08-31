@@ -232,7 +232,7 @@ int32_t deserialize_data256(uint8_t *databuf,int32_t datalen,bits256 *data)
 
 bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 {
-    int32_t desti,i; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
+    int32_t desti,i,j; char msgstr[32]; bits256 msg; HUFF H; bits320 msgelement = Unit;
     if ( group->myind == 0 )//(rand() % (groupsize)) == 0 )
     {
         memset(msgstr,0,sizeof(msgstr));
@@ -241,8 +241,18 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
         huff256(&H,&msg);
         while ( (desti= (rand() % groupsize)) == group->myind )
             ;
-        for (i=0; i<30&&msgstr[i]!=0; i++)
-            hwrite(msgstr[i],8,&H);
+        for (i=0; i<30; i++)
+        {
+            for (j=0; j<8; j++)
+            {
+                if ( (msgstr[i] & (1<<j)) != 0 )
+                    hputbit(&H,1), printf("1");
+                else hputbit(&H,0), printf("0");
+            }
+            fprintf(stderr,".%02x ",msgstr[i]);
+            if ( msgstr[i] == 0 )
+                break;
+        }
         msg.bytes[31] |= (desti & 0x3f);
         printf(">>>>>>>>>>>>>>>> %llu node.%d sending msg.(%s) to %d %llx\n",(long long)DCNET.myid,group->myind,msgstr,desti,(long long)msg.txid);
         msgelement = fexpand(msg);
@@ -252,7 +262,7 @@ bits320 dcnet_message(struct dcgroup *group,int32_t groupsize)
 
 void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 commit)//,void *packet,int32_t len)
 {
-    int32_t i,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H;
+    int32_t i,j,x,numbits,desti = -1; struct dcnode *node; char msgstr[33]; bits256 msg; HUFF H;
     //printf("dcround_update groupid.%llu from %llu\n",(long long)group->id,(long long)sender);
     for (i=0; i<group->n; i++)
     {
@@ -272,9 +282,20 @@ void dcround_update(struct dcgroup *group,uint64_t sender,bits256 Oi,bits256 com
                     {
                         msg = fcontract(group->prodOi);
                         desti = (msg.bytes[31] & 0x3f);
-                        huff256(&H,&msg);
-                        for (i=numbits=0; i<30&&msgstr[i]!=0; i++)
-                            msgstr[i] = hread(&numbits,8,&H);
+                        huff256(&H,&msg), H.endpos = 243;
+                        for (i=numbits=0; i<30; i++)
+                        {
+                            for (j=x=0; j<8; j++)
+                            {
+                                if ( hgetbit(&H) != 0 )
+                                    x |= (1 << j), printf("1");
+                                else printf("0");
+                            }
+                            msgstr[i] = x;
+                            fprintf(stderr,".%02x ",x&0xff);
+                            if ( x == 0 )
+                                break;
+                        }
                     } else strcpy(msgstr,"no message");
                     printf("node %llu received prod (Oi.%llx commit.%llx) -> %llx msg.(%s) desti.%d\n",(long long)DCNET.myid,(long long)group->prodOi.txid,(long long)group->prodcommit.txid,(long long)msg.txid,msgstr,desti);
                 }
@@ -449,6 +470,49 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     plugin->allowremote = 1;
     if ( initflag > 0 )
     {
+        if ( 0 )
+        {
+            int32_t numbits,desti,i,j,x; HUFF H; bits256 msg; char msgstr[33];
+            memset(msgstr,0,sizeof(msgstr));
+            strcpy(msgstr,"hello world");
+            memset(&msg,0,sizeof(msg));
+            huff256(&H,&msg);
+            while ( (desti= (rand() % 8)) == 0 )
+                ;
+            for (i=0; i<30; i++)
+            {
+                for (j=0; j<8; j++)
+                {
+                    if ( (msgstr[i] & (1<<j)) != 0 )
+                        hputbit(&H,1), printf("1");
+                    else hputbit(&H,0), printf("0");
+                }
+                fprintf(stderr,".%02x ",msgstr[i]);
+                if ( msgstr[i] == 0 )
+                    break;
+            }
+            msg.bytes[31] |= (desti & 0x3f);
+            fprintf(stderr,"-> desti.%d\n",desti);
+            for (i=0; i<16; i++)
+                printf("%02x ",msg.bytes[i]);
+            printf("msg\n");
+            huff256(&H,&msg), H.endpos = 243;
+            for (i=numbits=0; i<30; i++)
+            {
+                for (j=x=0; j<8; j++)
+                {
+                    if ( hgetbit(&H) != 0 )
+                        x |= (1 << j), printf("1");
+                    else printf("0");
+                }
+                msgstr[i] = x;
+                fprintf(stderr,".%02x ",x&0xff);
+                if ( x == 0 )
+                    break;
+            }
+            printf("TESTDONE.(%s)\n",msgstr);
+            getchar();
+        }
         char *ipaddrs[] = { "5.9.56.103", "5.9.102.210", "89.248.160.237", "89.248.160.238", "89.248.160.239", "89.248.160.240", "89.248.160.241", "89.248.160.242" };
         fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
         for (i=0; i<1000; i++)
