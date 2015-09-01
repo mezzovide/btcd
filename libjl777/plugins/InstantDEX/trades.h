@@ -526,8 +526,8 @@ uint64_t prices777_swapbuf(uint64_t *txidp,char *triggertx,char *txbytes,char *s
 
 char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double volume,struct InstantDEX_quote *iQ,struct prices777_order *order,uint64_t orderid,char *extra)
 {
-    struct InstantDEX_quote _iQ;
-    char *retstr; struct exchange_info *exchange; struct pending_trade *pend; uint32_t nonce; char *str,swapbuf[8192],triggertx[4096],txbytes[4096];
+    struct InstantDEX_quote _iQ; char *retstr; struct exchange_info *exchange; struct pending_trade *pend; uint32_t nonce;
+    char *str,swapbuf[8192],triggertx[4096],txbytes[4096]; uint64_t txid;
     if ( (exchange= find_exchange(0,prices->exchange)) == 0 && exchange->trade != 0 )
     {
         printf("prices777_trade: need to have supported exchange\n");
@@ -594,8 +594,12 @@ char *prices777_trade(struct prices777 *prices,int32_t dir,double price,double v
         {
             printf(" issue dir.%d %s/%s price %f vol %f -> %s\n",dir,prices->base,prices->rel,price,volume,prices->exchange);
             retstr = extra;
-            (*exchange->trade)(&retstr,exchange,prices->base,prices->rel,dir,price,volume);
-            InstantDEX_history(0,pend,retstr);
+            if ( (txid= (*exchange->trade)(&retstr,exchange,prices->base,prices->rel,dir,price,volume)) != 0 )
+                InstantDEX_history(0,pend,retstr);
+            else printf("no txid from trade\n");
+            pend->txid = txid;
+            if ( retstr != 0 )
+                printf("returning.%p (%s)\n",retstr,retstr);
             return(retstr);
         } else return(clonestr("{\"error\":\"no trade function for exchange\"}\n"));
     }

@@ -232,6 +232,7 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
 cJSON *exchanges_json();
 struct InstantDEX_quote *delete_iQ(uint64_t quoteid);
 char *is_tradedasset(char *exchange,char *assetidstr);
+int32_t supported_exchange(char *exchangestr);
 
 struct exchange_info *get_exchange(int32_t exchangeid);
 char *exchange_str(int32_t exchangeid);

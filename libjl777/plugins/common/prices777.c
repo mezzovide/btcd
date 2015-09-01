@@ -703,6 +703,7 @@ char *prices777_allorderbooks()
         jaddstr(item,"rel",prices->rel);
         sprintf(numstr,"%llu",(long long)prices->relid), jaddstr(item,"relid",numstr);
         jaddstr(item,"exchange",prices->exchange);
+        jaddnum(item,"commission",prices->commission);
         if ( strcmp(prices->exchange,"basket") == 0 )
             jadd(item,"basket",basket_json(prices));
         else if ( strcmp(prices->exchange,"active") == 0 )
@@ -739,7 +740,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         {"bityes", prices777_bityes, bityes_supports, bityes_trade },
         {"coinbase", prices777_coinbase, coinbase_supports, coinbase_trade },
         {"lakebtc", prices777_lakebtc, lakebtc_supports, lakebtc_trade },
-        {"exmo", prices777_exmo, exmo_supports, exmo_trade },
+        //{"exmo", prices777_exmo, exmo_supports, exmo_trade },
         {"quadriga", prices777_quadriga, quadriga_supports, quadriga_trade },
         {"truefx", 0 }, {"ecb", 0 }, {"instaforex", 0 }, {"fxcm", 0 }, {"yahoo", 0 },
     };
@@ -848,6 +849,8 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     prices->RTflag = 1;
     if ( (exchangeptr= find_exchange(0,exchange)) != 0 )
     {
+        if ( prices->commission == 0. )
+            prices->commission = exchangeptr->commission;
         prices->exchangeid = exchangeptr->exchangeid;
         if ( (exchangeptr->updatefunc= updatefunc) == 0 )
         {
@@ -908,6 +911,14 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
     {
         printf("cant add exchange.(%s)\n",exchangestr);
         return(0);
+    }
+    if ( strcmp(exchangestr,"nxtae") == 0 || strcmp(exchangestr,"unconf") == 0 )
+    {
+        if ( strcmp(base,"NXT") != 0 && strcmp(rel,"NXT") != 0 )
+        {
+            printf("nxtae/unconf needs to be relative to NXT (%s/%s) %llu/%llu\n",base,rel,(long long)baseid,(long long)relid);
+            return(0);
+        }
     }
     if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
         prices777_addbundle(&valid,1,prices,0,0,0);
@@ -1063,7 +1074,7 @@ int32_t prices777_init(char *jsonstr)
                     extract_cJSON_str(exchangeptr->apisecret,sizeof(exchangeptr->apisecret),item,"apisecret");
                 if ( exchangeptr->commission == 0. )
                     exchangeptr->commission = jdouble(item,"commission");
-                printf("%p ADDEXCHANGE.(%s) [%s, %s, %s]\n",exchangeptr,exchange,exchangeptr->apikey,exchangeptr->userid,exchangeptr->apisecret);
+                printf("%p ADDEXCHANGE.(%s) [%s, %s, %s] commission %.3f%%\n",exchangeptr,exchange,exchangeptr->apikey,exchangeptr->userid,exchangeptr->apisecret,exchangeptr->commission * 100);
             }
             if ( strcmp(exchange,"truefx") == 0 )
             {
@@ -1075,6 +1086,7 @@ int32_t prices777_init(char *jsonstr)
             {
                 if ( (BUNDLE.ptrs[BUNDLE.num]->commission= jdouble(item,"commission")) == 0. )
                     BUNDLE.ptrs[BUNDLE.num]->commission = exchangeptr->commission;
+                printf("SET COMMISSION.%s %f for %s/%s\n",exchange,exchangeptr->commission,base,rel);
                 BUNDLE.num++;
             }
         }
