@@ -542,6 +542,12 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
     } else fprintf(stderr,"submit err cmd.(%s)\n",cmdbuf);
     if ( retstrp != 0 )
     {
+        if ( (json= cJSON_Parse(data)) == 0 )
+        {
+            json = cJSON_CreateObject();
+            jaddstr(json,"result",data);
+            data = jprint(json,1);
+        } else free_json(json);
         printf("btc38 returning.(%s) in %p\n",data,data);
         *retstrp = data;
     }
@@ -1107,7 +1113,7 @@ uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,ui
     return(txid);
 }
 
-char *fill_nxtae(uint64_t *txidp,uint64_t nxt64bits,int32_t dir,double price,double volume,uint64_t baseid,uint64_t relid)
+char *fill_nxtae(uint64_t *txidp,uint64_t nxt64bits,char *secret,int32_t dir,double price,double volume,uint64_t baseid,uint64_t relid)
 {
     uint64_t txid,assetid,avail,qty,priceNQT,ap_mult; char retbuf[512],*errstr;
     if ( nxt64bits != calc_nxt64bits(SUPERNET.NXTADDR) )
@@ -1119,8 +1125,8 @@ char *fill_nxtae(uint64_t *txidp,uint64_t nxt64bits,int32_t dir,double price,dou
     else return(clonestr("{\"error\":\"NXT AE order without NXT\"}"));
     if ( (ap_mult= get_assetmult(assetid)) == 0 )
         return(clonestr("{\"error\":\"assetid not found\"}"));
-    qty = calc_asset_qty(&avail,&priceNQT,SUPERNET.NXTADDR,0,assetid,price,volume);
-    txid = submit_triggered_nxtae(&errstr,0,dir > 0 ? "placeBidOrder" : "placeAskOrder",nxt64bits,SUPERNET.NXTACCTSECRET,assetid,qty,priceNQT,0,0,0,0);
+    qty = calc_asset_qty(&avail,&priceNQT,secret,0,assetid,price,volume);
+    txid = submit_triggered_nxtae(&errstr,0,dir > 0 ? "placeBidOrder" : "placeAskOrder",nxt64bits,secret,assetid,qty,priceNQT,0,0,0,0);
     if ( errstr != 0 )
         sprintf(retbuf,"{\"error\":\"%s\"}",errstr), free(errstr);
     else sprintf(retbuf,"{\"result\":\"success\",\"txid\":\"%llu\"}",(long long)txid);
