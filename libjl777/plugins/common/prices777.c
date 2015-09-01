@@ -1023,7 +1023,7 @@ int32_t prices777_init(char *jsonstr)
 {
     static int32_t didinit;
     char *btcdexchanges[] = { "poloniex", "bittrex" };//, "bter" };
-    char *btcusdexchanges[] = { "bityes", "bitfinex", "bitstamp", "itbit", "okcoin", "coinbase", "btce", "lakebtc", "exmo" };
+    char *btcusdexchanges[] = { "bityes", "bitfinex", "bitstamp", "okcoin", "coinbase", "btce", "lakebtc", "kraken" };
     cJSON *json=0,*item,*exchanges; int32_t i,n; char *exchange,*base,*rel,*contract; struct exchange_info *exchangeptr; struct destbuf tmp;
     if ( didinit != 0 )
         return(0);
