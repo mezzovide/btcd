@@ -232,7 +232,7 @@ uint64_t btce_trade(char **retstrp,struct exchange_info *exchange,char *_base,ch
             return(0);
         }
         //dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
-        sprintf(payload,"method=Trade&nonce=%ld&pair=%s&type=%s&rate=%.6f&amount=%.6f",time(NULL),pairstr,dir>0?"buy":"sell",price,volume);
+        sprintf(payload,"method=Trade&nonce=%ld&pair=%s&type=%s&rate=%.3f&amount=%.6f",time(NULL),pairstr,dir>0?"buy":"sell",price,volume);
     }
     if ( (sig= hmac_sha512_str(dest,exchange->apisecret,(int32_t)strlen(exchange->apisecret),payload)) != 0 )
         sprintf(hdr2,"Sign:%s",sig);
