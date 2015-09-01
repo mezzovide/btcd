@@ -686,7 +686,7 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
         prices777_setorder(&gp->bid,group,highbidi,bidorderid);
     if ( lowaski >= 0 )
         prices777_setorder(&gp->ask,group,lowaski,askorderid);
-    printf("groupsize.%d highbidi.%d %f %f lowaski.%d\n",groupsize,highbidi,gp->bid.s.price,gp->ask.s.price,lowaski);
+    //printf("groupsize.%d highbidi.%d %f %f lowaski.%d\n",groupsize,highbidi,gp->bid.s.price,gp->ask.s.price,lowaski);
     if ( gp->bid.s.price > SMALLVAL && gp->ask.s.price > SMALLVAL )
         return(0);
     return(-1);
