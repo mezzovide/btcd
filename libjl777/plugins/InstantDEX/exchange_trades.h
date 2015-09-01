@@ -494,11 +494,11 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
                     break;
                 }
         }
-    }
-    if ( good == 0 )
-    {
-        *retstrp = clonestr("{\"error\":\"invalid contract pair\"}");
-        return(0);
+        if ( good == 0 )
+        {
+            *retstrp = clonestr("{\"error\":\"invalid contract pair\"}");
+            return(0);
+        }
     }
     nonce = time(NULL);
     sprintf(buf,"%s_%s_%s_%llu",exchange->apikey,exchange->userid,exchange->apisecret,(long long)nonce);
@@ -805,7 +805,7 @@ uint64_t lakebtc_trade(char **retstrp,struct exchange_info *exchange,char *_base
     return(txid);
 }
 
-uint64_t quadriga_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
+uint64_t quadriga_trade(char **retstrp,struct exchange_info *exchange,char *_base,char *_rel,int32_t dir,double price,double volume)
 {
     /* You need to POST 3 fields as a JSON payload to the API in order to perform authentication.
      
@@ -841,21 +841,42 @@ uint64_t quadriga_trade(char **retstrp,struct exchange_info *exchange,char *base
      
      */
     static CURL *cHandle;
- 	char *sig,*data,*path,hdr3[4096],url[512],md5secret[128],req[4096],payload[4096],hdr1[4096],hdr2[4096],dest[1024 + 1];
+    char *baserels[][2] = { {"btc","usd"}, {"btc","cad"} };
+	char *extra,*sig,*data,*path,pairstr[64],base[64],rel[64],hdr3[4096],url[512],md5secret[128],req[4096],payload[4096],hdr1[4096],hdr2[4096],dest[1024 + 1];
     cJSON *json; uint64_t nonce,txid = 0;
     memset(payload,0,sizeof(payload));
+    if ( (extra= *retstrp) != 0 )
+        *retstrp = 0;
     nonce = time(NULL);
     sprintf(payload,"%llu%s%s",(long long)nonce,exchange->userid,exchange->apikey);
     calc_md5(md5secret,exchange->apisecret,(int32_t)strlen(exchange->apisecret));
-    if ( dir == 0 )
-        path = "balance";
-    else
-    {
-        //dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
-    }
     if ( (sig= hmac_sha256_str(dest,md5secret,(int32_t)strlen(md5secret),payload)) != 0 )
     {
-        sprintf(req,"{\"key\":\"%s\",\"nonce\":%llu,\"signature\":\"%s\"}",exchange->apikey,(long long)nonce,sig);
+        if ( dir == 0 )
+        {
+            path = "balance";
+            sprintf(req,"{\"key\":\"%s\",\"nonce\":%llu,\"signature\":\"%s\"}",exchange->apikey,(long long)nonce,sig);
+        }
+        else
+        {
+            strcpy(base,_base), strcpy(rel,_rel);
+            tolowercase(base), tolowercase(rel);
+            if ( flipstr_for_exchange(pairstr,"%s_%s",baserels,sizeof(baserels)/sizeof(*baserels),dir,&price,&volume,base,rel) == 0 )
+            {
+                printf("cant find baserel (%s/%s)\n",base,rel);
+                return(0);
+            }
+            path = (dir > 0) ? "buy" : "sell";
+            /*key - API key
+             signature - signature
+             nonce - nonce
+             amount - amount of major currency
+             price - price to buy at
+             book - optional, if not specified, will default to btc_cad*/
+            sprintf(req,"{\"key\":\"%s\",\"amount\":%.6f,\"price\":%.3f,\"book\":\"%s_%s\",\"nonce\":%llu,\"signature\":\"%s\"}",exchange->apikey,volume,price,base,rel,(long long)nonce,sig);
+
+            //dir = flip_for_exchange(pairstr,"%s_%s","BTC",dir,&price,&volume,base,rel);
+        }
         sprintf(hdr1,"Content-Type:application/json"), sprintf(hdr2,"charset=utf-8"), sprintf(hdr3,"Content-Length:%ld",strlen(req));
         printf("quadriga req.(%s) -> (%s) [%s %s sig.%s]\n",req,payload,md5secret,payload,sig);
         sprintf(url,"https://api.quadrigacx.com/v2/%s",path);
