@@ -60,7 +60,7 @@ cJSON *InstantDEX_lottostats();
 //#include "NXT_tx.h"
 #include "trades.h"
 #include "quotes.h"
-//#include "atomic.h"
+#include "subatomic.h"
 
 uint32_t prices777_NXTBLOCK,FIRST_EXTERNAL = 5;
 int32_t InstantDEX_idle(struct plugin_info *plugin) { return(0); }
