@@ -72,13 +72,6 @@ struct NXT_tx
     char comment[128];
 };
 
-struct subatomic_unspent_tx
-{
-    int64_t amount;    // MUST be first!
-    uint32_t vout,confirmations;
-    char txid[128],address[64],scriptPubKey[128],redeemScript[192];
-};
-
 struct atomic_swap
 {
     char *parsed[2];
@@ -90,14 +83,6 @@ struct atomic_swap
     struct NXT_tx *mytx;
 };
 
-struct subatomic_rawtransaction
-{
-    char destaddrs[MAX_SUBATOMIC_OUTPUTS][64];
-    int64_t amount,change,inputsum,destamounts[MAX_SUBATOMIC_OUTPUTS];
-    int32_t numoutputs,numinputs,completed,broadcast,confirmed;
-    char rawtransaction[1024],signedtransaction[1024],txid[128];
-    struct subatomic_unspent_tx inputs[MAX_SUBATOMIC_INPUTS];   // must be last, could even make it variable sized
-};
 
 struct subatomic_halftx
 {
@@ -247,50 +232,6 @@ void calc_OP_HASH160(unsigned char hash160[20],char *msg)
     }
 }
 
-int32_t subatomic_gen_pubkeys(struct subatomic_tx *atx,struct subatomic_halftx *htx)
-{
-    char coinaddrs[3][64],pubkeys[3][128];
-    struct daemon_info *cp;
-    int32_t i,flag,coinid;
-    char *pubkey,*coinaddr;
-    if ( htx->xferaddr == 0 )
-    {
-        memset(coinaddrs,0,sizeof(coinaddrs));
-        memset(pubkeys,0,sizeof(pubkeys));
-        for (i=flag=0; i<2; i++)
-        {
-            if ( i == 0 )
-            {
-                coinid = atx->ARGS.coinid;
-                pubkey = atx->myhalf.pubkey;
-                coinaddr = atx->myhalf.coinaddr;
-            }
-            else
-            {
-                coinid = atx->ARGS.destcoinid;
-                pubkey = atx->myhalf.destpubkey;
-                coinaddr = atx->myhalf.destcoinaddr;
-            }
-            cp = get_daemon_info(coinid);
-            if ( pubkey[0] == 0 )
-            {
-                if ( get_bitcoind_pubkey(pubkey,cp,coinaddr) != 0 )
-                {
-                    flag++;
-                    safecopy(atx->ARGS.mypubkeys[i],pubkey,sizeof(atx->ARGS.mypubkeys[i]));
-                    printf("gen pubkey %s (%s) for (%s)\n",coinid_str(coinid),pubkey,coinaddr);
-                }
-                else
-                {
-                    printf("cant generate %s pubkey for addr.%s\n",coinid_str(coinid),coinaddr);
-                    return(-1);
-                }
-            }
-        }
-    }
-    return(0);
-}
-
 int32_t subatomic_gen_multisig(struct subatomic_tx *atx,struct subatomic_halftx *htx)
 {
     char coinaddrs[3][64],pubkeys[3][128];
@@ -351,27 +292,6 @@ int32_t subatomic_tx_confirmed(int32_t coinid,char *txid)
     return(numconfirmed);
 }
 
-cJSON *get_decoderaw_json(struct daemon_info *cp,char *rawtransaction)
-{
-    struct gateway_info *gp = Global_gp;
-    int32_t coinid = cp->coinid;
-    char *str,*retstr;
-    cJSON *json = 0;
-    str = malloc(strlen(rawtransaction)+4);
-    //printf("got rawtransaction.(%s)\n",rawtransaction);
-    sprintf(str,"\"%s\"",rawtransaction);
-    retstr = bitcoind_RPC(cp->curl_handle,coinid_str(coinid),gp->serverport[coinid],gp->userpass[coinid],"decoderawtransaction",str);
-    if ( retstr != 0 && retstr[0] != 0 )
-    {
-        //printf("got decodetransaction.(%s)\n",retstr);
-        json = cJSON_Parse(retstr);
-    } else printf("error decoding.(%s)\n",str);
-    if ( retstr != 0 )
-        free(retstr);
-    free(str);
-    return(json);
-}
-
 char *subatomic_broadcasttx(struct subatomic_halftx *htx,char *bytes,int32_t myincr,int32_t lockedblock)
 {
     FILE *fp;
@@ -424,252 +344,6 @@ cJSON *get_rawtransaction_json(struct daemon_info *cp,char *txid)
     if ( rawtransaction != 0 )
         free(rawtransaction);
     return(json);
-}
-
-int32_t script_has_coinaddr(cJSON *scriptobj,char *coinaddr)
-{
-    int32_t i,n;
-    char buf[512];
-    cJSON *addresses,*addrobj;
-    if ( scriptobj == 0 )
-        return(0);
-    addresses = cJSON_GetObjectItem(scriptobj,"addresses");
-    if ( addresses != 0 )
-    {
-        n = cJSON_GetArraySize(addresses);
-        for (i=0; i<n; i++)
-        {
-            addrobj = cJSON_GetArrayItem(addresses,i);
-            copy_cJSON(buf,addrobj);
-            if ( strcmp(buf,coinaddr) == 0 )
-                return(1);
-        }
-    }
-    return(0);
-}
-
-char *subatomic_decodetxid(int64_t *valuep,char *scriptPubKey,int32_t *locktimep,struct daemon_info *cp,char *rawtransaction,char *mycoinaddr)
-{
-    char txidbuf[512],checkasmstr[1024],asmstr[1024],*txid = 0;
-    uint64_t value = 0;
-    int32_t i,n,nval,reqSigs;
-    cJSON *json,*txidjson,*scriptobj,*array,*item,*hexobj,*asmobj;
-    *locktimep = -1;
-    if ( (json= get_decoderaw_json(cp,rawtransaction)) != 0 )
-    {
-        *locktimep = (int32_t)get_cJSON_int(json,"locktime");
-        txidjson = cJSON_GetObjectItem(json,"txid");
-        copy_cJSON(txidbuf,txidjson);
-        if ( txidbuf[0] != 0 )
-            txid = clonestr(txidbuf);
-        array = cJSON_GetObjectItem(json,"vout");
-        if ( mycoinaddr != 0 && is_cJSON_Array(array) != 0 )
-        {
-            n = cJSON_GetArraySize(array);
-            for (i=0; i<n; i++)
-            {
-                item = cJSON_GetArrayItem(array,i);
-                hexobj = 0;
-                scriptobj = cJSON_GetObjectItem(item,"scriptPubKey");
-                if ( mycoinaddr != 0 && scriptobj != 0 && script_has_coinaddr(scriptobj,mycoinaddr) != 0 )
-                {
-                    nval = (int32_t)get_cJSON_int(item,"n");
-                    if ( nval == i )
-                    {
-                        reqSigs = (int32_t)get_cJSON_int(item,"reqSigs");
-                        value = conv_cJSON_float(item,"value");
-                        hexobj = cJSON_GetObjectItem(scriptobj,"hex");
-                        asmobj = cJSON_GetObjectItem(scriptobj,"asm");
-                        if ( scriptPubKey != 0 && hexobj != 0 )
-                            copy_cJSON(scriptPubKey,hexobj);
-                        if ( reqSigs == 1 && hexobj != 0 && asmobj != 0 )
-                        {
-                            sprintf(checkasmstr,"OP_DUP OP_HASH160 %s OP_EQUALVERIFY OP_CHECKSIG","need to figure out how ot gen magic number");
-                            copy_cJSON(asmstr,asmobj);
-                            if ( 0 && strcmp(asmstr,checkasmstr) != 0 ) // maybe I am paranoid, but what if they fiddled the script!
-                                printf("warning: (%s) != check.(%s)\n",asmstr,checkasmstr);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    if ( valuep != 0 )
-        *valuep = value;
-    return(txid);
-}
-
-cJSON *subatomic_vouts_json_params(struct subatomic_rawtransaction *rp)
-{
-    int32_t i;
-    cJSON *json,*obj;
-    json = cJSON_CreateObject();
-    for (i=0; i<rp->numoutputs; i++)
-    {
-        obj = cJSON_CreateNumber((double)rp->destamounts[i]/SATOSHIDEN);
-        cJSON_AddItemToObject(json,rp->destaddrs[i],obj);
-    }
-    // printf("numdests.%d (%s)\n",rp->numoutputs,cJSON_Print(json));
-    return(json);
-}
-
-cJSON *subatomic_vins_json_params(int32_t coinid,struct subatomic_rawtransaction *rp)
-{
-    int32_t i;
-    cJSON *json,*obj,*array;
-    struct subatomic_unspent_tx *up;
-    array = cJSON_CreateArray();
-    for (i=0; i<rp->numinputs; i++)
-    {
-        up = &rp->inputs[i];
-        json = cJSON_CreateObject();
-        obj = cJSON_CreateString(up->txid); cJSON_AddItemToObject(json,"txid",obj);
-        obj = cJSON_CreateNumber(up->vout); cJSON_AddItemToObject(json,"vout",obj);
-        if ( up->scriptPubKey[0] != 0 )
-        {
-            obj = cJSON_CreateString(up->scriptPubKey);
-            cJSON_AddItemToObject(json,"scriptPubKey",obj);
-        }
-        if ( up->redeemScript[0] != 0 )
-        {
-            obj = cJSON_CreateString(up->redeemScript);
-            cJSON_AddItemToObject(json,"redeemScript",obj);
-        }
-        cJSON_AddItemToArray(array,json);
-    }
-    return(array);
-}
-
-char *subatomic_rawtxid_json(int32_t coinid,struct subatomic_rawtransaction *rp)
-{
-    char *paramstr = 0;
-    cJSON *array,*vinsobj,*voutsobj;
-    vinsobj = subatomic_vins_json_params(coinid,rp);
-    if ( vinsobj != 0 )
-    {
-        voutsobj = subatomic_vouts_json_params(rp);
-        if ( voutsobj != 0 )
-        {
-            array = cJSON_CreateArray();
-            cJSON_AddItemToArray(array,vinsobj);
-            cJSON_AddItemToArray(array,voutsobj);
-            paramstr = cJSON_Print(array);
-            free_json(array);   // this frees both vinsobj and voutsobj
-        }
-        else free_json(vinsobj);
-    }
-    // printf("subatomic_rawtxid_json.%s\n",paramstr);
-    return(paramstr);
-}
-
-cJSON *subatomic_privkeys_json_params(int32_t coinid,char **coinaddrs,int32_t n)
-{
-    struct daemon_info *cp = get_daemon_info(coinid);
-    char walletkey[64];
-    if ( cp != 0 )
-    {
-        sprintf(walletkey,"[\"%s\",%d]",Global_subatomic->NXTADDR,BITCOIN_WALLET_UNLOCKSECONDS);
-        // locking first avoids error, hacky but no time for wallet fiddling now
-        bitcoind_RPC(cp->curl_handle,coinid_str(coinid),Global_gp->serverport[coinid],Global_gp->userpass[coinid],"walletlock",0);
-        bitcoind_RPC(cp->curl_handle,coinid_str(coinid),Global_gp->serverport[coinid],Global_gp->userpass[coinid],"walletpassphrase",walletkey);
-        return(create_privkeys_json_params(coinid,coinaddrs,n));
-    } else return(0);
-}
-
-char *subatomic_signraw_json_params(char *skipaddr,char *coinaddr,int32_t coinid,struct subatomic_rawtransaction *rp,char *rawbytes)
-{
-    int32_t i,j,flag;
-    char *coinaddrs[MAX_SUBATOMIC_INPUTS+1],*paramstr = 0;
-    cJSON *array,*rawobj,*vinsobj,*keysobj;
-    rawobj = cJSON_CreateString(rawbytes);
-    if ( rawobj != 0 )
-    {
-        vinsobj = subatomic_vins_json_params(coinid,rp);
-        if ( vinsobj != 0 )
-        {
-            // printf("add %d inputs skipaddr.%s coinaddr.%s\n",rp->numinputs,skipaddr,coinaddr);
-            for (i=flag=j=0; i<rp->numinputs; i++)
-            {
-                //printf("i.%d j.%d flag.%d %s\n",i,j,flag,rp->inputs[i].address);
-                if ( skipaddr != 0 && strcmp(rp->inputs[i].address,skipaddr) != 0 )
-                {
-                    coinaddrs[j] = rp->inputs[i].address;
-                    if ( coinaddr != 0 && strcmp(coinaddrs[j],coinaddr) == 0 )
-                        flag++;
-                    j++;
-                }
-            }
-            //printf("i.%d j.%d flag.%d\n",i,j,flag);
-            if ( coinaddr != 0 && flag == 0 )
-                coinaddrs[j++] = coinaddr;
-            coinaddrs[j++] = 0;
-            keysobj = subatomic_privkeys_json_params(coinid,coinaddrs,j);
-            //printf("subatomic_privkeys_json_params\n");
-            if ( keysobj != 0 )
-            {
-                array = cJSON_CreateArray();
-                cJSON_AddItemToArray(array,rawobj);
-                cJSON_AddItemToArray(array,vinsobj);
-                cJSON_AddItemToArray(array,keysobj);
-                paramstr = cJSON_Print(array);
-                free_json(array);
-            }
-            else free_json(vinsobj);
-        }
-        else free_json(rawobj);
-    }
-    return(paramstr);
-}
-
-char *subatomic_signtx(char *skipaddr,int32_t *lockedblockp,int64_t *valuep,char *coinaddr,char *deststr,unsigned long destsize,struct daemon_info *cp,int32_t coinid,struct subatomic_rawtransaction *rp,char *rawbytes)
-{
-    struct gateway_info *gp = Global_gp;
-    cJSON *json,*hexobj,*compobj;
-    char *retstr,*signparams,*txid = 0;
-    int32_t locktime = 0;
-    rp->txid[0] = 0;
-    deststr[0] = 0;
-    rp->completed = -1;
-    //printf("cp.%d vs %d: subatomic_signtx rawbytes.(%s)\n",cp->coinid,coinid,rawbytes);
-    signparams = subatomic_signraw_json_params(skipaddr,coinaddr,coinid,rp,rawbytes);
-    if ( signparams != 0 )
-    {
-        stripwhite(signparams,strlen(signparams));
-        // printf("got signparams.(%s)\n",signparams);
-        retstr = bitcoind_RPC(cp->curl_handle,coinid_str(coinid),gp->serverport[coinid],gp->userpass[coinid],"signrawtransaction",signparams);
-        if ( retstr != 0 )
-        {
-            //printf("got retstr.(%s)\n",retstr);
-            json = cJSON_Parse(retstr);
-            if ( json != 0 )
-            {
-                hexobj = cJSON_GetObjectItem(json,"hex");
-                compobj = cJSON_GetObjectItem(json,"complete");
-                if ( compobj != 0 )
-                    rp->completed = ((compobj->type&0xff) == cJSON_True);
-                copy_cJSON(deststr,hexobj);
-                if ( strlen(deststr) > destsize )
-                    printf("sign_rawtransaction: strlen(deststr) %ld > %ld destize\n",strlen(deststr),destsize);
-                else
-                {
-                    txid = subatomic_decodetxid(valuep,0,&locktime,cp,deststr,coinaddr);
-                    if ( txid != 0 )
-                    {
-                        safecopy(rp->txid,txid,sizeof(rp->txid));
-                        free(txid);
-                        txid = rp->txid;
-                    }
-                    // printf("got signedtransaction -> txid.(%s) %.8f\n",rp->txid,dstr(valuep!=0?*valuep:0));
-                }
-                free_json(json);
-            } else printf("json parse error.(%s)\n",retstr);
-            free(retstr);
-        } else printf("error signing rawtx\n");
-        free(signparams);
-    } else printf("error generating signparams\n");
-    if ( lockedblockp != 0 )
-        *lockedblockp = locktime;
-    return(txid);
 }
 
 void subatomic_uint32_splicer(char *txbytes,int32_t offset,uint32_t spliceval)
@@ -826,193 +500,6 @@ uint32_t calc_vin0seqstart(char *txbytes)
     if ( firstinput != 0 )
         return(vin0seqstart);
     else return(-1);
-}
-
-// if signcoindaddr is non-zero then signtx and return txid, otherwise just return rawtransaction bytes (NOT allocated)
-char *subatomic_gen_rawtransaction(char *skipaddr,struct daemon_info *cp,struct subatomic_rawtransaction *rp,char *signcoinaddr,uint32_t locktime,uint32_t vin0sequenceid)
-{
-    struct gateway_info *gp = Global_gp;
-    int32_t coinid = cp->coinid;
-    char *rawparams,*retstr=0;
-    int64_t value;
-    long len;
-    rawparams = subatomic_rawtxid_json(coinid,rp);
-    if ( rawparams != 0 )
-    {
-        stripwhite(rawparams,strlen(rawparams));
-        retstr = bitcoind_RPC(cp->curl_handle,coinid_str(coinid),gp->serverport[coinid],gp->userpass[coinid],"createrawtransaction",rawparams);
-        if ( retstr != 0 )
-        {
-            if ( retstr[0] != 0 )
-            {
-                // printf("calc_rawtransaction retstr.(%s)\n",retstr);
-                safecopy(rp->rawtransaction,retstr,sizeof(rp->rawtransaction));
-                free(retstr);
-                len = strlen(rp->rawtransaction);
-                if ( len < 8 )
-                {
-                    printf("funny rawtransactionlen %ld??\n",len);
-                    free(rawparams);
-                    return(0);
-                }
-                if ( locktime != 0 )
-                {
-                    subatomic_uint32_splicer(rp->rawtransaction,(int32_t)(len - sizeof(uint32_t)*2),locktime);
-                    if ( 0 && vin0sequenceid != 0xffffffff )
-                        subatomic_uint32_splicer(rp->rawtransaction,calc_vin0seqstart(rp->rawtransaction),vin0sequenceid);
-                    printf("locktime.%d sequenceid.%d\n",locktime,vin0sequenceid);
-                }
-                if ( signcoinaddr != 0 )
-                    retstr = subatomic_signtx(skipaddr,0,&value,signcoinaddr,rp->signedtransaction,sizeof(rp->signedtransaction),cp,coinid,rp,rp->rawtransaction);
-                else retstr = rp->rawtransaction;
-            } else { free(retstr); retstr = 0; };
-        } else printf("error creating rawtransaction from.(%s)\n",rawparams);
-        free(rawparams);
-    } else printf("error creating rawparams\n");
-    return(retstr);
-}
-
-struct subatomic_unspent_tx *gather_unspents(int32_t *nump,struct daemon_info *cp,char *coinaddr)
-{
-    struct gateway_info *gp = Global_gp;
-    int32_t i,j,num,coinid = cp->coinid;
-    struct subatomic_unspent_tx *ups = 0;
-    char *retstr;
-    cJSON *json,*item;
-    //sprintf(str,"[\"minconf:%d\"]",cp->minconfirms);
-    retstr = bitcoind_RPC(cp->curl_handle,coinid_str(coinid),gp->serverport[coinid],gp->userpass[coinid],"listunspent",0);
-    /*{
-     "txid" : "1ccd2a9d0f8d690ed13b6768fc6c041972362f5531922b6b152ed2c98d3fe113",
-     "vout" : 1,
-     "address" : "DK3nxu6GshBcQNDMqc66ARcwqDZ1B5TJe5",
-     "scriptPubKey" : "76a9149891029995222077889b36c77e2b85690878df9088ac",
-     "amount" : 2.00000000,
-     "confirmations" : 72505
-     },*/
-    if ( retstr != 0 )
-    {
-        printf("unspents (%s)\n",retstr);
-        if ( (json = cJSON_Parse(retstr)) != 0 )
-        {
-            if ( is_cJSON_Array(json) != 0 && (num= cJSON_GetArraySize(json)) > 0 )
-            {
-                ups = calloc(num,sizeof(struct subatomic_unspent_tx));
-                for (i=j=0; i<num; i++)
-                {
-                    item = cJSON_GetArrayItem(json,i);
-                    copy_cJSON(ups[j].address,cJSON_GetObjectItem(item,"address"));
-                    if ( coinaddr == 0 || strcmp(coinaddr,ups[j].address) == 0 )
-                    {
-                        copy_cJSON(ups[j].txid,cJSON_GetObjectItem(item,"txid"));
-                        copy_cJSON(ups[j].scriptPubKey,cJSON_GetObjectItem(item,"scriptPubKey"));
-                        ups[j].vout = (int32_t)get_cJSON_int(item,"vout");
-                        ups[j].amount = conv_cJSON_float(item,"amount");
-                        ups[j].confirmations = (int32_t)get_cJSON_int(item,"confirmations");
-                        j++;
-                    }
-                }
-                *nump = j;
-                if ( j > 1 )
-                    qsort(ups,j,sizeof(*ups),_decreasing_signedint64);
-            }
-            free_json(json);
-        }
-        free(retstr);
-    }
-    return(ups);
-}
-
-int64_t subatomic_calc_rawinputs(struct daemon_info *cp,struct subatomic_rawtransaction *rp,uint64_t amount,struct subatomic_unspent_tx *ups,int32_t num,uint64_t donation)
-{
-    uint64_t sum = 0;
-    struct subatomic_unspent_tx *up;
-    int32_t i;
-    rp->inputsum = rp->numinputs = 0;
-    printf("unspent num %d, amount %.8f vs donation %.8f txfee %.8f\n",num,dstr(amount),dstr(donation),dstr(cp->txfee));
-    if ( (donation + cp->txfee) > amount )
-        return(0);
-    for (i=0; i<num&&i<((int32_t)(sizeof(rp->inputs)/sizeof(*rp->inputs))); i++)
-    {
-        up = &ups[i];
-        sum += up->amount;
-        rp->inputs[rp->numinputs++] = *up;
-        if ( sum >= amount )
-        {
-            rp->amount = (amount - cp->txfee);
-            rp->change = (sum - amount);
-            rp->inputsum = sum;
-            printf("numinputs %d sum %.8f vs amount %.8f change %.8f -> txfee %.8f\n",rp->numinputs,dstr(rp->inputsum),dstr(amount),dstr(rp->change),dstr(sum - rp->change - rp->amount));
-            return(rp->inputsum);
-        }
-    }
-    printf("i.%d error numinputs %d sum %.8f\n",i,rp->numinputs,dstr(rp->inputsum));
-    return(0);
-}
-
-int32_t subatomic_calc_rawoutputs(struct subatomic_halftx *htx,struct daemon_info *cp,struct subatomic_rawtransaction *rp,double myshare,char *myaddr,char *otheraddr,char *changeaddr)
-{
-    struct gateway_info *gp = Global_gp;
-    int32_t coinid,n = 0;
-    int64_t donation;
-    coinid = htx->coinid;
-    if ( cp == 0 || cp->coinid != coinid )
-    {
-        printf("subatomic_calc_rawoutputs: bad cp.%p or coinid.%d\n",cp,coinid);
-        return(-1);
-    }
-    //printf("rp->amount %.8f, (%.8f - %.8f), change %.8f (%.8f - %.8f) donation %.8f\n",dstr(rp->amount),dstr(htx->avail),dstr(cp->txfee),dstr(rp->change),dstr(rp->inputsum),dstr(htx->avail),dstr(htx->donation));
-    if ( rp->amount == (htx->avail - cp->txfee) && rp->change == (rp->inputsum - htx->avail) )
-    {
-        if ( changeaddr == 0 )
-            changeaddr = gp->internalmarker[cp->coinid];
-        if ( htx->donation != 0 && gp->internalmarker[coinid] != 0 )
-            donation = htx->donation;
-        else donation = 0;
-        htx->myamount = (rp->amount - donation) * myshare;
-        if ( htx->myamount > rp->amount )
-            htx->myamount = rp->amount;
-        htx->otheramount = (rp->amount - htx->myamount - donation);
-        if ( htx->myamount > 0 )
-        {
-            safecopy(rp->destaddrs[n],myaddr,sizeof(rp->destaddrs[n]));
-            rp->destamounts[n] = htx->myamount;
-            n++;
-        }
-        if ( otheraddr == 0 )
-        {
-            printf("no otheraddr, boost donation by %.8f\n",dstr(htx->otheramount));
-            donation += htx->otheramount;
-            htx->otheramount = 0;
-        }
-        if ( htx->otheramount > 0 )
-        {
-            safecopy(rp->destaddrs[n],otheraddr,sizeof(rp->destaddrs[n]));
-            rp->destamounts[n] = htx->otheramount;
-            n++;
-        }
-        if ( changeaddr == 0 )
-        {
-            printf("no changeaddr, boost donation %.8f\n",dstr(rp->change));
-            donation += rp->change;
-            rp->change = 0;
-        }
-        if ( rp->change > 0 )
-        {
-            safecopy(rp->destaddrs[n],changeaddr,sizeof(rp->destaddrs[n]));
-            rp->destamounts[n] = rp->change;
-            n++;
-        }
-        if ( donation > 0 && gp->internalmarker[coinid] != 0 )
-        {
-            safecopy(rp->destaddrs[n],gp->internalmarker[coinid],sizeof(rp->destaddrs[n]));
-            rp->destamounts[n] = donation;
-            n++;
-        }
-        //printf("myshare %.6f %.8f -> %s, other %.8f -> %s, change %.8f -> %s, donation %.8f -> %s | ",myshare,dstr(htx->myamount),myaddr,dstr(htx->otheramount),otheraddr,dstr(rp->change),changeaddr,dstr(donation),gp->internalmarker[coinid]);
-    }
-    rp->numoutputs = n;
-    //printf("numoutputs.%d\n",n);
-    return(n);
 }
 
 
@@ -1444,203 +931,6 @@ int32_t share_micropaytx(struct NXT_acct *np,struct subatomic_rawtransaction *rp
     return(share_tx(np,rp,startfragi,SUBATOMIC_SEND_MICROTX));
 }
 
-
-/*{
- "sender": "8989816935121514892",
- "timestamp": 13000704,
- "referencedTransaction": "0",
- "hash": "3bfcbb9e173ab146b9538e3d606417f53885d34360c75b40d4dd2123245d6e91",
- "amountNQT": "100000000",
- "feeNQT": "100000000",
- "senderPublicKey": "25c5fed2690701cf06f267e7c227b1a3c0dfa9c6fc3cdb593b3af6f16d65302f",
- "verify": false,
- "subtype": 0,
- "type": 0,
- "deadline": 666,
- "recipient": "423766016895692955"
- }*/
-
-
-int32_t NXTutxcmp(struct NXT_tx *ref,struct NXT_tx *tx,double myshare)
-{
-    if ( ref->senderbits == tx->senderbits && ref->recipientbits == tx->recipientbits && ref->type == tx->type && ref->subtype == tx->subtype)
-    {
-        if ( ref->feeNQT != tx->feeNQT || ref->deadline != tx->deadline )
-            return(-1);
-        if ( ref->assetidbits != 0 )
-        {
-            if ( ref->assetidbits == tx->assetidbits && fabs((ref->quantityQNT*myshare) - tx->quantityQNT) < 0.5 && strcmp(ref->comment,tx->comment) == 0 )
-                return(0);
-        }
-        else
-        {
-            if ( fabs((ref->amountNQT*myshare) - tx->amountNQT) < 0.5 )
-                return(0);
-        }
-    }
-    return(-1);
-}
-
-cJSON *gen_NXT_tx_json(struct NXT_tx *utx,char *reftxid,double myshare)
-{
-    cJSON *json = 0;
-    char cmd[1024],destNXTaddr[64],assetidstr[64],*retstr;
-    if ( utx->senderbits == Global_mp->nxt64bits )
-    {
-        expand_nxt64bits(destNXTaddr,utx->recipientbits);
-        cmd[0] = 0;
-        if ( utx->type == 0 && utx->subtype == 0 )
-            sprintf(cmd,"%s=sendMoney&amountNQT=%lld",_NXTSERVER,(long long)(utx->amountNQT*myshare));
-        else if ( utx->type == 2 && utx->subtype == 1 )
-        {
-            expand_nxt64bits(assetidstr,utx->assetidbits);
-            sprintf(cmd,"%s=transferAsset&asset=%s&quantityQNT=%lld",_NXTSERVER,assetidstr,(long long)(utx->quantityQNT*myshare));
-            if ( utx->comment[0] != 0 )
-                strcat(cmd,"&comment="),strcat(cmd,utx->comment);
-        }
-        else printf("unsupported type.%d subtype.%d\n",utx->type,utx->subtype);
-        if ( reftxid != 0 && reftxid[0] != 0 && cmd[0] != 0 )
-            strcat(cmd,"&referencedTransactionFullHash="),strcat(cmd,reftxid);
-        if ( cmd[0] != 0 )
-        {
-            sprintf(cmd+strlen(cmd),"&deadline=%u&feeNQT=%lld&secretPhrase=%s&recipient=%s&broadcast=false",utx->deadline,(long long)utx->feeNQT,Global_mp->NXTACCTSECRET,destNXTaddr);
-            printf("generated cmd.(%s)\n",cmd);
-            retstr = issue_NXTPOST(Global_subatomic->curl_handle,cmd);
-            if ( retstr != 0 )
-            {
-                json = cJSON_Parse(retstr);
-                //if ( json != 0 )
-                //    printf("Parsed.(%s)\n",cJSON_Print(json));
-                free(retstr);
-            }
-        }
-    } else printf("cant gen_NXT_txjson when sender is not me\n");
-    return(json);
-}
-
-void set_NXTtx(struct NXT_tx *tx,uint64_t assetidbits,int64_t amount,uint64_t other64bits)
-{
-    struct NXT_tx U;
-    memset(&U,0,sizeof(U));
-    U.senderbits = calc_nxt64bits(Global_mp->NXTADDR);
-    U.recipientbits = other64bits;
-    U.assetidbits = assetidbits;
-    if ( assetidbits != 0 )
-    {
-        U.type = 2;
-        U.subtype = 1;
-        U.quantityQNT = amount;
-    } else U.amountNQT = amount;
-    U.feeNQT = MIN_NQTFEE;
-    U.deadline = DEFAULT_NXT_DEADLINE;
-    *tx = U;
-}
-
-int32_t calc_raw_NXTtx(char *utxbytes,char *sighash,uint64_t assetidbits,int64_t amount,uint64_t other64bits)
-{
-    int32_t retval = -1;
-    struct NXT_tx U;
-    cJSON *json;
-    long n;
-    utxbytes[0] = sighash[0] = 0;
-    set_NXTtx(&U,assetidbits,amount,other64bits);
-    json = gen_NXT_tx_json(&U,0,1.);
-    if ( json != 0 )
-    {
-        if ( extract_cJSON_str(utxbytes,1024,json,"transactionBytes") > 0 && extract_cJSON_str(sighash,1024,json,"signatureHash") > 0 )
-        {
-            n = strlen(utxbytes);
-            if ( n > 128 )
-                utxbytes[n-128] = 0;
-            retval = 0;
-            printf("generated utx.(%s) sighash.(%s)\n",utxbytes,sighash);
-        }
-        free_json(json);
-    }
-    return(retval);
-}
-
-struct NXT_tx *set_NXT_tx(cJSON *json)
-{
-    long size;
-    int32_t n = 0;
-    uint64_t assetidbits,quantity;
-    cJSON *attachmentobj;
-    struct NXT_tx *utx = 0;
-    char sender[1024],recipient[1024],deadline[1024],feeNQT[1024],amountNQT[1024],type[1024],subtype[1024],verify[1024],referencedTransaction[1024],quantityQNT[1024],comment[1024],assetidstr[1024];
-    if ( json == 0 )
-        return(0);
-    if ( extract_cJSON_str(sender,sizeof(sender),json,"sender") > 0 ) n++;
-    if ( extract_cJSON_str(recipient,sizeof(recipient),json,"recipient") > 0 ) n++;
-    if ( extract_cJSON_str(referencedTransaction,sizeof(referencedTransaction),json,"referencedTransaction") > 0 ) n++;
-    if ( extract_cJSON_str(amountNQT,sizeof(amountNQT),json,"amountNQT") > 0 ) n++;
-    if ( extract_cJSON_str(feeNQT,sizeof(feeNQT),json,"feeNQT") > 0 ) n++;
-    if ( extract_cJSON_str(deadline,sizeof(deadline),json,"deadline") > 0 ) n++;
-    if ( extract_cJSON_str(type,sizeof(type),json,"type") > 0 ) n++;
-    if ( extract_cJSON_str(subtype,sizeof(subtype),json,"subtype") > 0 ) n++;
-    if ( extract_cJSON_str(verify,sizeof(verify),json,"verify") > 0 ) n++;
-    comment[0] = 0;
-    assetidbits = quantity = 0;
-    size = sizeof(*utx);
-    if ( strcmp(type,"2") == 0 && strcmp(subtype,"1") == 0 )
-    {
-        attachmentobj = cJSON_GetObjectItem(json,"attachment");
-        if ( attachmentobj != 0 )
-        {
-            if ( extract_cJSON_str(assetidstr,sizeof(assetidstr),attachmentobj,"asset") > 0 )
-                assetidbits = calc_nxt64bits(assetidstr);
-            if ( extract_cJSON_str(comment,sizeof(comment),attachmentobj,"comment") > 0 )
-                size += strlen(comment);
-            if ( extract_cJSON_str(quantityQNT,sizeof(quantityQNT),attachmentobj,"quantityQNT") > 0 )
-                quantity = calc_nxt64bits(quantityQNT);
-        }
-    }
-    utx = malloc(size);
-    memset(utx,0,size);
-    if ( strlen(referencedTransaction) == 64 )
-        decode_hex(utx->refhash,32,referencedTransaction);
-    utx->senderbits = calc_nxt64bits(sender);
-    utx->recipientbits = calc_nxt64bits(recipient);
-    utx->assetidbits = assetidbits;
-    utx->feeNQT = calc_nxt64bits(feeNQT);
-    if ( quantity != 0 )
-        utx->quantityQNT = quantity;
-    else utx->amountNQT = calc_nxt64bits(amountNQT);
-    utx->deadline = atoi(deadline);
-    utx->type = atoi(type);
-    utx->subtype = atoi(subtype);
-    utx->verify = (strcmp("true",verify) == 0);
-    strcpy(utx->comment,comment);
-    return(utx);
-}
-
-struct NXT_tx *sign_NXT_tx(CURL *curl_handle,char signedtx[1024],struct NXT_tx *utx,char *reftxid,double myshare)
-{
-    cJSON *refjson,*txjson;
-    char *parsed;
-    struct NXT_tx *refutx = 0;
-    txjson = gen_NXT_tx_json(utx,reftxid,myshare);
-    signedtx[0] = 0;
-    if ( txjson != 0 )
-    {
-        if ( extract_cJSON_str(signedtx,1024,txjson,"transactionBytes") > 0 )
-        {
-            if ( (parsed = issue_parseTransaction(curl_handle,signedtx)) != 0 )
-            {
-                refjson = cJSON_Parse(parsed);
-                if ( refjson != 0 )
-                {
-                    refutx = set_NXT_tx(refjson);
-                    free_json(refjson);
-                }
-                free(parsed);
-            }
-        }
-        free_json(txjson);
-    }
-    return(refutx);
-}
-
 int32_t update_atomic(struct NXT_acct *np,struct subatomic_tx *atx)
 {
     cJSON *txjson,*json;
@@ -2041,317 +1331,6 @@ void update_subatomic_transfers(char *NXTaddr)
         }
     }
     //printf("done update subatomics\n");
-}
-
-int32_t subatomic_txcmp(struct subatomic_tx *_ref,struct subatomic_tx *_atx,int32_t flipped)
-{
-    struct subatomic_tx_args *ref,*atx;
-    if ( _atx->type == ATOMICSWAP_TYPE )
-    {
-        //printf("flipped.%d (%s) vs (%s) and (%s) vs (%s)\n",flipped,_ref->swap.NXTaddr,_atx->swap.NXTaddr,_ref->swap.otherNXTaddr,_atx->swap.otherNXTaddr);
-        //printf("(%s) vs (%s)\n",_ref->swap.txbytes[0],_atx->swap.txbytes[0]);
-        //printf("(%s) vs (%s)\n",_ref->swap.txbytes[1],_atx->swap.txbytes[1]);
-        if ( flipped == 0 )
-        {
-            if ( strcmp(_ref->swap.NXTaddr,_atx->swap.NXTaddr) != 0 )
-                return(-1);
-            if ( strcmp(_ref->swap.otherNXTaddr,_atx->swap.otherNXTaddr) != 0 )
-                return(-2);
-            if ( strcmp(_ref->swap.txbytes[0],_atx->swap.txbytes[0]) != 0 )
-                return(-3);
-            if ( strcmp(_ref->swap.txbytes[1],_atx->swap.txbytes[1]) != 0 )
-                return(-4);
-        }
-        else
-        {
-            if ( strcmp(_ref->swap.NXTaddr,_atx->swap.otherNXTaddr) != 0 )
-                return(-5);
-            if ( strcmp(_ref->swap.otherNXTaddr,_atx->swap.NXTaddr) != 0 )
-                return(-6);
-            if ( strcmp(_ref->swap.txbytes[0],_atx->swap.txbytes[0]) != 0 )
-                return(-7);
-            if ( strcmp(_ref->swap.txbytes[1],_atx->swap.txbytes[1]) != 0 )
-                return(-8);
-        }
-        printf("MATCHED!\n");
-        return(0);
-    }
-    ref = &_ref->ARGS; atx = &_atx->ARGS;
-    printf("%p.(%s <-> %s) vs %p.(%s <-> %s)\n",ref,ref->NXTaddr,ref->otherNXTaddr,atx, atx->NXTaddr,atx->otherNXTaddr);
-    if ( flipped != 0 )
-    {
-        if ( strcmp(ref->NXTaddr,atx->otherNXTaddr) != 0 )
-        {
-            printf("%s != %s\n",ref->NXTaddr,atx->otherNXTaddr);
-            return(-1);
-        }
-        if ( strcmp(ref->otherNXTaddr,atx->NXTaddr) != 0 )
-            return(-2);
-    }
-    else
-    {
-        if ( strcmp(ref->NXTaddr,atx->NXTaddr) != 0 )
-        {
-            printf("%s != %s\n",ref->NXTaddr,atx->NXTaddr);
-            return(-1);
-        }
-        if ( strcmp(ref->otherNXTaddr,atx->otherNXTaddr) != 0 )
-            return(-2);
-    }
-    if ( flipped == 0 )
-    {
-        if ( ref->coinid != atx->coinid )
-        {
-            printf("%s != %s\n",coinid_str(ref->coinid),coinid_str(atx->coinid));
-            return(-3);
-        }
-        if ( ref->destcoinid != atx->destcoinid )
-            return(-4);
-        if ( ref->destamount != atx->destamount )
-            return(-5);
-        if ( ref->amount != atx->amount )
-            return(-6);
-    }
-    else
-    {
-        if ( ref->coinid != atx->destcoinid )
-        {
-            printf("%s != %s\n",coinid_str(ref->coinid),coinid_str(atx->destcoinid));
-            return(-13);
-        }
-        if ( ref->destcoinid != atx->coinid )
-            return(-14);
-        if ( ref->destamount != atx->amount )
-            return(-15);
-        if ( ref->amount != atx->destamount )
-            return(-16);
-    }
-    return(0);
-}
-
-int32_t set_atomic_swap(struct atomic_swap *sp,char *NXTaddr,char *mytxbytes,char *otherNXTaddr,char *othertxbytes,char *otheripaddr,int32_t flipped,char *mysighash,char *othersighash)
-{
-    int i,j;
-    char *retstr,*padded;
-    memset(sp,0,sizeof(*sp));
-    for (i=0; i<2; i++)
-    {
-        safecopy(sp->txbytes[i],i==flipped?mytxbytes:othertxbytes,sizeof(*sp->txbytes));
-        safecopy(sp->sighash[i],i==flipped?mysighash:othersighash,sizeof(*sp->sighash));
-        padded = malloc(strlen(sp->txbytes[i]) + 129);
-        strcpy(padded,sp->txbytes[i]);
-        for (j=0; j<128; j++)
-            strcat(padded,"0");
-        if ( (sp->parsed[i] = issue_parseTransaction(Global_subatomic->curl_handle,padded)) != 0 )
-        {
-            sp->jsons[i] = cJSON_Parse(sp->parsed[i]);
-            if ( sp->jsons[i] == 0 )
-                return(-1);
-        }
-        retstr = issue_calculateFullHash(Global_subatomic->curl_handle,padded,sp->sighash[i]);
-        if ( retstr != 0 )
-            safecopy(sp->fullhash[i],retstr,sizeof(*sp->fullhash));
-        free(padded);
-    }
-    safecopy(sp->NXTaddr,NXTaddr,sizeof(sp->NXTaddr));
-    safecopy(sp->otherNXTaddr,otherNXTaddr,sizeof(sp->otherNXTaddr));
-    if ( flipped != 0 )
-        safecopy(sp->otheripaddr,otheripaddr,sizeof(sp->otheripaddr));
-    printf("flipped.%d ipaddr.%s %s %s -> %s %s\n",flipped,sp->otheripaddr,sp->NXTaddr,sp->parsed[0]!=0?sp->parsed[0]:"",sp->otherNXTaddr,sp->parsed[1]!=0?sp->parsed[1]:"");
-    return(0);
-}
-
-int32_t set_subatomic_trade(int type,struct subatomic_tx *_atx,char *NXTaddr,char *coin,char *amountstr,char *coinaddr,char *otherNXTaddr,char *destcoin,char *destamountstr,char *destcoinaddr,char *otheripaddr,int32_t flipped)
-{
-    struct subatomic_tx_args *atx = &_atx->ARGS;
-    if ( type == ATOMICSWAP_TYPE )
-    {
-        _atx->type = type;
-        return(set_atomic_swap(&_atx->swap,NXTaddr,coinaddr,otherNXTaddr,destcoinaddr,otheripaddr,flipped,amountstr,destamountstr));
-    }
-    memset(atx,0,sizeof(*atx));
-    atx->coinid = conv_coinstr(coin);
-    atx->destcoinid = conv_coinstr(destcoin);
-    atx->amount = conv_floatstr(amountstr);
-    atx->destamount = conv_floatstr(destamountstr);
-    safecopy(atx->coinaddr[flipped],coinaddr,sizeof(atx->coinaddr[flipped]));
-    safecopy(atx->coinaddr[flipped^1],destcoinaddr,sizeof(atx->coinaddr[flipped^1]));
-    safecopy(atx->NXTaddr,NXTaddr,sizeof(atx->NXTaddr));
-    safecopy(atx->otherNXTaddr,otherNXTaddr,sizeof(atx->otherNXTaddr));
-    safecopy(atx->destcoinaddr[flipped],destcoinaddr,sizeof(atx->destcoinaddr[flipped]));
-    safecopy(atx->destcoinaddr[flipped^1],coinaddr,sizeof(atx->destcoinaddr[flipped^1]));
-    if ( flipped != 0 )
-        safecopy(atx->otheripaddr,otheripaddr,sizeof(atx->otheripaddr));
-    printf("flipped.%d ipaddr.%s %d %d -> %s %s\n",flipped,atx->otheripaddr,atx->coinid,atx->destcoinid,coin,destcoin);
-    if ( atx->amount != 0 && atx->destamount != 0 && atx->coinid >= 0 && atx->destcoinid >= 0 )
-        return(0);
-    printf("error setting subatomic trade %lld %lld %d %d\n",(long long)atx->amount,(long long)atx->destamount,atx->coinid,atx->destcoinid);
-    return(-1);
-}
-
-// this function needs to invert everything to the point of view of this acct
-int32_t set_subatomic_argstrs(int32_t *flippedp,char *sender,char *receiver,cJSON **objs,char *amountstr,char *destamountstr,char *NXTaddr,char *coin,char *destcoin,char *coinaddr,char *destcoinaddr,char *otherNXTaddr,char *senderipaddr)
-{
-    char type[64];
-    *flippedp = 0;
-    copy_cJSON(NXTaddr,objs[0]);
-    copy_cJSON(coin,objs[1]);
-    copy_cJSON(amountstr,objs[2]);
-    copy_cJSON(coinaddr,objs[3]);
-    
-    copy_cJSON(otherNXTaddr,objs[4]);
-    copy_cJSON(destcoin,objs[5]);
-    copy_cJSON(destamountstr,objs[6]);
-    copy_cJSON(destcoinaddr,objs[7]);
-    copy_cJSON(senderipaddr,objs[8]);
-    copy_cJSON(type,objs[9]);
-    if ( strcmp(coin,"NXT") == 0 && strcmp(destcoin,"NXT") == 0 )
-        strcpy(type,"NXTatomicswap");
-    if ( strcmp(type,"NXTatomicswap") == 0 )
-    {
-        if ( coinaddr[0] == 0 && objs[10] != 0 )
-            copy_cJSON(coinaddr,objs[10]);
-        if ( destcoinaddr[0] == 0 && objs[11] != 0 )
-            copy_cJSON(destcoinaddr,objs[11]);
-        if ( amountstr[0] == 0 && objs[12] != 0 )
-            copy_cJSON(amountstr,objs[12]);
-        if ( destamountstr[0] == 0 && objs[13] != 0 )
-            copy_cJSON(destamountstr,objs[13]);
-    }
-    //printf("type (%s)\n",type);
-    if ( strcmp(otherNXTaddr,Global_subatomic->NXTADDR) == 0 )
-        *flippedp = 1;
-    //printf("NXT.(%s) (%s) <-> NXT.(%s) (%s)\n",NXTaddr,coinaddr,otherNXTaddr,destcoinaddr);
-    if ( strcmp(type,"NXTatomicswap") != 0 && NXTaddr[0] != 0 && coin[0] != 0 && amountstr[0] != 0 && coinaddr[0] != 0 && otherNXTaddr[0] != 0 && destcoin[0] != 0 && destamountstr[0] != 0 && destcoinaddr[0] != 0 )
-    {
-        //*amountp = conv_floatstr(amountstr);
-        //*destamountp = conv_floatstr(destamountstr);
-        //if ( *amountp == 0 || *destamountp == 0 )
-        //    return(-1);
-        return(0);
-    }
-    else if ( strcmp(type,"NXTatomicswap") == 0 && otherNXTaddr[0] != 0 && NXTaddr[0] != 0 && coinaddr[0] != 0 && destcoinaddr[0] != 0 && amountstr[0] != 0 && destamountstr[0] != 0 )
-    {
-        //printf("NXT Atomic swap %s.(%s).%s <-> %s.(%s).%s\n",NXTaddr,coinaddr,amountstr,otherNXTaddr,destcoinaddr,destamountstr);
-        return(1);
-    }
-    printf("something is not right: flipped.%d %d %d %d %d %d %d %d %d | sender.%s gp.%s\n",*flippedp,NXTaddr[0],coin[0],amountstr[0],coinaddr[0],otherNXTaddr[0],destcoin[0],destamountstr[0],destcoinaddr[0],sender,Global_subatomic->NXTADDR);
-    return(-1);
-}
-
-int32_t decode_subatomic_json(struct subatomic_tx *atx,cJSON *json,char *sender,char *receiver)
-{
-    char amountstr[128],destamountstr[128],NXTaddr[64],coin[64],destcoin[64],coinaddr[MAX_NXT_TXBYTES],destcoinaddr[MAX_NXT_TXBYTES],otherNXTaddr[64],otheripaddr[32];
-    cJSON *objs[16];
-    int32_t type,flipped = 0;
-    objs[0] = cJSON_GetObjectItem(json,"NXT");
-    objs[1] = cJSON_GetObjectItem(json,"coin");
-    objs[2] = cJSON_GetObjectItem(json,"amount");
-    objs[3] = cJSON_GetObjectItem(json,"coinaddr");
-    objs[4] = cJSON_GetObjectItem(json,"destNXT");
-    objs[5] = cJSON_GetObjectItem(json,"destcoin");
-    objs[6] = cJSON_GetObjectItem(json,"destamount");
-    objs[7] = cJSON_GetObjectItem(json,"destcoinaddr");
-    objs[8] = cJSON_GetObjectItem(json,"senderip");
-    objs[9] = cJSON_GetObjectItem(json,"type");
-    objs[10] = cJSON_GetObjectItem(json,"mytxbytes");
-    objs[11] = cJSON_GetObjectItem(json,"othertxbytes");
-    objs[12] = cJSON_GetObjectItem(json,"mysighash");
-    objs[13] = cJSON_GetObjectItem(json,"othersighash");
-    if ( (type= set_subatomic_argstrs(&flipped,sender,receiver,objs,amountstr,destamountstr,NXTaddr,coin,destcoin,coinaddr,destcoinaddr,otherNXTaddr,otheripaddr)) >= 0 )
-    {
-        if ( set_subatomic_trade(type,atx,NXTaddr,coin,amountstr,coinaddr,otherNXTaddr,destcoin,destamountstr,destcoinaddr,otheripaddr,flipped) == 0 )
-            return(flipped);
-    }
-    return(-1);
-}
-
-void update_subatomic_state(struct subatomic_info *gp,int32_t funcid,int32_t rating,cJSON *argjson,uint64_t nxt64bits,char *sender,char *receiver)  // the only path into the subatomics[], eg. via AM
-{
-    //int32_t decode_subatomic_json(struct subatomic_tx *atx,cJSON *json,char *sender,char *receiver);
-    int32_t i,flipped,cmpval;
-    struct subatomic_tx *atx,T;
-    memset(&T,0,sizeof(T));
-    //printf("parse subatomic\n");
-    if ( (flipped= decode_subatomic_json(&T,argjson,sender,receiver)) >= 0 )
-    {
-        //printf("NXT.%s (%s %s %s %s) <-> %s (%s %s %s %s)\n",T.NXTaddr,coinid_str(T.coinid),T.coinaddr[0],coinid_str(T.destcoinid),T.destcoinaddr[0],T.otherNXTaddr,coinid_str(T.coinid),T.coinaddr[1],coinid_str(T.destcoinid),T.destcoinaddr[1]);
-        atx = 0;
-        for (i=0; i<gp->numsubatomics; i++)
-        {
-            atx = gp->subatomics[i];
-            if ( (cmpval= subatomic_txcmp(atx,&T,flipped)) == 0 )
-            {
-                printf("%d: cmpval.%d vs %p\n",i,cmpval,atx);
-                if ( T.type == SUBATOMIC_TYPE )
-                {
-                    strcpy(atx->ARGS.coinaddr[flipped],T.ARGS.coinaddr[flipped]);
-                    strcpy(atx->ARGS.destcoinaddr[flipped],T.ARGS.destcoinaddr[flipped]);
-                    if ( flipped != 0 )
-                        strcpy(atx->ARGS.otheripaddr,T.ARGS.otheripaddr);
-                }
-                else
-                {
-                    if ( flipped != 0 )
-                    {
-                        strcpy(atx->ARGS.otheripaddr,T.swap.otheripaddr);
-                        strcpy(atx->ARGS.NXTaddr,T.swap.otherNXTaddr);
-                        strcpy(atx->ARGS.otherNXTaddr,T.swap.NXTaddr);
-                    }
-                    else
-                    {
-                        strcpy(atx->ARGS.NXTaddr,T.swap.NXTaddr);
-                        strcpy(atx->ARGS.otherNXTaddr,T.swap.otherNXTaddr);
-                    }
-                }
-                break;
-            }
-        }
-        if ( i == gp->numsubatomics )
-        {
-            atx = malloc(sizeof(T));
-            *atx = T;
-            if ( T.type == SUBATOMIC_TYPE )
-            {
-                strcpy(atx->ARGS.coinaddr[flipped],T.ARGS.coinaddr[flipped]);
-                strcpy(atx->ARGS.destcoinaddr[flipped],T.ARGS.destcoinaddr[flipped]);
-                if ( flipped != 0 )
-                {
-                    strcpy(atx->ARGS.otheripaddr,T.ARGS.otheripaddr);
-                    strcpy(atx->ARGS.NXTaddr,T.ARGS.otherNXTaddr);
-                    strcpy(atx->ARGS.otherNXTaddr,T.ARGS.NXTaddr);
-                    atx->ARGS.coinid = T.ARGS.destcoinid;
-                    atx->ARGS.amount = T.ARGS.destamount;
-                    atx->ARGS.destcoinid = T.ARGS.coinid;
-                    atx->ARGS.destamount = T.ARGS.amount;
-                }
-                else
-                {
-                    atx->ARGS.coinid = T.ARGS.coinid;
-                    atx->ARGS.amount = T.ARGS.amount;
-                    atx->ARGS.destcoinid = T.ARGS.destcoinid;
-                    atx->ARGS.destamount = T.ARGS.destamount;
-                }
-            }
-            else
-            {
-                if ( flipped != 0 )
-                    strcpy(atx->ARGS.otheripaddr,T.swap.otheripaddr);
-                strcpy(atx->ARGS.NXTaddr,T.swap.NXTaddr);
-                strcpy(atx->ARGS.otherNXTaddr,T.swap.otherNXTaddr);
-            }
-            printf("alloc type.%d new %p atx.%d (%s <-> %s)\n",T.type,atx,gp->numsubatomics,atx->ARGS.NXTaddr,atx->ARGS.otherNXTaddr);
-            gp->subatomics = realloc(gp->subatomics,(gp->numsubatomics + 1) * sizeof(*gp->subatomics));
-            gp->subatomics[gp->numsubatomics] = atx, atx->tag = gp->numsubatomics;
-            gp->numsubatomics++;
-        }
-        atx->initflag |= init_subatomic_tx(atx,flipped,T.type);
-        printf("got trade! flipped.%d | initflag.%d\n",flipped,atx->initflag);
-        if ( atx->initflag == 3 )
-        {
-            printf("PENDING SUBATOMIC TRADE from %s %s %.8f <-> %s %s %.8f\n",atx->ARGS.NXTaddr,coinid_str(atx->ARGS.coinid),dstr(atx->ARGS.amount),atx->ARGS.otherNXTaddr,coinid_str(atx->ARGS.destcoinid),dstr(atx->ARGS.destamount));
-        }
-    }
 }
 
 char *AM_subatomic(int32_t func,int32_t rating,char *destaddr,char *senderNXTaddr,char *jsontxt)
@@ -2908,6 +1887,901 @@ void test_atomictx()
 #endif
 #endif
 
+#define MAX_SUBATOMIC_OUTPUTS 4
+#define MAX_SUBATOMIC_INPUTS 16
+#define SUBATOMIC_STARTING_SEQUENCEID 1000
+#define SUBATOMIC_LOCKTIME (3600 * 2)
+#define SUBATOMIC_DONATIONRATE .001
+#define SUBATOMIC_DEFAULTINCR 100
+#define SUBATOMIC_TYPE 0
 
+struct subatomic_unspent_tx
+{
+    int64_t amount;    // MUST be first!
+    uint32_t vout,confirmations;
+    struct destbuf txid,address,scriptPubKey,redeemScript;
+};
+
+struct subatomic_rawtransaction
+{
+    char destaddrs[MAX_SUBATOMIC_OUTPUTS][64];
+    int64_t amount,change,inputsum,destamounts[MAX_SUBATOMIC_OUTPUTS];
+    int32_t numoutputs,numinputs,completed,broadcast,confirmed;
+    char rawtransaction[1024],signedtransaction[1024],txid[128];
+    struct subatomic_unspent_tx inputs[MAX_SUBATOMIC_INPUTS];   // must be last, could even make it variable sized
+};
+
+struct subatomic_halftx
+{
+    int32_t minconfirms;
+    int64_t destamount,avail,amount,donation,myamount,otheramount;  // amount = (myamount + otheramount + donation + txfee)
+    struct subatomic_rawtransaction funding,refund,micropay;
+    struct destbuf funding_scriptPubKey;
+    char fundingtxid[128],refundtxid[128],micropaytxid[128],countersignedrefund[1024],completedmicropay[1024];
+    char NXTaddr[64],coinaddr[64],pubkey[128],ipaddr[32],coinstr[16],destcoinstr[16],redeemScript[4096];
+    char otherNXTaddr[64],destcoinaddr[64],destpubkey[128],otheripaddr[32],multisigaddr[128];
+};
+
+struct subatomic_tx_args
+{
+    char coinstr[16],destcoinstr[16],NXTaddr[64],otherNXTaddr[64],coinaddr[2][64],destcoinaddr[2][64],otheripaddr[32],mypubkeys[2][128];
+    int64_t amount,destamount;
+    double myshare;
+    int32_t numincr,incr,otherincr;
+};
+
+struct subatomic_tx
+{
+    struct subatomic_tx_args ARGS,otherARGS;
+    struct subatomic_halftx myhalf,otherhalf;
+    char *claimtxid;
+    int64_t lastcontact,myexpectedamount,myreceived,otherexpectedamount,sent_to_other;
+    int32_t status,initflag,connsock,refundlockblock,cantsend,type,longerflag,tag,verified;
+    int32_t txs_created,other_refundtx_done,myrefundtx_done,other_fundingtx_confirms;
+    int32_t other_refundtx_waiting,myrefundtx_waiting,other_fundingtx_waiting,other_micropaytx_waiting;
+    unsigned char recvbufs[4][sizeof(struct subatomic_rawtransaction)];
+};
+
+struct subatomic_unspent_tx *gather_unspents(int32_t *nump,struct coin777 *coin,char *coinaddr)
+{
+    int32_t i,j,num; struct subatomic_unspent_tx *ups = 0; char params[128],*retstr; cJSON *json,*item;
+    /*{
+     "txid" : "1ccd2a9d0f8d690ed13b6768fc6c041972362f5531922b6b152ed2c98d3fe113",
+     "vout" : 1,
+     "address" : "DK3nxu6GshBcQNDMqc66ARcwqDZ1B5TJe5",
+     "scriptPubKey" : "76a9149891029995222077889b36c77e2b85690878df9088ac",
+     "amount" : 2.00000000,
+     "confirmations" : 72505
+     },*/
+    sprintf(params,"%d, 99999999",coin->minconfirms);
+    if ( (retstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"listunspent",params)) != 0 )
+    {
+        printf("unspents (%s)\n",retstr);
+        if ( (json= cJSON_Parse(retstr)) != 0 )
+        {
+            if ( is_cJSON_Array(json) != 0 && (num= cJSON_GetArraySize(json)) > 0 )
+            {
+                ups = calloc(num,sizeof(struct subatomic_unspent_tx));
+                for (i=j=0; i<num; i++)
+                {
+                    item = cJSON_GetArrayItem(json,i);
+                    copy_cJSON(&ups[j].address,cJSON_GetObjectItem(item,"address"));
+                    if ( coinaddr == 0 || strcmp(coinaddr,ups[j].address.buf) == 0 )
+                    {
+                        copy_cJSON(&ups[j].txid,cJSON_GetObjectItem(item,"txid"));
+                        copy_cJSON(&ups[j].scriptPubKey,cJSON_GetObjectItem(item,"scriptPubKey"));
+                        ups[j].vout = (int32_t)get_cJSON_int(item,"vout");
+                        ups[j].amount = conv_cJSON_float(item,"amount");
+                        ups[j].confirmations = (int32_t)get_cJSON_int(item,"confirmations");
+                        j++;
+                    }
+                }
+                *nump = j;
+                if ( j > 1 )
+                {
+                    int _decreasing_signedint64(const void *a,const void *b);
+                    qsort(ups,j,sizeof(*ups),_decreasing_signedint64);
+                }
+            }
+            free_json(json);
+        }
+        free(retstr);
+    }
+    return(ups);
+}
+
+int64_t subatomic_calc_rawinputs(struct coin777 *coin,struct subatomic_rawtransaction *rp,uint64_t amount,struct subatomic_unspent_tx *ups,int32_t num,uint64_t donation)
+{
+    uint64_t sum = 0; struct subatomic_unspent_tx *up; int32_t i;
+    rp->inputsum = rp->numinputs = 0;
+    printf("unspent num %d, amount %.8f vs donation %.8f txfee %.8f\n",num,dstr(amount),dstr(donation),dstr(coin->mgw.txfee));
+    if ( coin == 0 || (donation + coin->mgw.txfee) > amount )
+        return(0);
+    for (i=0; i<num&&i<((int32_t)(sizeof(rp->inputs)/sizeof(*rp->inputs))); i++)
+    {
+        up = &ups[i];
+        sum += up->amount;
+        rp->inputs[rp->numinputs++] = *up;
+        if ( sum >= amount )
+        {
+            rp->amount = (amount - coin->mgw.txfee);
+            rp->change = (sum - amount);
+            rp->inputsum = sum;
+            printf("numinputs %d sum %.8f vs amount %.8f change %.8f -> txfee %.8f\n",rp->numinputs,dstr(rp->inputsum),dstr(amount),dstr(rp->change),dstr(sum - rp->change - rp->amount));
+            return(rp->inputsum);
+        }
+    }
+    printf("i.%d error numinputs %d sum %.8f\n",i,rp->numinputs,dstr(rp->inputsum));
+    return(0);
+}
+
+int32_t subatomic_calc_rawoutputs(struct subatomic_halftx *htx,struct coin777 *coin,struct subatomic_rawtransaction *rp,double myshare,char *myaddr,char *otheraddr,char *changeaddr)
+{
+    int32_t n = 0; int64_t donation;
+    //printf("rp->amount %.8f, (%.8f - %.8f), change %.8f (%.8f - %.8f) donation %.8f\n",dstr(rp->amount),dstr(htx->avail),dstr(cp->txfee),dstr(rp->change),dstr(rp->inputsum),dstr(htx->avail),dstr(htx->donation));
+    if ( rp->amount == (htx->avail - coin->mgw.txfee) && rp->change == (rp->inputsum - htx->avail) )
+    {
+        if ( changeaddr == 0 )
+            changeaddr = coin->mgw.marker;
+        if ( htx->donation != 0 && coin->mgw.marker != 0 )
+            donation = htx->donation;
+        else donation = 0;
+        htx->myamount = (rp->amount - donation) * myshare;
+        if ( htx->myamount > rp->amount )
+            htx->myamount = rp->amount;
+        htx->otheramount = (rp->amount - htx->myamount - donation);
+        if ( htx->myamount > 0 )
+        {
+            safecopy(rp->destaddrs[n],myaddr,sizeof(rp->destaddrs[n]));
+            rp->destamounts[n] = htx->myamount;
+            n++;
+        }
+        if ( otheraddr == 0 )
+        {
+            printf("no otheraddr, boost donation by %.8f\n",dstr(htx->otheramount));
+            donation += htx->otheramount;
+            htx->otheramount = 0;
+        }
+        if ( htx->otheramount > 0 )
+        {
+            safecopy(rp->destaddrs[n],otheraddr,sizeof(rp->destaddrs[n]));
+            rp->destamounts[n] = htx->otheramount;
+            n++;
+        }
+        if ( changeaddr == 0 )
+        {
+            printf("no changeaddr, boost donation %.8f\n",dstr(rp->change));
+            donation += rp->change;
+            rp->change = 0;
+        }
+        if ( rp->change > 0 )
+        {
+            safecopy(rp->destaddrs[n],changeaddr,sizeof(rp->destaddrs[n]));
+            rp->destamounts[n] = rp->change;
+            n++;
+        }
+        if ( donation > 0 && coin->mgw.marker != 0 )
+        {
+            safecopy(rp->destaddrs[n],coin->mgw.marker,sizeof(rp->destaddrs[n]));
+            rp->destamounts[n] = donation;
+            n++;
+        }
+        //printf("myshare %.6f %.8f -> %s, other %.8f -> %s, change %.8f -> %s, donation %.8f -> %s | ",myshare,dstr(htx->myamount),myaddr,dstr(htx->otheramount),otheraddr,dstr(rp->change),changeaddr,dstr(donation),gp->marker[coinid]);
+    }
+    rp->numoutputs = n;
+    //printf("numoutputs.%d\n",n);
+    return(n);
+}
+
+int32_t script_has_coinaddr(cJSON *scriptobj,char *coinaddr)
+{
+    int32_t i,n; struct destbuf buf; cJSON *addresses,*addrobj;
+    if ( scriptobj == 0 )
+        return(0);
+    addresses = cJSON_GetObjectItem(scriptobj,"addresses");
+    if ( addresses != 0 )
+    {
+        n = cJSON_GetArraySize(addresses);
+        for (i=0; i<n; i++)
+        {
+            addrobj = cJSON_GetArrayItem(addresses,i);
+            copy_cJSON(&buf,addrobj);
+            if ( strcmp(buf.buf,coinaddr) == 0 )
+                return(1);
+        }
+    }
+    return(0);
+}
+
+cJSON *get_decoderaw_json(struct coin777 *coin,char *rawtransaction)
+{
+    char *str,*retstr; cJSON *json = 0;
+    str = malloc(strlen(rawtransaction)+4);
+    //printf("got rawtransaction.(%s)\n",rawtransaction);
+    sprintf(str,"\"%s\"",rawtransaction);
+    retstr = bitcoind_RPC(0,coin->name,coin->serverport,coin->userpass,"decoderawtransaction",str);
+    if ( retstr != 0 && retstr[0] != 0 )
+    {
+        //printf("got decodetransaction.(%s)\n",retstr);
+        json = cJSON_Parse(retstr);
+    } else printf("error decoding.(%s)\n",str);
+    if ( retstr != 0 )
+        free(retstr);
+    free(str);
+    return(json);
+}
+
+char *subatomic_decodetxid(int64_t *valuep,struct destbuf *scriptPubKey,int32_t *locktimep,struct coin777 *coin,char *rawtransaction,char *mycoinaddr)
+{
+    char *txidstr,checkasmstr[1024],*asmstr,*txid = 0; uint64_t value = 0; int32_t i,n,nval,reqSigs; cJSON *json,*scriptobj,*array,*item,*hexobj;
+    *locktimep = -1;
+    if ( (json= get_decoderaw_json(coin,rawtransaction)) != 0 )
+    {
+        *locktimep = (int32_t)get_cJSON_int(json,"locktime");
+        if ( (txidstr= jstr(json,"txid")) == 0 )
+        {
+            printf("subatomic_decodetxid no txid\n");
+            return(0);
+        }
+        txid = clonestr(txidstr);
+        array = cJSON_GetObjectItem(json,"vout");
+        if ( mycoinaddr != 0 && is_cJSON_Array(array) != 0 )
+        {
+            n = cJSON_GetArraySize(array);
+            for (i=0; i<n; i++)
+            {
+                item = cJSON_GetArrayItem(array,i);
+                hexobj = 0;
+                scriptobj = cJSON_GetObjectItem(item,"scriptPubKey");
+                if ( mycoinaddr != 0 && scriptobj != 0 && script_has_coinaddr(scriptobj,mycoinaddr) != 0 )
+                {
+                    nval = (int32_t)get_cJSON_int(item,"n");
+                    if ( nval == i )
+                    {
+                        reqSigs = (int32_t)get_cJSON_int(item,"reqSigs");
+                        value = conv_cJSON_float(item,"value");
+                        hexobj = cJSON_GetObjectItem(scriptobj,"hex");
+                        if ( scriptPubKey != 0 && hexobj != 0 )
+                            copy_cJSON(scriptPubKey,hexobj);
+                        if ( reqSigs == 1 && hexobj != 0 )
+                        {
+                            sprintf(checkasmstr,"OP_DUP OP_HASH160 %s OP_EQUALVERIFY OP_CHECKSIG","need to figure out how ot gen magic number");
+                            if ( (asmstr= jstr(scriptobj,"asm")) != 0 && strcmp(asmstr,checkasmstr) != 0 )
+                                printf("warning: (%s) != check.(%s)\n",asmstr,checkasmstr);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if ( valuep != 0 )
+        *valuep = value;
+    return(txid);
+}
+
+cJSON *subatomic_vins_json_params(struct coin777 *coin,struct subatomic_rawtransaction *rp)
+{
+    int32_t i; cJSON *json,*array; struct subatomic_unspent_tx *up;
+    array = cJSON_CreateArray();
+    for (i=0; i<rp->numinputs; i++)
+    {
+        up = &rp->inputs[i];
+        json = cJSON_CreateObject();
+        jaddstr(json,"txid",up->txid.buf);
+        jaddnum(json,"vout",up->vout);
+        if ( up->scriptPubKey.buf[0] != 0 )
+            jaddstr(json,"scriptPubKey",up->scriptPubKey.buf);
+        if ( up->redeemScript.buf[0] != 0 )
+            jaddstr(json,"redeemScript",up->redeemScript.buf);
+        cJSON_AddItemToArray(array,json);
+    }
+    return(array);
+}
+
+cJSON *subatomic_privkeys_json_params(struct coin777 *coin,char **coinaddrs,int32_t n)
+{
+    int32_t i; char *privkey; cJSON *array = cJSON_CreateArray();
+    //sprintf(walletkey,"[\"%s\",%d]",Global_subatomic->NXTADDR,BITCOIN_WALLET_UNLOCKSECONDS);
+    // locking first avoids error, hacky but no time for wallet fiddling now
+    //bitcoind_RPC(0,coin->name,coin->serverport,coin->userpass,"walletlock",0);
+    //bitcoind_RPC(0,coin->name,coin->serverport,coin->userpass,"walletpassphrase",walletkey);
+    for (i=0; i<n; i++)
+    {
+        if ( (privkey= dumpprivkey(coin->name,coin->serverport,coin->userpass,coinaddrs[i])) != 0 )
+        {
+            jaddistr(array,privkey);
+            free(privkey);
+        }
+    }
+    return(array);
+}
+
+char *subatomic_signraw_json_params(char *skipaddr,char *coinaddr,struct coin777 *coin,struct subatomic_rawtransaction *rp,char *rawbytes)
+{
+    int32_t i,j,flag; char *coinaddrs[MAX_SUBATOMIC_INPUTS+1],*paramstr = 0; cJSON *array,*rawobj,*vinsobj,*keysobj;
+    if ( (rawobj= cJSON_CreateString(rawbytes)) != 0 )
+    {
+        if ( (vinsobj= subatomic_vins_json_params(coin,rp)) != 0 )
+        {
+            // printf("add %d inputs skipaddr.%s coinaddr.%s\n",rp->numinputs,skipaddr,coinaddr);
+            for (i=flag=j=0; i<rp->numinputs; i++)
+            {
+                //printf("i.%d j.%d flag.%d %s\n",i,j,flag,rp->inputs[i].address);
+                if ( skipaddr != 0 && strcmp(rp->inputs[i].address.buf,skipaddr) != 0 )
+                {
+                    coinaddrs[j] = rp->inputs[i].address.buf;
+                    if ( coinaddr != 0 && strcmp(coinaddrs[j],coinaddr) == 0 )
+                        flag++;
+                    j++;
+                }
+            }
+            //printf("i.%d j.%d flag.%d\n",i,j,flag);
+            if ( coinaddr != 0 && flag == 0 )
+                coinaddrs[j++] = coinaddr;
+            coinaddrs[j++] = 0;
+            keysobj = subatomic_privkeys_json_params(coin,coinaddrs,j);
+            //printf("subatomic_privkeys_json_params\n");
+            if ( keysobj != 0 )
+            {
+                array = cJSON_CreateArray();
+                cJSON_AddItemToArray(array,rawobj);
+                cJSON_AddItemToArray(array,vinsobj);
+                cJSON_AddItemToArray(array,keysobj);
+                paramstr = cJSON_Print(array);
+                free_json(array);
+            }
+            else free_json(vinsobj);
+        }
+        else free_json(rawobj);
+    }
+    return(paramstr);
+}
+
+char *subatomic_signtx(char *skipaddr,int32_t *lockedblockp,int64_t *valuep,char *coinaddr,char *deststr,unsigned long destsize,struct coin777 *coin,struct subatomic_rawtransaction *rp,char *rawbytes)
+{
+    cJSON *json,*compobj; char *retstr,*signparams,*txid = 0; int32_t locktime = 0;
+    rp->txid[0] = deststr[0] = 0;
+    rp->completed = -1;
+    //printf("cp.%d vs %d: subatomic_signtx rawbytes.(%s)\n",cp->coinid,coinid,rawbytes);
+    if ( (signparams= subatomic_signraw_json_params(skipaddr,coinaddr,coin,rp,rawbytes)) != 0 )
+    {
+        _stripwhite(signparams,' ');
+        // printf("got signparams.(%s)\n",signparams);
+        if ( (retstr= bitcoind_RPC(0,coin->name,coin->serverport,coin->userpass,"signrawtransaction",signparams)) != 0 )
+        {
+            //printf("got retstr.(%s)\n",retstr);
+            if ( (json= cJSON_Parse(retstr)) != 0 )
+            {
+                if ( (deststr= jstr(json,"hex")) != 0 )
+                {
+                    compobj = cJSON_GetObjectItem(json,"complete");
+                    if ( compobj != 0 )
+                        rp->completed = ((compobj->type&0xff) == cJSON_True);
+                    if ( strlen(deststr) > destsize )
+                        printf("sign_rawtransaction: strlen(deststr) %ld > %ld destize\n",strlen(deststr),destsize);
+                    else
+                    {
+                        txid = subatomic_decodetxid(valuep,0,&locktime,coin,deststr,coinaddr);
+                        if ( txid != 0 )
+                        {
+                            safecopy(rp->txid,txid,sizeof(rp->txid));
+                            free(txid);
+                            txid = rp->txid;
+                        }
+                        // printf("got signedtransaction -> txid.(%s) %.8f\n",rp->txid,dstr(valuep!=0?*valuep:0));
+                    }
+                } else printf("cant get hex from.(%s)\n",retstr);
+                free_json(json);
+            } else printf("json parse error.(%s)\n",retstr);
+            free(retstr);
+        } else printf("error signing rawtx\n");
+        free(signparams);
+    } else printf("error generating signparams\n");
+    if ( lockedblockp != 0 )
+        *lockedblockp = locktime;
+    return(txid);
+}
+
+cJSON *subatomic_vouts_json_params(struct subatomic_rawtransaction *rp)
+{
+    int32_t i; cJSON *json,*obj;
+    json = cJSON_CreateObject();
+    for (i=0; i<rp->numoutputs; i++)
+    {
+        obj = cJSON_CreateNumber((double)rp->destamounts[i]/SATOSHIDEN);
+        cJSON_AddItemToObject(json,rp->destaddrs[i],obj);
+    }
+    // printf("numdests.%d (%s)\n",rp->numoutputs,cJSON_Print(json));
+    return(json);
+}
+
+char *subatomic_rawtxid_json(struct coin777 *coin,struct subatomic_rawtransaction *rp)
+{
+    char *paramstr = 0; cJSON *array,*vinsobj,*voutsobj;
+    if ( (vinsobj= subatomic_vins_json_params(coin,rp)) != 0 )
+    {
+        if ( (voutsobj= subatomic_vouts_json_params(rp)) != 0 )
+        {
+            array = cJSON_CreateArray();
+            cJSON_AddItemToArray(array,vinsobj);
+            cJSON_AddItemToArray(array,voutsobj);
+            paramstr = cJSON_Print(array);
+            free_json(array);   // this frees both vinsobj and voutsobj
+        }
+        else free_json(vinsobj);
+    }
+    // printf("subatomic_rawtxid_json.%s\n",paramstr);
+    return(paramstr);
+}
+
+// if signcoindaddr is non-zero then signtx and return txid, otherwise just return rawtransaction bytes (NOT allocated)
+char *subatomic_gen_rawtransaction(char *skipaddr,struct coin777 *coin,struct subatomic_rawtransaction *rp,char *signcoinaddr,uint32_t locktime,uint32_t vin0sequenceid)
+{
+    char *rawparams,*retstr=0; int64_t value; long len; struct cointx_info *cointx;
+    if ( (rawparams = subatomic_rawtxid_json(coin,rp)) != 0 )
+    {
+        _stripwhite(rawparams,' ');
+        if ( (retstr= bitcoind_RPC(0,coin->name,coin->serverport,coin->userpass,"createrawtransaction",rawparams)) != 0 )
+        {
+            if ( retstr[0] != 0 )
+            {
+                // printf("calc_rawtransaction retstr.(%s)\n",retstr);
+                safecopy(rp->rawtransaction,retstr,sizeof(rp->rawtransaction));
+                free(retstr);
+                len = strlen(rp->rawtransaction);
+                if ( len < 8 )
+                {
+                    printf("funny rawtransactionlen %ld??\n",len);
+                    free(rawparams);
+                    return(0);
+                }
+                if ( locktime != 0 )
+                {
+                    if ( (cointx= _decode_rawtransaction(rp->rawtransaction,coin->mgw.oldtx_format)) != 0 )
+                    {
+                        printf("%s\n->\n",rp->rawtransaction);
+                        cointx->nlocktime = locktime;
+                        cointx->inputs[0].sequence = vin0sequenceid;
+                        _validate_decoderawtransaction(rp->rawtransaction,cointx,coin->mgw.oldtx_format);
+                        printf("spliced tx.(%s)\n",rp->rawtransaction);
+                        //subatomic_uint32_splicer(rp->rawtransaction,(int32_t)(len - sizeof(uint32_t)*2),locktime);
+                        //if ( 0 && vin0sequenceid != 0xffffffff )
+                        //    subatomic_uint32_splicer(rp->rawtransaction,calc_vin0seqstart(rp->rawtransaction),vin0sequenceid);
+                        free(cointx);
+                    }
+                    printf("locktime.%d sequenceid.%d\n",locktime,vin0sequenceid);
+                }
+                if ( signcoinaddr != 0 )
+                    retstr = subatomic_signtx(skipaddr,0,&value,signcoinaddr,rp->signedtransaction,sizeof(rp->signedtransaction),coin,rp,rp->rawtransaction);
+                else retstr = rp->rawtransaction;
+            } else { free(retstr); retstr = 0; };
+        } else printf("error creating rawtransaction from.(%s)\n",rawparams);
+        free(rawparams);
+    } else printf("error creating rawparams\n");
+    return(retstr);
+}
+
+char *subatomic_create_fundingtx(struct subatomic_halftx *htx,int64_t amount)
+{
+    //2) Create and sign but do not broadcast a transaction (T1) that sets up a payment of amount to funding acct
+    struct subatomic_unspent_tx *ups; struct coin777 *coin; char *txid,*retstr = 0; int32_t num,check_locktime,locktime = 0;
+    if ( (coin= coin777_find(htx->coinstr,0)) == 0 )
+    {
+        printf("subatomic_create_fundingtx: cant find (%s)\n",htx->coinstr);
+        return(0);
+    }
+    printf("CREATE FUNDING TX.(%s) for %.8f -> %s locktime.%d\n",coin->name,dstr(amount),htx->coinaddr,locktime);
+    memset(&htx->funding,0,sizeof(htx->funding));
+    if ( (ups= gather_unspents(&num,coin,0)) && num != 0 )
+    {
+        if ( subatomic_calc_rawinputs(coin,&htx->funding,amount,ups,num,htx->donation) >= amount )
+        {
+            htx->avail = amount;
+            if ( subatomic_calc_rawoutputs(htx,coin,&htx->funding,1.,htx->multisigaddr,0,htx->coinaddr) > 0 )
+            {
+                if ( (retstr= subatomic_gen_rawtransaction(htx->multisigaddr,coin,&htx->funding,htx->coinaddr,locktime,0xffffffff)) != 0 )
+                {
+                    txid = subatomic_decodetxid(0,&htx->funding_scriptPubKey,&check_locktime,coin,htx->funding.rawtransaction,htx->multisigaddr);
+                    printf("txid.%s fundingtx %.8f -> %.8f %s completed.%d locktimes %d vs %d\n",txid,dstr(amount),dstr(htx->funding.amount),retstr,htx->funding.completed,check_locktime,locktime);
+                    printf("funding.(%s)\n",htx->funding.signedtransaction);
+                }
+            }
+        }
+    }
+    if ( ups != 0 )
+        free(ups);
+    return(retstr);
+}
+
+void subatomic_set_unspent_tx0(struct subatomic_unspent_tx *up,struct subatomic_halftx *htx)
+{
+    memset(up,0,sizeof(*up));
+    up->vout = 0;
+    up->amount = htx->avail;
+    safecopy(up->txid.buf,htx->fundingtxid,sizeof(up->txid));
+    safecopy(up->address.buf,htx->multisigaddr,sizeof(up->address));
+    safecopy(up->scriptPubKey.buf,htx->funding_scriptPubKey.buf,sizeof(up->scriptPubKey));
+    safecopy(up->redeemScript.buf,htx->redeemScript,sizeof(up->redeemScript));
+}
+
+char *subatomic_create_paytx(struct subatomic_rawtransaction *rp,char *signcoinaddr,struct subatomic_halftx *htx,char *othercoinaddr,int32_t locktime,double myshare,int32_t seqid)
+{
+    struct subatomic_unspent_tx U; int32_t check_locktime; int64_t value; char *txid = 0; struct coin777 *coin = coin777_find(htx->coinstr,0);
+    if ( coin == 0 )
+        return(0);
+    printf("create paytx %s\n",coin->name);
+    subatomic_set_unspent_tx0(&U,htx);
+    rp->numinputs = 0;
+    rp->inputs[rp->numinputs++] = U;
+    rp->amount = (htx->avail - coin->mgw.txfee);
+    rp->change = 0;
+    rp->inputsum = htx->avail;
+    // jl777: make sure sequence number is not -1!!
+    if ( subatomic_calc_rawoutputs(htx,coin,rp,myshare,htx->coinaddr,othercoinaddr,0) > 0 )
+    {
+        subatomic_gen_rawtransaction(htx->multisigaddr,coin,rp,signcoinaddr,locktime,seqid);
+        txid = subatomic_decodetxid(&value,0,&check_locktime,coin,rp->rawtransaction,htx->coinaddr);
+        if ( check_locktime != locktime )
+        {
+            printf("check_locktime.%d vs locktime.%d\n",check_locktime,locktime);
+            return(0);
+        }
+        printf("created paytx %.8f to %s value %.8f, locktime.%d\n",dstr(value),htx->coinaddr,dstr(value),locktime);
+    }
+    return(txid);
+}
+
+int32_t subatomic_ensure_txs(struct subatomic_halftx *otherhalf,struct subatomic_halftx *htx,int32_t locktime)
+{
+    char *fundingtxid,*refundtxid,*micropaytxid; struct coin777 *coin; int32_t blocknum = 0;
+    if ( (coin= coin777_find(htx->coinstr,0)) == 0 || htx->multisigaddr[0] == 0 )
+    {
+        printf("cant get valid daemon for %s or no xferaddr.%p\n",coin->name,htx->multisigaddr);
+        return(-1);
+    }
+    if ( locktime != 0 )
+    {
+        coin->ramchain.RTblocknum = _get_RTheight(&coin->ramchain.lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->ramchain.RTblocknum);
+        if ( (blocknum= coin->ramchain.RTblocknum) == 0 )
+        {
+            printf("cant get valid blocknum for %s\n",coin->name);
+            return(-1);
+        }
+        blocknum += (locktime/coin->estblocktime) + 1;
+    }
+    if ( htx->fundingtxid == 0 )
+    {
+        //printf("create funding TX\n");
+        if ( (fundingtxid= subatomic_create_fundingtx(htx,htx->amount)) == 0 )
+            return(-1);
+        safecopy(htx->fundingtxid,fundingtxid,sizeof(htx->fundingtxid));
+        free(fundingtxid);
+        htx->avail = htx->myamount;
+    }
+    if ( htx->refundtxid == 0 )
+    {
+        // printf("create refund TX\n");
+        if ( (refundtxid= subatomic_create_paytx(&htx->refund,0,htx,otherhalf->coinaddr,blocknum,1.,SUBATOMIC_STARTING_SEQUENCEID-1)) == 0 )
+            return(-1);
+        safecopy(htx->refundtxid,refundtxid,sizeof(htx->refundtxid));
+        free(refundtxid);
+        //printf("created refundtx.(%s)\n",htx->refundtxid);
+    }
+    if ( htx->micropaytxid == 0 )
+    {
+        //printf("create micropay TX\n");
+        if ( (micropaytxid= subatomic_create_paytx(&htx->micropay,htx->coinaddr,htx,otherhalf->coinaddr,0,1.,SUBATOMIC_STARTING_SEQUENCEID)) == 0 )
+            return(-1);
+        safecopy(htx->micropaytxid,micropaytxid,sizeof(htx->micropaytxid));
+        free(micropaytxid);
+  }
+    return(blocknum);
+}
+
+int32_t subatomic_gen_pubkeys(struct subatomic_tx *atx,struct subatomic_halftx *htx)
+{
+    char coinaddrs[3][128],pubkeys[3][256],*coinstr; int32_t i,flag=0; struct destbuf pubkey; char *coinaddr,*pubkeystr; struct coin777 *coin;
+    if ( htx->multisigaddr[0] == 0 )
+    {
+        memset(coinaddrs,0,sizeof(coinaddrs));
+        memset(pubkeys,0,sizeof(pubkeys));
+        for (i=0; i<2; i++)
+        {
+            if ( i == 0 )
+            {
+                pubkeystr = atx->myhalf.pubkey;
+                coinaddr = atx->myhalf.coinaddr;
+                coinstr = atx->ARGS.coinstr;
+            }
+            else
+            {
+                pubkeystr = atx->myhalf.destpubkey;
+                coinaddr = atx->myhalf.destcoinaddr;
+                coinstr = atx->ARGS.destcoinstr;
+            }
+            if ( pubkeystr[0] == 0 && (coin= coin777_find(coinstr,0)) != 0 )
+            {
+                get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
+                pubkeystr = pubkey.buf;
+            }
+            if ( pubkeystr[0] != 0 )
+            {
+                flag++;
+                safecopy(atx->ARGS.mypubkeys[i],pubkey.buf,sizeof(atx->ARGS.mypubkeys[i]));
+                printf("i.%d gen pubkey %s (%s) for (%s)\n",i,coinstr,pubkey.buf,coinaddr);
+            }
+            else
+            {
+                printf("i.%d cant generate %s pubkey for addr.%s\n",i,coinstr,coinaddr);
+                //return(-1);
+            }
+        }
+    }
+    return(flag);
+}
+
+void init_subatomic_halftx(struct subatomic_halftx *htx,struct subatomic_tx *atx)
+{
+    safecopy(htx->NXTaddr,atx->ARGS.NXTaddr,sizeof(htx->NXTaddr));
+    safecopy(htx->otherNXTaddr,atx->ARGS.otherNXTaddr,sizeof(htx->otherNXTaddr));
+    safecopy(htx->ipaddr,SUPERNET.myipaddr,sizeof(htx->ipaddr));
+    if ( atx->ARGS.otheripaddr[0] != 0 )
+        safecopy(htx->otheripaddr,atx->ARGS.otheripaddr,sizeof(htx->otheripaddr));
+}
+
+int32_t init_subatomic_tx(struct subatomic_tx *atx,int32_t flipped)
+{
+    struct coin777 *coin,*destcoin;
+    if ( (coin= coin777_find(atx->ARGS.coinstr,1)) == 0 || (destcoin= coin777_find(atx->ARGS.destcoinstr,1)) == 0 )
+    {
+        printf("coin.(%s) or (%s) not found\n",atx->ARGS.coinstr,atx->ARGS.destcoinstr);
+        return(-1);
+    }
+    if ( atx->ARGS.coinaddr[flipped][0] != 0 && atx->ARGS.destcoinaddr[flipped][0] != 0 ) // atx->ARGS.otherNXTaddr[0] != 0 &&
+    {
+        if ( atx->ARGS.amount != 0 && atx->ARGS.destamount != 0 && strcmp(atx->ARGS.coinstr,atx->ARGS.destcoinstr) != 0 )
+        {
+            if ( atx->longerflag == 0 )
+            {
+                atx->myhalf.minconfirms = coin->minconfirms;
+                atx->otherhalf.minconfirms = destcoin->minconfirms;
+                atx->ARGS.numincr = SUBATOMIC_DEFAULTINCR;
+                atx->longerflag = 1;
+                if ( (calc_nxt64bits(atx->ARGS.NXTaddr) % 666) > (calc_nxt64bits(atx->ARGS.otherNXTaddr) % 666) )
+                    atx->longerflag = 2;
+            }
+            init_subatomic_halftx(&atx->myhalf,atx);
+            init_subatomic_halftx(&atx->otherhalf,atx);
+            atx->connsock = -1;
+            if ( flipped == 0 )
+            {
+                strcpy(atx->myhalf.coinstr,atx->ARGS.coinstr); strcpy(atx->myhalf.destcoinstr,atx->ARGS.destcoinstr);
+                atx->myhalf.amount = atx->ARGS.amount; atx->myhalf.destamount = atx->ARGS.destamount;
+                safecopy(atx->myhalf.coinaddr,atx->ARGS.coinaddr[0],sizeof(atx->myhalf.coinaddr));
+                safecopy(atx->myhalf.destcoinaddr,atx->ARGS.destcoinaddr[0],sizeof(atx->myhalf.destcoinaddr));
+                atx->myhalf.donation = atx->myhalf.amount * SUBATOMIC_DONATIONRATE;
+                if ( atx->myhalf.donation < coin->mgw.txfee )
+                    atx->myhalf.donation = coin->mgw.txfee;
+                atx->otherexpectedamount = atx->myhalf.amount - 2*coin->mgw.txfee - 2*atx->myhalf.donation;
+                subatomic_gen_pubkeys(atx,&atx->myhalf);
+            }
+            else
+            {
+                strcpy(atx->otherhalf.coinstr,atx->ARGS.destcoinstr); strcpy(atx->otherhalf.destcoinstr,atx->ARGS.coinstr);
+                atx->otherhalf.amount = atx->ARGS.destamount; atx->otherhalf.destamount = atx->ARGS.amount;
+                safecopy(atx->otherhalf.coinaddr,atx->ARGS.destcoinaddr[1],sizeof(atx->otherhalf.coinaddr));
+                safecopy(atx->otherhalf.destcoinaddr,atx->ARGS.coinaddr[1],sizeof(atx->otherhalf.destcoinaddr));
+                atx->otherhalf.donation = atx->otherhalf.amount * SUBATOMIC_DONATIONRATE;
+                if ( atx->otherhalf.donation < destcoin->mgw.txfee )
+                    atx->otherhalf.donation = destcoin->mgw.txfee;
+                atx->myexpectedamount = atx->otherhalf.amount - 2*destcoin->mgw.txfee - 2*atx->otherhalf.donation;
+            }
+            printf("%p.(%s %s %.8f -> %.8f %s <-> %s %s %.8f <- %.8f %s) myhalf.(%s %s) %.8f <-> %.8f other.(%s %s) IP.(%s)\n",atx,atx->ARGS.NXTaddr,atx->myhalf.coinstr,dstr(atx->myhalf.amount),dstr(atx->myhalf.destamount),atx->myhalf.destcoinstr,atx->ARGS.otherNXTaddr,atx->otherhalf.coinstr,dstr(atx->otherhalf.amount),dstr(atx->otherhalf.destamount),atx->otherhalf.destcoinstr,atx->myhalf.coinaddr,atx->myhalf.destcoinaddr,dstr(atx->myexpectedamount),dstr(atx->otherexpectedamount),atx->otherhalf.coinaddr,atx->otherhalf.destcoinaddr,atx->ARGS.otheripaddr);
+            return(1 << flipped);
+        }
+    }
+    return(0);
+}
+
+int32_t subatomic_txcmp(struct subatomic_tx *_ref,struct subatomic_tx *_atx,int32_t flipped)
+{
+    struct subatomic_tx_args *ref,*atx;
+    ref = &_ref->ARGS; atx = &_atx->ARGS;
+    printf("%p.(%s <-> %s) vs %p.(%s <-> %s)\n",ref,ref->NXTaddr,ref->otherNXTaddr,atx,atx->NXTaddr,atx->otherNXTaddr);
+    if ( flipped != 0 )
+    {
+        if ( strcmp(ref->NXTaddr,atx->otherNXTaddr) != 0 )
+        {
+            printf("%s != %s\n",ref->NXTaddr,atx->otherNXTaddr);
+            return(-1);
+        }
+        if ( strcmp(ref->otherNXTaddr,atx->NXTaddr) != 0 )
+            return(-2);
+    }
+    else
+    {
+        if ( strcmp(ref->NXTaddr,atx->NXTaddr) != 0 )
+        {
+            printf("%s != %s\n",ref->NXTaddr,atx->NXTaddr);
+            return(-1);
+        }
+        if ( strcmp(ref->otherNXTaddr,atx->otherNXTaddr) != 0 )
+            return(-2);
+    }
+    if ( flipped == 0 )
+    {
+        if ( strcmp(ref->coinstr,atx->coinstr) != 0 )
+        {
+            printf("%s != %s\n",ref->coinstr,atx->coinstr);
+            return(-3);
+        }
+        if ( strcmp(ref->destcoinstr,atx->destcoinstr) != 0 )
+            return(-4);
+        if ( ref->destamount != atx->destamount )
+            return(-5);
+        if ( ref->amount != atx->amount )
+            return(-6);
+    }
+    else
+    {
+        if ( strcmp(ref->coinstr,atx->destcoinstr) != 0 )
+        {
+            printf("%s != %s\n",ref->coinstr,atx->destcoinstr);
+            return(-13);
+        }
+        if ( strcmp(ref->destcoinstr,atx->coinstr) != 0 )
+            return(-14);
+        if ( ref->destamount != atx->amount )
+            return(-15);
+        if ( ref->amount != atx->destamount )
+            return(-16);
+    }
+    return(0);
+}
+
+int32_t set_subatomic_trade(struct subatomic_tx *_atx,char *NXTaddr,char *coin,char *amountstr,char *coinaddr,char *otherNXTaddr,char *destcoin,char *destamountstr,char *destcoinaddr,char *otheripaddr,int32_t flipped)
+{
+    struct subatomic_tx_args *atx = &_atx->ARGS;
+    memset(atx,0,sizeof(*atx));
+    strcpy(atx->coinstr,coin);
+    strcpy(atx->destcoinstr,destcoin);
+    atx->amount = conv_floatstr(amountstr);
+    atx->destamount = conv_floatstr(destamountstr);
+    safecopy(atx->coinaddr[flipped],coinaddr,sizeof(atx->coinaddr[flipped]));
+    safecopy(atx->coinaddr[flipped^1],destcoinaddr,sizeof(atx->coinaddr[flipped^1]));
+    safecopy(atx->NXTaddr,NXTaddr,sizeof(atx->NXTaddr));
+    safecopy(atx->otherNXTaddr,otherNXTaddr,sizeof(atx->otherNXTaddr));
+    safecopy(atx->destcoinaddr[flipped],destcoinaddr,sizeof(atx->destcoinaddr[flipped]));
+    safecopy(atx->destcoinaddr[flipped^1],coinaddr,sizeof(atx->destcoinaddr[flipped^1]));
+    if ( flipped != 0 )
+        safecopy(atx->otheripaddr,otheripaddr,sizeof(atx->otheripaddr));
+    printf("flipped.%d ipaddr.%s %s %s\n",flipped,atx->otheripaddr,coin,destcoin);
+    if ( atx->amount != 0 && atx->destamount != 0 )//&& atx->coinid >= 0 && atx->destcoinid >= 0 )
+        return(0);
+    printf("error setting subatomic trade %lld %lld %s %s\n",(long long)atx->amount,(long long)atx->destamount,atx->coinstr,atx->destcoinstr);
+    return(-1);
+}
+
+// this function needs to invert everything to the point of view of this acct
+int32_t decode_subatomic_json(struct subatomic_tx *atx,cJSON *json,char *sender,char *receiver)
+{
+    struct destbuf amountstr,destamountstr,NXTaddr,coin,destcoin,coinaddr,destcoinaddr,otherNXTaddr,otheripaddr;
+    int32_t flipped = 0;
+    copy_cJSON(&NXTaddr,jobj(json,"NXT"));
+    copy_cJSON(&coin,jobj(json,"coin"));
+    copy_cJSON(&amountstr,jobj(json,"amount"));
+    copy_cJSON(&coinaddr,jobj(json,"coinaddr"));
+    copy_cJSON(&otherNXTaddr,jobj(json,"destNXT"));
+    copy_cJSON(&destcoin,jobj(json,"destcoin"));
+    copy_cJSON(&destamountstr,jobj(json,"destamount"));
+    copy_cJSON(&destcoinaddr,jobj(json,"destcoinaddr"));
+    copy_cJSON(&otheripaddr,jobj(json,"senderip"));
+    if ( strcmp(otherNXTaddr.buf,SUPERNET.NXTADDR) == 0 )
+        flipped = 1;
+    if ( set_subatomic_trade(atx,NXTaddr.buf,coin.buf,amountstr.buf,coinaddr.buf,otherNXTaddr.buf,destcoin.buf,destamountstr.buf,destcoinaddr.buf,otheripaddr.buf,flipped) == 0 )
+        return(flipped);
+    return(-1);
+}
+
+struct subatomic_tx *update_subatomic_state(cJSON *argjson,uint64_t nxt64bits,char *sender,char *receiver)  // the only path into the subatomics[], eg. via AM
+{
+    static struct subatomic_tx **Subatomics; static int32_t Numsubatomics;
+    int32_t i,flipped,cmpval; struct subatomic_tx *atx = 0,T;
+    memset(&T,0,sizeof(T));
+    //printf("parse subatomic\n");
+    if ( (flipped= decode_subatomic_json(&T,argjson,sender,receiver)) >= 0 )
+    {
+        //printf("NXT.%s (%s %s %s %s) <-> %s (%s %s %s %s)\n",T.NXTaddr,coinid_str(T.coinid),T.coinaddr[0],coinid_str(T.destcoinid),T.destcoinaddr[0],T.otherNXTaddr,coinid_str(T.coinid),T.coinaddr[1],coinid_str(T.destcoinid),T.destcoinaddr[1]);
+        atx = 0;
+        for (i=0; i<Numsubatomics; i++)
+        {
+            atx = Subatomics[i];
+            if ( (cmpval= subatomic_txcmp(atx,&T,flipped)) == 0 )
+            {
+                printf("%d: cmpval.%d vs %p\n",i,cmpval,atx);
+                if ( T.type == SUBATOMIC_TYPE )
+                {
+                    strcpy(atx->ARGS.coinaddr[flipped],T.ARGS.coinaddr[flipped]);
+                    strcpy(atx->ARGS.destcoinaddr[flipped],T.ARGS.destcoinaddr[flipped]);
+                    if ( flipped != 0 )
+                        strcpy(atx->ARGS.otheripaddr,T.ARGS.otheripaddr);
+                }
+                /*else
+                {
+                    if ( flipped != 0 )
+                    {
+                        strcpy(atx->ARGS.otheripaddr,T.swap.otheripaddr);
+                        strcpy(atx->ARGS.NXTaddr,T.swap.otherNXTaddr);
+                        strcpy(atx->ARGS.otherNXTaddr,T.swap.NXTaddr);
+                    }
+                    else
+                    {
+                        strcpy(atx->ARGS.NXTaddr,T.swap.NXTaddr);
+                        strcpy(atx->ARGS.otherNXTaddr,T.swap.otherNXTaddr);
+                    }
+                }*/
+                break;
+            }
+        }
+        if ( i == Numsubatomics )
+        {
+            atx = malloc(sizeof(T));
+            *atx = T;
+            if ( T.type == SUBATOMIC_TYPE )
+            {
+                strcpy(atx->ARGS.coinaddr[flipped],T.ARGS.coinaddr[flipped]);
+                strcpy(atx->ARGS.destcoinaddr[flipped],T.ARGS.destcoinaddr[flipped]);
+                if ( flipped != 0 )
+                {
+                    strcpy(atx->ARGS.otheripaddr,T.ARGS.otheripaddr);
+                    strcpy(atx->ARGS.NXTaddr,T.ARGS.otherNXTaddr);
+                    strcpy(atx->ARGS.otherNXTaddr,T.ARGS.NXTaddr);
+                    strcpy(atx->ARGS.coinstr,T.ARGS.destcoinstr);
+                    atx->ARGS.amount = T.ARGS.destamount;
+                    strcpy(atx->ARGS.destcoinstr,T.ARGS.coinstr);
+                    atx->ARGS.destamount = T.ARGS.amount;
+                }
+                else
+                {
+                    strcpy(atx->ARGS.coinstr,T.ARGS.coinstr);
+                    atx->ARGS.amount = T.ARGS.amount;
+                    strcpy(atx->ARGS.destcoinstr,T.ARGS.destcoinstr);
+                    atx->ARGS.destamount = T.ARGS.destamount;
+                }
+            }
+            /*else
+            {
+                if ( flipped != 0 )
+                    strcpy(atx->ARGS.otheripaddr,T.swap.otheripaddr);
+                strcpy(atx->ARGS.NXTaddr,T.swap.NXTaddr);
+                strcpy(atx->ARGS.otherNXTaddr,T.swap.otherNXTaddr);
+            }*/
+            printf("alloc type.%d new %p atx.%d (%s <-> %s)\n",T.type,atx,Numsubatomics,atx->ARGS.NXTaddr,atx->ARGS.otherNXTaddr);
+            Subatomics = realloc(Subatomics,(Numsubatomics + 1) * sizeof(*Subatomics));
+            Subatomics[Numsubatomics] = atx, atx->tag = Numsubatomics;
+            Numsubatomics++;
+        }
+        atx->initflag |= init_subatomic_tx(atx,flipped);
+        printf("got trade! flipped.%d | initflag.%d\n",flipped,atx->initflag);
+        if ( atx->initflag == 3 )
+        {
+            printf("PENDING SUBATOMIC TRADE from %s %s %.8f <-> %s %s %.8f\n",atx->ARGS.NXTaddr,atx->ARGS.coinstr,dstr(atx->ARGS.amount),atx->ARGS.otherNXTaddr,atx->ARGS.destcoinstr,dstr(atx->ARGS.destamount));
+        }
+    }
+    return(atx);
+}
+
+void test_subatomic()
+{
+    char *teststr = "{\"requestType\":\"subatomic\",\"NXT\":\"423766016895692955\",\"coin\":\"BTCD\",\"amount\":\"100\",\"coinaddr\":\"RGLbLB5YHM6vngmd8XKvAFCUK8zDfWoSSr\",\"senderip\":\"209.126.71.170\",\"destNXT\":\"8989816935121514892\",\"destcoin\":\"LTC\",\"destamount\":\".1\",\"destcoinaddr\":\"LLedxvb1e5aCYmQfn8PHEPFR56AsbGgbUG\"}";
+    struct subatomic_tx *atx;
+    if ( (atx= update_subatomic_state(cJSON_Parse(teststr),SUPERNET.my64bits,SUPERNET.myipaddr,SUPERNET.myipaddr)) != 0 )
+    {
+        strcpy(atx->myhalf.multisigaddr,"bGMMi9syucbu5qdLUbuprHCBMrEowzDDM4");
+        subatomic_create_paytx(&atx->myhalf.refund,0,&atx->myhalf,atx->otherhalf.coinaddr,100,1.,SUBATOMIC_STARTING_SEQUENCEID-1);
+        //subatomic_ensure_txs(&atx->otherhalf,&atx->myhalf,333);
+    }
+    getchar();
+}
 
 #endif

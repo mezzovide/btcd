@@ -661,9 +661,10 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
     {
         if ( (feature= group[i].prices) != 0 )
         {
-            if ( i > 0 && strcmp(feature->base,group[0].rel) == 0 && strcmp(feature->rel,group[0].base) == 0 )
-                polarity = -1.;
-            else polarity = 1.;
+            //if ( i > 0 && strcmp(feature->base,group[0].rel) == 0 && strcmp(feature->rel,group[0].base) == 0 )
+            //    polarity = -1.;
+            //else polarity = 1.;
+            polarity = group[i].wt;
             order = &feature->O.book[MAX_GROUPS][group[i].bidi].bid;
             if ( group[i].bidi < feature->O.numbids && (vol= order->s.vol) > minvol && (price= order->s.price) > SMALLVAL )
             {
@@ -680,12 +681,12 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
             }
         } else printf("null feature.%p\n",feature);
     }
-    //printf("groupsize.%d highbidi.%d lowaski.%d\n",groupsize,highbidi,lowaski);
     gp->bid.s.price = highbid, gp->bid.s.vol = bidvol, gp->ask.s.price = lowask, gp->ask.s.vol = askvol;
     if ( highbidi >= 0 )
         prices777_setorder(&gp->bid,group,highbidi,bidorderid);
     if ( lowaski >= 0 )
         prices777_setorder(&gp->ask,group,lowaski,askorderid);
+    printf("groupsize.%d highbidi.%d %f %f lowaski.%d\n",groupsize,highbidi,gp->bid.s.price,gp->ask.s.price,lowaski);
     if ( gp->bid.s.price > SMALLVAL && gp->ask.s.price > SMALLVAL )
         return(0);
     return(-1);

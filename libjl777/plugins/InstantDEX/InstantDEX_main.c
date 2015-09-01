@@ -40,7 +40,7 @@
 #include "../common/txind777.c"
 #undef DEFINES_ONLY
 
-char *Supported_exchanges[] = { "InstantDEX", "nxtae", "unconf", "basket", "basketNXT", "basketUSD", "basketBTC", "basketCNY", "active", "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "quadriga", "kraken" }; // "bter" <- orderbook is backwards and all entries are needed, later to support, "exmo" flakey apiservers
+char *Supported_exchanges[] = { "InstantDEX", "nxtae", "unconf", "basket", "basketNXT", "basketUSD", "basketBTC", "basketCNY", "active", "subatomic", "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "quadriga", "kraken" }; // "bter" <- orderbook is backwards and all entries are needed, later to support, "exmo" flakey apiservers
 
 #define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory", "balance", "allexchanges"
 
