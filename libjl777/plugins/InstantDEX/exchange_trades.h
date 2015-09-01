@@ -541,7 +541,10 @@ uint64_t btc38_trade(char **retstrp,struct exchange_info *exchange,char *_base,c
         }
     } else fprintf(stderr,"submit err cmd.(%s)\n",cmdbuf);
     if ( retstrp != 0 )
+    {
+        printf("btc38 returning.(%s) in %p\n",data,data);
         *retstrp = data;
+    }
     else if ( data != 0 )
         free(data);
     return(txid);
@@ -1131,7 +1134,7 @@ uint64_t submit_to_exchange(int32_t exchangeid,char **jsonstrp,uint64_t assetid,
     {
         printf("submit_to_exchange.(%d) dir.%d price %f vol %f | inv %f %f (%s)\n",exchangeid,dir,price,volume,1./price,price*volume,comment);
         if ( (txid= (*exchange->trade)(&retstr,exchange,base,rel,dir,price,volume)) == 0 )
-            printf("illegal combo (%s/%s) ret.(%s)\n",base,rel,retstr!=0?retstr:"");
+            printf("error trading (%s/%s) dir.%d price %f vol %f ret.(%s)\n",base,rel,dir,price,volume,retstr!=0?retstr:"");
         if ( jsonstrp != 0 )
             *jsonstrp = retstr;
     }
