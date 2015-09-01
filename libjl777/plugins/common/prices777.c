@@ -740,7 +740,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         {"bityes", prices777_bityes, bityes_supports, bityes_trade },
         {"coinbase", prices777_coinbase, coinbase_supports, coinbase_trade },
         {"lakebtc", prices777_lakebtc, lakebtc_supports, lakebtc_trade },
-        {"exmo", prices777_exmo, exmo_supports, exmo_trade },
+        //{"exmo", prices777_exmo, exmo_supports, exmo_trade },
         {"quadriga", prices777_quadriga, quadriga_supports, quadriga_trade },
         {"truefx", 0 }, {"ecb", 0 }, {"instaforex", 0 }, {"fxcm", 0 }, {"yahoo", 0 },
     };

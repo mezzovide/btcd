@@ -40,7 +40,7 @@
 #include "../common/txind777.c"
 #undef DEFINES_ONLY
 
-static char *Supported_exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "exmo", "quadriga", "kraken" }; // "bter" <- orderbook is backwards and all entries are needed, later to support
+char *Supported_exchanges[] = { "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "quadriga", "kraken" }; // "bter" <- orderbook is backwards and all entries are needed, later to support, "exmo" flakey apiservers
 
 #define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory", "balance", "allexchanges"
 
@@ -64,6 +64,15 @@ cJSON *InstantDEX_lottostats();
 
 uint32_t prices777_NXTBLOCK,FIRST_EXTERNAL = 5;
 int32_t InstantDEX_idle(struct plugin_info *plugin) { return(0); }
+
+int32_t supported_exchange(char *exchangestr)
+{
+    int32_t i;
+    for (i=0; i<sizeof(Supported_exchanges)/sizeof(*Supported_exchanges); i++)
+        if ( strcmp(exchangestr,Supported_exchanges[i]) == 0 )
+            return(i);
+    return(-1);
+}
 
 void idle()
 {

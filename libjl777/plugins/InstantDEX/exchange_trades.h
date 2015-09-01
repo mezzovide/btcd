@@ -983,6 +983,7 @@ uint64_t coinbase_trade(char **retstrp,struct exchange_info *exchange,char *base
     return(txid);
 }
 
+#ifdef enable_exmo
 uint64_t exmo_trade(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume)
 {
     /* $req['nonce'] = $NONCE;
@@ -1033,6 +1034,7 @@ uint64_t exmo_trade(char **retstrp,struct exchange_info *exchange,char *base,cha
         free(data);
     return(txid);
 }
+#endif
 
 uint64_t submit_triggered_nxtae(char **retjsonstrp,int32_t is_MS,char *bidask,uint64_t nxt64bits,char *NXTACCTSECRET,uint64_t assetid,uint64_t qty,uint64_t NXTprice,char *triggerhash,char *comment,uint64_t otherNXT,uint32_t triggerheight)
 {
