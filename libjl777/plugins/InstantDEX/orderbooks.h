@@ -916,23 +916,25 @@ struct prices777 *prices777_addbundle(int32_t *validp,int32_t loadprices,struct 
 
 int32_t create_basketitem(struct prices777_basket *basketitem,cJSON *item,char *refbase,char *refrel,int32_t basketsize)
 {
-    struct destbuf exchangestr,name,base,rel; char key[512]; uint64_t baseid,relid; int32_t groupid,keysize,valid; double wt; struct prices777 *prices;
+    struct destbuf exchangestr,name,base,rel; char key[512]; uint64_t tmp,baseid,relid; int32_t groupid,keysize,valid; double wt; struct prices777 *prices;
     copy_cJSON(&exchangestr,jobj(item,"exchange"));
     if ( exchange_find(exchangestr.buf) == 0 )
         return(-1);
     copy_cJSON(&name,jobj(item,"name"));
     copy_cJSON(&base,jobj(item,"base"));
-    if ( base.buf[0] == 0 )
-        strcpy(base.buf,refbase);
     copy_cJSON(&rel,jobj(item,"rel"));
-    if ( rel.buf[0] == 0 )
-        strcpy(rel.buf,refrel);
-    baseid = j64bits(item,"baseid");
-    relid = j64bits(item,"relid");
+    if ( (baseid= j64bits(item,"baseid")) != 0 && base.buf[0] == 0 )
+        _set_assetname(&tmp,base.buf,0,baseid);
+    if ( (relid= j64bits(item,"relid")) != 0 && rel.buf[0] == 0 )
+        _set_assetname(&tmp,rel.buf,0,relid);
     groupid = juint(item,"group");
     wt = jdouble(item,"wt");
     if ( wt == 0. )
         wt = 1.;
+    if ( base.buf[0] == 0 )
+        strcpy(base.buf,refbase);
+    if ( rel.buf[0] == 0 )
+        strcpy(rel.buf,refrel);
     InstantDEX_name(key,&keysize,exchangestr.buf,name.buf,base.buf,&baseid,rel.buf,&relid);
     printf(">>>>>>>>>> create basketitem.%s (%s/%s) %llu/%llu wt %f\n",exchangestr.buf,base.buf,rel.buf,(long long)baseid,(long long)relid,wt);
     if ( (prices= prices777_initpair(1,0,exchangestr.buf,base.buf,rel.buf,0.,name.buf,baseid,relid,basketsize)) != 0 )
@@ -963,9 +965,9 @@ struct prices777 *prices777_makebasket(char *basketstr,cJSON *_basketjson,int32_
     copy_cJSON(&refrel,jobj(basketjson,"rel"));
     refbaseid = j64bits(basketjson,"baseid");
     refrelid = j64bits(basketjson,"relid");
-    printf("MAKE/(%s)\n",jprint(basketjson,0));
     if ( (array= jarray(&n,basketjson,"basket")) != 0 )
     {
+        printf("MAKE/(%s) n.%d num.%d\n",jprint(basketjson,0),n,num);
         basketsize = (n + num);
         basket = calloc(1,sizeof(*basket) * basketsize);
         for (i=0; i<n; i++)

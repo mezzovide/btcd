@@ -912,6 +912,14 @@ struct prices777 *prices777_poll(char *_exchangestr,char *_name,char *_base,uint
         printf("cant add exchange.(%s)\n",exchangestr);
         return(0);
     }
+    if ( strcmp(exchangestr,"nxtae") == 0 || strcmp(exchangestr,"unconf") == 0 )
+    {
+        if ( strcmp(base,"NXT") != 0 && strcmp(rel,"NXT") != 0 )
+        {
+            printf("nxtae/unconf needs to be relative to NXT (%s/%s) %llu/%llu\n",base,rel,(long long)baseid,(long long)relid);
+            return(0);
+        }
+    }
     if ( (prices= prices777_initpair(1,0,exchangestr,base,rel,0.,name,baseid,relid,0)) != 0 )
         prices777_addbundle(&valid,1,prices,0,0,0);
     return(prices);
