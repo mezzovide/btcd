@@ -479,11 +479,13 @@ double prices777_okcoin(struct prices777 *prices,int32_t maxdepth)
 
 int32_t huobi_supports(char *base,char *rel)
 {
+    printf("huobi test.(%s/%s)\n",base,rel);
     if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"CNY") == 0) || (strcmp(base,"LTC") == 0 && strcmp(rel,"CNY") == 0) )
         return(1);
     else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"CNY") == 0) || (strcmp(rel,"LTC") == 0 && strcmp(base,"CNY") == 0) )
         return(-1);
-    else return(0);
+    printf("invalid.(%s/%s)\n",base,rel);
+    return(0);
 }
 
 double prices777_huobi(struct prices777 *prices,int32_t maxdepth)
@@ -527,9 +529,9 @@ double prices777_coinbase(struct prices777 *prices,int32_t maxdepth)
 
 int32_t lakebtc_supports(char *base,char *rel)
 {
-    if ( strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0 )
+    if ( (strcmp(base,"BTC") == 0 && strcmp(rel,"USD") == 0) || (strcmp(base,"BTC") == 0 && strcmp(rel,"CNY") == 0) )
         return(1);
-    else if ( strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0 )
+    else if ( (strcmp(rel,"BTC") == 0 && strcmp(base,"USD") == 0) || (strcmp(rel,"BTC") == 0 && strcmp(base,"CNY") == 0) )
         return(-1);
     else return(0);
 }

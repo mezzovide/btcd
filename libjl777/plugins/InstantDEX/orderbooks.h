@@ -114,6 +114,8 @@ struct prices777 *prices777_createbasket(int32_t addbasket,char *name,char *base
                 prices->groupwts[j] /= wtsum;
         }
     }
+    if ( prices->numgroups == 1 )
+        prices->groupwts[0] = 1.;
     for (j=0; j<prices->numgroups; j++)
         printf("%9.6f ",prices->groupwts[j]);
     printf("groupwts %s\n",typestr);
@@ -797,7 +799,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             //printf("j%d slot.%d %s numgroups.%d groupsize.%d %p\n",j,slot,prices->contract,prices->numgroups,groupsize,&prices->basket[0].groupsize);
             if ( prices777_groupbidasks(gp,prices->groupwts[j],minvol,&prices->basket[i],groupsize) != 0 )
             {
-                printf("prices777_groupbidasks i.%d j.%d error\n",i,j);
+                //printf("prices777_groupbidasks i.%d j.%d error\n",i,j);
                 break;
             }
             if ( bid > SMALLVAL && (b= gp->bid.s.price) > SMALLVAL && (bv= gp->bid.s.vol) > SMALLVAL )
@@ -828,7 +830,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             gp = &OB.book[j][slot];
             if ( gp->bid.source == 0 || gp->ask.source == 0 )
             {
-                printf("%s: null source slot.%d j.%d\n",prices->exchange,slot,j);
+                //printf("%s: null source slot.%d j.%d\n",prices->exchange,slot,j);
                 break;
             }
             baseratio = prices777_volratio(basevols,baseids,gp->bid.source->baseid,gp->bid.s.vol);
@@ -845,7 +847,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         }
         if ( j != prices->numgroups )
         {
-            printf("%s: j.%d != numgroups.%d\n",prices->exchange,j,prices->numgroups);
+            //printf("%s: j.%d != numgroups.%d\n",prices->exchange,j,prices->numgroups);
             break;
         }
         for (j=0; j<MAX_GROUPS*2; j++)
@@ -1318,7 +1320,7 @@ int32_t calc_baseflags(char *exchange,char *base,uint64_t *baseidp)
                 {
                     unstringbits(tmpstr,*baseidp);
                     if ( (tmp= is_MGWcoin(tmpstr)) != 0 )
-                        strcpy(base,tmpstr), *baseidp = tmp, flags |= (BASE_EXCHANGEASSET | BASE_ISMGW);
+                        strcpy(base,tmpstr), *baseidp = tmp, flags |= (BASE_EXCHANGEASSET | BASE_ISMGW | BASE_ISASSET);
                     else
                     {
                         _set_assetname(&tmp,base,0,*baseidp), flags |= BASE_ISASSET;
@@ -1479,7 +1481,7 @@ int32_t centralexchange_items(int32_t group,double wt,cJSON *array,char *_base,c
             if ( array != 0 )
             {
                 item = cJSON_CreateObject(), jaddstr(item,"exchange",Exchanges[exchangeid].name);
-                printf("ref.(%s/%s) vs (%s/%s) inverted.%d flipped.%d\n",refbase,refrel,base,rel,inverted,strcmp(refbase,rel) == 0 || strcmp(refrel,base) == 0);
+                //printf("ref.(%s/%s) vs (%s/%s) inverted.%d flipped.%d\n",refbase,refrel,base,rel,inverted,strcmp(refbase,rel) == 0 || strcmp(refrel,base) == 0);
                 if ( inverted < 0 )
                     jaddstr(item,"base",rel), jaddstr(item,"rel",base), sprintf(name,"%s/%s",rel,base);
                 else jaddstr(item,"base",base), jaddstr(item,"rel",rel), sprintf(name,"%s/%s",base,rel);
@@ -1487,7 +1489,7 @@ int32_t centralexchange_items(int32_t group,double wt,cJSON *array,char *_base,c
                     jaddnum(item,"wt",-inverted);
                 else jaddnum(item,"wt",inverted);
                 jaddstr(item,"name",name), jaddnum(item,"group",group);
-                printf("ADDED inverted.%d (%s) ref.(%s/%s)\n",inverted,name,refbase,refrel);
+                printf("ADDED.%s inverted.%d (%s) ref.(%s/%s)\n",Exchanges[exchangeid].name,inverted,name,refbase,refrel);
                 jaddi(array,item);
             }
             n++;
