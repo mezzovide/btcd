@@ -163,7 +163,7 @@ void set_best_amounts(int64_t *baseamountp,int64_t *relamountp,double price,doub
 int32_t is_mscoin(char *assetidstr);
 uint32_t issue_getTime();
 
-#define MAX_DEPTH 25
+#define MAX_DEPTH 100
 #define MINUTES_FIFO (1024)
 #define HOURS_FIFO (64)
 #define DAYS_FIFO (512)
