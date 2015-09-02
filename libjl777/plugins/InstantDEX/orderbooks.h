@@ -106,7 +106,7 @@ struct prices777 *prices777_createbasket(int32_t addbasket,char *name,char *base
             if ( prices->groupwts[j]*i > 0 )
                 wtsum += prices->groupwts[j], m++;
         }
-        if ( wtsum != 0. )
+        if ( 0 && wtsum != 0. )
         {
             if ( wtsum < 0. )
                 wtsum = -wtsum;
@@ -627,11 +627,11 @@ double prices777_json_orderbook(char *exchangestr,struct prices777 *prices,int32
 
 void prices777_hbla(uint64_t *bidorderid,uint64_t *askorderid,int32_t *lowaski,int32_t *highbidi,double *highbid,double *bidvol,double *lowask,double *askvol,double groupwt,int32_t i,int32_t bidask,double price,double vol,uint64_t orderid)
 {
-    //printf("hbla.(%f %f) ",price,vol);
     if ( groupwt > SMALLVAL && (*lowask == 0. || price < *lowask) )
         *askorderid = orderid, *lowask = price, *askvol = vol, *lowaski = (i << 1) | bidask;
     else if ( groupwt < -SMALLVAL && (*highbid == 0. || price > *highbid) )
         *bidorderid = orderid, *highbid = price, *bidvol = vol, *highbidi = (i << 1) | bidask;
+    //printf("hbla.(%f %f)\n",price,vol);
 }
 
 void prices777_setorder(struct prices777_order *order,struct prices777_basket *group,int32_t coordinate,uint64_t orderid)
@@ -661,21 +661,23 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
     {
         if ( (feature= group[i].prices) != 0 )
         {
-            //if ( i > 0 && strcmp(feature->base,group[0].rel) == 0 && strcmp(feature->rel,group[0].base) == 0 )
-            //    polarity = -1.;
-            //else polarity = 1.;
-            polarity = group[i].wt * groupwt;
+            if ( strcmp(feature->base,group[0].rel) == 0 && strcmp(feature->rel,group[0].base) == 0 )
+                polarity = -1.;
+            else polarity = 1.;
+            //polarity = group[i].wt;// * groupwt;
             order = &feature->O.book[MAX_GROUPS][group[i].bidi].bid;
             if ( group[i].bidi < feature->O.numbids && (vol= order->s.vol) > minvol && (price= order->s.price) > SMALLVAL )
             {
-                if ( polarity < 0. )
+                //printf("%d/%d: %s bidi.%d price.%f polarity.%f groupwt.%f -> ",i,groupsize,feature->exchange,group[i].bidi,price,polarity,groupwt);
+                if ( polarity * groupwt < 0. )
                     vol *= price, price = (1. / price);
                 prices777_hbla(&bidorderid,&askorderid,&lowaski,&highbidi,&highbid,&bidvol,&lowask,&askvol,-polarity * groupwt,i,0,price,vol,order->id);
             }
             order = &feature->O.book[MAX_GROUPS][group[i].aski].ask;
             if ( group[i].aski < feature->O.numasks && (vol= order->s.vol) > minvol && (price= order->s.price) > SMALLVAL )
             {
-                if ( polarity < 0. )
+                //printf("%d/%d: %s aski.%d price.%f polarity.%f groupwt.%f -> ",i,groupsize,feature->exchange,group[i].aski,price,polarity,groupwt);
+                if ( polarity * groupwt < 0. )
                     vol *= price, price = (1. / price);
                 prices777_hbla(&bidorderid,&askorderid,&lowaski,&highbidi,&highbid,&bidvol,&lowask,&askvol,polarity * groupwt,i,1,price,vol,order->id);
             }
@@ -686,7 +688,7 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
         prices777_setorder(&gp->bid,group,highbidi,bidorderid);
     if ( lowaski >= 0 )
         prices777_setorder(&gp->ask,group,lowaski,askorderid);
-    //printf("groupsize.%d highbidi.%d %f %f lowaski.%d\n",groupsize,highbidi,gp->bid.s.price,gp->ask.s.price,lowaski);
+//printf("groupwt %f groupsize.%d highbidi.%d %f %f lowaski.%d\n",groupwt,groupsize,highbidi,gp->bid.s.price,gp->ask.s.price,lowaski);
     if ( gp->bid.s.price > SMALLVAL && gp->ask.s.price > SMALLVAL )
         return(0);
     return(-1);
@@ -800,23 +802,25 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             }
             if ( bid > SMALLVAL && (b= gp->bid.s.price) > SMALLVAL && (bv= gp->bid.s.vol) > SMALLVAL )
             {
-                if ( prices->groupwts[j] < 0 )
-                    bid /= b;
-                else bid *= b;
+                //if ( prices->groupwts[j] < 0 )
+                //    bid /= b;
+                //else
+                    bid *= b;
                 prices777_volcalc(basevols,baseids,gp->bid.source->baseid,bv);
                 prices777_volcalc(basevols,baseids,gp->bid.source->relid,b*bv);
                 //printf("bid %f b %f bv %f %s %s %f\n",bid,b,bv,gp->bid.source->base,gp->bid.source->rel,bv*b);
             } else bid = 0.;
             if ( ask > SMALLVAL && (a= gp->ask.s.price) > SMALLVAL && (av= gp->ask.s.vol) > SMALLVAL )
             {
-                if ( prices->groupwts[j] < 0 )
-                    ask /= a;
-                else ask *= a;
+                //if ( prices->groupwts[j] < 0 )
+                //    ask /= a;
+                //else
+                    ask *= a;
                 prices777_volcalc(relvols,baseids,gp->ask.source->baseid,av);
                 prices777_volcalc(relvols,baseids,gp->ask.source->relid,a*av);
                 //printf("ask %f b %f bv %f %s %s %f\n",ask,a,av,gp->ask.source->base,gp->ask.source->rel,av*a);
             } else ask = 0.;
-            if ( Debuglevel > 2 )
+            //if ( Debuglevel > 2 )
                 printf("%10s %10s/%10s %s (%s %s) wt %2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f ask %.8f inv %f %f\n",prices->exchange,gp->ask.source->exchange,gp->ask.source->exchange,prices->contract,gp->bid.source->contract,gp->ask.source->contract,prices->groupwts[j],j,b,bv,a,av,bid,ask,bv,av);
         }
         for (j=0; j<prices->numgroups; j++)
@@ -824,7 +828,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             gp = &OB.book[j][slot];
             if ( gp->bid.source == 0 || gp->ask.source == 0 )
             {
-                //printf("null source slot.%d j.%d\n",slot,j);
+                printf("%s: null source slot.%d j.%d\n",prices->exchange,slot,j);
                 break;
             }
             baseratio = prices777_volratio(basevols,baseids,gp->bid.source->baseid,gp->bid.s.vol);
@@ -840,7 +844,10 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 askvol = (gp->ask.ratio * gp->ask.s.vol);
         }
         if ( j != prices->numgroups )
+        {
+            printf("%s: j.%d != numgroups.%d\n",prices->exchange,j,prices->numgroups);
             break;
+        }
         for (j=0; j<MAX_GROUPS*2; j++)
         {
             if ( baseids[j] == 0 )
@@ -863,7 +870,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             gp->ask.s.timestamp = OB.timestamp, gp->ask.s.price = ask, gp->ask.s.vol = askvol, gp->ask.slot_ba = (OB.numasks++ << 1) | 1;
             gp->ask.source = prices, gp->ask.wt = prices->groupwts[j];
         }
-        //printf("%s slot.%d (%.8f %.6f %.8f %.6f) (%d %d)\n",prices->contract,slot,gp->bid.s.price,gp->bid.s.vol,gp->ask.s.price,gp->ask.s.vol,OB.numbids,OB.numasks);
+        printf("%s slot.%d (%.8f %.6f %.8f %.6f) (%d %d)\n",prices->contract,slot,gp->bid.s.price,gp->bid.s.vol,gp->ask.s.price,gp->ask.s.vol,OB.numbids,OB.numasks);
     }
     //fprintf(stderr,"basket.%s slot.%d numbids.%d numasks.%d\n",prices->contract,slot,prices->O.numbids,prices->O.numasks);
     if ( slot > 0 )
@@ -1320,6 +1327,8 @@ int32_t calc_baseflags(char *exchange,char *base,uint64_t *baseidp)
                 }
             }
         }
+        if ( flags != BASE_ISASSET )
+            *baseidp = stringbits(base);
     }
     printf("-> flags.%d (%s %llu) %s\n",flags,base,(long long)*baseidp,exchange);
     return(flags);
@@ -1378,11 +1387,12 @@ cJSON *make_arrayNXT(cJSON *directarray,cJSON **arrayBTCp,char *base,char *rel,u
     relflags = calc_baseflags(relexchange,rel,&relid);
     sprintf(tmpstr,"%s/%s",base,rel);
     printf("make_arrayNXT base.(%s) %llu rel.(%s) %llu\n",base,(long long)baseid,rel,(long long)relid);
-    item = cJSON_CreateObject(), setitemjson(item,tmpstr,base,stringbits(base),rel,stringbits(rel));
+    item = cJSON_CreateObject(), setitemjson(item,tmpstr,base,baseid,rel,relid);
     jaddstr(item,"exchange",INSTANTDEX_NAME);
     jaddnum(item,"wt",1), jaddnum(item,"group",0), jaddi(directarray,item);
     if ( ((baseflags | relflags) & BASE_ISNXT) != 0 )
     {
+        printf("one is NXT\n");
         if ( strcmp(base,"NXT") == 0 )
             n = get_duplicates(duplicatebases,relid), wt = -1, str = rel;
         else n = get_duplicates(duplicatebases,baseid), wt = 1, str = base;
@@ -1392,6 +1402,7 @@ cJSON *make_arrayNXT(cJSON *directarray,cJSON **arrayBTCp,char *base,char *rel,u
     }
     else if ( (baseflags & BASE_ISASSET) != 0 && (relflags & BASE_ISASSET) != 0 )
     {
+        printf("both are assets\n");
         arrayNXT = cJSON_CreateArray();
         n = get_duplicates(duplicatebases,baseid);
         for (i=0; i<n; i++)
@@ -1400,7 +1411,7 @@ cJSON *make_arrayNXT(cJSON *directarray,cJSON **arrayBTCp,char *base,char *rel,u
         m = get_duplicates(duplicaterels,relid);
         for (j=0; j<m; j++)
             nxt_basketjson(arrayNXT,1,-1,rel,duplicaterels[j],"NXT",NXT_ASSETID,base,rel);
-        //printf("both are assets (%s)\n",jprint(arrayNXT,0));
+        printf("both are assets (%s)\n",jprint(arrayNXT,0));
     }
     if ( (baseflags & BASE_EXCHANGEASSET) != 0 || (relflags & BASE_EXCHANGEASSET) != 0 )
     {
@@ -1468,15 +1479,14 @@ int32_t centralexchange_items(int32_t group,double wt,cJSON *array,char *_base,c
             if ( array != 0 )
             {
                 item = cJSON_CreateObject(), jaddstr(item,"exchange",Exchanges[exchangeid].name);
-                if ( strcmp(refbase,rel) == 0 || strcmp(refrel,base) == 0 )
-                {
-                    printf("ref.(%s/%s) -> (%s/%s) invert inverted.%d\n",refbase,refrel,base,rel,inverted);
-                    inverted = -1;
-                } else inverted = 1;
+                printf("ref.(%s/%s) vs (%s/%s) inverted.%d flipped.%d\n",refbase,refrel,base,rel,inverted,strcmp(refbase,rel) == 0 || strcmp(refrel,base) == 0);
                 if ( inverted < 0 )
                     jaddstr(item,"base",rel), jaddstr(item,"rel",base), sprintf(name,"%s/%s",rel,base);
                 else jaddstr(item,"base",base), jaddstr(item,"rel",rel), sprintf(name,"%s/%s",base,rel);
-                jaddstr(item,"name",name), jaddnum(item,"wt",inverted), jaddnum(item,"group",group);
+                if ( strcmp(refbase,rel) == 0 || strcmp(refrel,base) == 0 )
+                    jaddnum(item,"wt",-inverted);
+                else jaddnum(item,"wt",inverted);
+                jaddstr(item,"name",name), jaddnum(item,"group",group);
                 printf("ADDED inverted.%d (%s) ref.(%s/%s)\n",inverted,name,refbase,refrel);
                 jaddi(array,item);
             }
@@ -1489,6 +1499,7 @@ int32_t centralexchange_items(int32_t group,double wt,cJSON *array,char *_base,c
 cJSON *external_combo(char *base,char *rel,char *coinstr,int32_t tradeable)
 {
     cJSON *array = 0;
+    printf("check central jumper.(%s) for (%s/%s)\n",coinstr,base,rel);
     //if ( (baseflags & (BASE_ISNAME|BASE_ISMGW)) != 0 && (relflags & (BASE_ISNAME|BASE_ISMGW)) != 0 )
     {
         if ( strcmp(base,coinstr) != 0 && strcmp(rel,coinstr) != 0 && centralexchange_items(0,1,0,base,coinstr,tradeable,base,rel) > 0 && centralexchange_items(0,1,0,rel,coinstr,tradeable,base,rel) > 0 )
@@ -1530,7 +1541,6 @@ char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,ui
     strcpy(base,_base), strcpy(rel,_rel);
     baseflags = calc_baseflags(bexchange,base,&baseid);
     relflags = calc_baseflags(rexchange,rel,&relid);
-    baseid = stringbits(base), relid = stringbits(rel);
     InstantDEX_name(key,&keysize,"active",name,base,&baseid,rel,&relid);
     printf("activebooks (%s/%s) (%llu/%llu)\n",base,rel,(long long)baseid,(long long)relid);
     if ( (active= prices777_find(&inverted,baseid,relid,"active")) == 0 )
