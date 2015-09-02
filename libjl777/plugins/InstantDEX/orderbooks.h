@@ -820,7 +820,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 prices777_volcalc(relvols,baseids,gp->ask.source->relid,a*av);
                 //printf("ask %f b %f bv %f %s %s %f\n",ask,a,av,gp->ask.source->base,gp->ask.source->rel,av*a);
             } else ask = 0.;
-            //if ( Debuglevel > 2 )
+            if ( Debuglevel > 2 )
                 printf("%10s %10s/%10s %s (%s %s) wt %2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f ask %.8f inv %f %f\n",prices->exchange,gp->ask.source->exchange,gp->ask.source->exchange,prices->contract,gp->bid.source->contract,gp->ask.source->contract,prices->groupwts[j],j,b,bv,a,av,bid,ask,bv,av);
         }
         for (j=0; j<prices->numgroups; j++)
