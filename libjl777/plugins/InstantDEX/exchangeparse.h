@@ -201,7 +201,7 @@ struct exchange_info *find_exchange(int32_t *exchangeidp,char *exchangestr)
             //    getchar();
             break;
         }
-        if ( strcmp(exchangestr,exchange->name) == 0 || (strncmp(exchangestr,"basket",strlen("basket")) == 0 && strcmp("basket",exchange->name) == 0)  )
+        if ( strcmp(exchangestr,exchange->name) == 0 )
             break;
     }
     if ( exchange != 0 && exchangeidp != 0 )
@@ -222,6 +222,8 @@ int32_t NXT_supports(char *base,char *rel)
 
 int32_t bittrex_supports(char *base,char *rel)
 {
+    if ( strcmp(rel,"CNY") == 0 || strcmp(base,"CNY") == 0 || strcmp(rel,"USD") == 0 || strcmp(base,"USD") == 0 )
+        return(0);
     if ( strcmp(rel,"BTC") == 0 )
         return(1);
     else if ( strcmp(base,"BTC") == 0 )
@@ -306,7 +308,7 @@ double prices777_standard(char *exchangestr,char *url,struct prices777 *prices,c
     char *jsonstr; cJSON *json; double hbla = 0.;
     if ( (jsonstr= issue_curl(url)) != 0 )
     {
-        //if ( strcmp(exchangestr,"btce") == 0 )
+        //if ( strcmp(exchangestr,"btc38") == 0 )
         //    printf("(%s) -> (%s)\n",url,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
@@ -320,6 +322,8 @@ double prices777_standard(char *exchangestr,char *url,struct prices777 *prices,c
 
 int32_t poloniex_supports(char *base,char *rel)
 {
+    if ( strcmp(rel,"CNY") == 0 || strcmp(base,"CNY") == 0 || strcmp(rel,"USD") == 0 || strcmp(base,"USD") == 0 )
+        return(0);
     if ( strcmp(rel,"BTC") == 0 )
         return(1);
     else if ( strcmp(base,"BTC") == 0 )
@@ -552,19 +556,55 @@ double prices777_exmo(struct prices777 *prices,int32_t maxdepth)
 }
 #endif
 
-int32_t btc38_supports(char *base,char *rel)
+// "gatecoin", "quoine", "jubi", "hitbtc"
+
+int32_t btc38_supports(char *_base,char *_rel)
 {
-    if ( strcmp(rel,"BTC") == 0 || strcmp(rel,"CNY") == 0 )
-        return(1);
-    else if ( strcmp(base,"BTC") == 0 || strcmp(base,"CNY") == 0 )
+    char *cnypairs[] = { "BTC", "LTC", "DOGE", "XRP", "BTS", "STR", "NXT", "BLK", "YBC", "BILS", "BOST", "PPC", "APC", "ZCC", "XPM", "DGC", "MEC", "WDC", "QRK", "BEC", "ANC", "UNC", "RIC", "SRC", "TAG" };
+    char *btcpairs[] = { "TMC", "LTC", "DOGE", "XRP", "BTS", "STR", "NXT", "BLK", "XEM", "VPN", "BILS", "BOST", "WDC", "ANC", "XCN", "VOOT", "SYS", "NRS", "NAS", "SYNC", "MED", "EAC" };
+    int32_t i; char base[64],rel[64];
+    strcpy(base,_base), strcpy(rel,_rel);
+    touppercase(base), touppercase(rel);
+    if ( strcmp(base,"BTC") == 0 && strcmp(rel,"CNY") == 0 )
         return(-1);
-    else return(0);
+    else if ( strcmp(base,"CNY") == 0 && strcmp(rel,"BTC") == 0 )
+        return(1);
+    else if ( strcmp(base,"BTC") == 0 )
+    {
+        for (i=0; i<sizeof(btcpairs)/sizeof(*btcpairs); i++)
+            if ( strcmp(btcpairs[i],rel) == 0 )
+                return(-1);
+    }
+    else if ( strcmp(rel,"BTC") == 0 )
+    {
+        for (i=0; i<sizeof(btcpairs)/sizeof(*btcpairs); i++)
+            if ( strcmp(btcpairs[i],base) == 0 )
+                return(1);
+    }
+    else if ( strcmp(base,"CNY") == 0 )
+    {
+        for (i=0; i<sizeof(cnypairs)/sizeof(*cnypairs); i++)
+            if ( strcmp(cnypairs[i],rel) == 0 )
+                return(-1);
+    }
+    else if ( strcmp(rel,"CNY") == 0 )
+    {
+        for (i=0; i<sizeof(cnypairs)/sizeof(*cnypairs); i++)
+            if ( strcmp(cnypairs[i],base) == 0 )
+                return(1);
+    }
+    printf("BTC38 doesnt support (%s/%s)\n",base,rel);
+    return(0);
 }
 
 double prices777_btc38(struct prices777 *prices,int32_t maxdepth)
 {
     if ( prices->url[0] == 0 )
-        sprintf(prices->url,"http://api.btc38.com/v1/depth.php?c=%s&mk_type=%s",prices->lbase,prices->lrel);
+    {
+        if ( strcmp(prices->lbase,"cny") == 0 && strcmp(prices->lrel,"btc") == 0 )
+            sprintf(prices->url,"http://api.btc38.com/v1/depth.php?c=%s&mk_type=%s","btc","cny");
+        else sprintf(prices->url,"http://api.btc38.com/v1/depth.php?c=%s&mk_type=%s",prices->lbase,prices->lrel);
+    }
     return(prices777_standard("btc38",prices->url,prices,0,0,maxdepth,0));
 }
 

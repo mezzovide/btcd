@@ -897,16 +897,22 @@ int32_t is_native_crypto(char *name,uint64_t bits)
 
 int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr,uint64_t assetid)
 {
-    int32_t type = 0,decimals = -1; cJSON *json=0; char assetidstr[64];
+    int32_t type = 0,decimals = -1; cJSON *json=0; char assetidstr[64],*str;
     *multp = 1;
     buf[0] = 0;
     if ( assetid != 0 )
     {
         //fprintf(stderr,"assetid.%llu\n",(long long)assetid);
-        if ( is_MGWasset(multp,assetid) != 0 )
+        if ( (str= is_MGWasset(multp,assetid)) != 0 )
+        {
+            strcpy(buf,str);
             return(0);
+        }
         if ( is_native_crypto(buf,assetid) != 0 )
+        {
+            unstringbits(buf,assetid);
             return(0);
+        }
     }
     if ( jsonstr == 0 )
     {
