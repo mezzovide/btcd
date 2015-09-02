@@ -114,8 +114,8 @@ struct prices777 *prices777_createbasket(int32_t addbasket,char *name,char *base
                 prices->groupwts[j] /= wtsum;
         }
     }
-    if ( prices->numgroups == 1 )
-        prices->groupwts[0] = 1.;
+    //if ( prices->numgroups == 1 )
+    //    prices->groupwts[0] = 1.;
     for (j=0; j<prices->numgroups; j++)
         printf("%9.6f ",prices->groupwts[j]);
     printf("groupwts %s\n",typestr);
@@ -666,6 +666,8 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
             if ( strcmp(feature->base,group[0].rel) == 0 && strcmp(feature->rel,group[0].base) == 0 )
                 polarity = -1.;
             else polarity = 1.;
+            //if ( group[i].wt * groupwt < 0 ) fixes supernet/BTC
+             //   polarity *= -1;
             //polarity = group[i].wt;// * groupwt;
             order = &feature->O.book[MAX_GROUPS][group[i].bidi].bid;
             if ( group[i].bidi < feature->O.numbids && (vol= order->s.vol) > minvol && (price= order->s.price) > SMALLVAL )
@@ -1413,7 +1415,7 @@ cJSON *make_arrayNXT(cJSON *directarray,cJSON **arrayBTCp,char *base,char *rel,u
         m = get_duplicates(duplicaterels,relid);
         for (j=0; j<m; j++)
             nxt_basketjson(arrayNXT,1,-1,rel,duplicaterels[j],"NXT",NXT_ASSETID,base,rel);
-        printf("both are assets (%s)\n",jprint(arrayNXT,0));
+        printf("both are assets (%s) n.%d m.%d\n",jprint(arrayNXT,0),n,m);
     }
     if ( (baseflags & BASE_EXCHANGEASSET) != 0 || (relflags & BASE_EXCHANGEASSET) != 0 )
     {
@@ -1436,6 +1438,7 @@ cJSON *make_arrayNXT(cJSON *directarray,cJSON **arrayBTCp,char *base,char *rel,u
                 item = cJSON_CreateObject(), jaddstr(item,"exchange",relexchange);
                 sprintf(tmpstr,"%s/%s",rel,"BTC");
                 setitemjson(item,tmpstr,rel,relid,"BTC",stringbits("BTC"));
+                jaddnum(item,"wt",-1);
                 jaddi(*arrayBTCp,item);
             }
         }

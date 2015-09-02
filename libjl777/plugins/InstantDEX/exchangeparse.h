@@ -93,6 +93,15 @@ int32_t get_duplicates(uint64_t *duplicates,uint64_t baseid)
     unstringbits(name,baseid);
     if ( (tmp= is_MGWcoin(name)) != 0 )
         baseid = tmp;
+    else
+    {
+        for (i=0; i<(int32_t)(sizeof(Tradedassets)/sizeof(*Tradedassets)); i++)
+            if ( strcmp(Tradedassets[i][1],name) == 0 )
+            {
+                baseid = calc_nxt64bits(Tradedassets[i][0]);
+                printf("baseid.%llu <- (%s)\n",(long long)baseid,name);
+            }
+    }
     expand_nxt64bits(assetidstr,baseid);
     duplicates[n++] = baseid;
     for (i=0; i<(int32_t)(sizeof(Tradedassets)/sizeof(*Tradedassets)); i++)
@@ -101,7 +110,10 @@ int32_t get_duplicates(uint64_t *duplicates,uint64_t baseid)
             for (j=0; j<(int32_t)(sizeof(Tradedassets)/sizeof(*Tradedassets)); j++)
             {
                 if ( i != j && strcmp(Tradedassets[i][1],Tradedassets[j][1]) == 0 )
+                {
                     duplicates[n++] = calc_nxt64bits(Tradedassets[j][0]);
+                    printf("found duplicate.%s\n",Tradedassets[j][0]);
+                }
             }
             break;
         }
