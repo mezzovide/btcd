@@ -50,18 +50,6 @@ char *Signedtx; // hack for testing atomic_swap
 #define SUBATOMIC_TRADEFUNC 't'
 #define SUBATOMIC_ATOMICSWAP 's'
 
-#define SUBATOMIC_ABORTED -1
-#define SUBATOMIC_HAVEREFUND 1
-#define SUBATOMIC_WAITFOR_CONFIRMS 2
-#define SUBATOMIC_COMPLETED 3
-
-#define SUBATOMIC_SEND_PUBKEY 'P'
-#define SUBATOMIC_REFUNDTX_NEEDSIG 'R'
-#define SUBATOMIC_REFUNDTX_SIGNED 'S'
-#define SUBATOMIC_FUNDINGTX 'F'
-#define SUBATOMIC_SEND_MICROTX 'T'
-#define SUBATOMIC_SEND_ATOMICTX 'A'
-
 struct NXT_tx
 {
     unsigned char refhash[32];
@@ -82,7 +70,6 @@ struct atomic_swap
     int32_t numfragis,atomictx_waiting;
     struct NXT_tx *mytx;
 };
-
 
 struct subatomic_halftx
 {
@@ -138,80 +125,7 @@ struct subatomic_packet
 };
 int32_t subatomic_gen_pubkeys(struct subatomic_tx *atx,struct subatomic_halftx *htx);
 
-void init_subatomic_halftx(struct subatomic_halftx *htx,struct subatomic_tx *atx)
-{
-    struct subatomic_info *gp = Global_subatomic;
-    //htx->comms = &atx->comms;
-    safecopy(htx->NXTaddr,atx->ARGS.NXTaddr,sizeof(htx->NXTaddr));
-    safecopy(htx->otherNXTaddr,atx->ARGS.otherNXTaddr,sizeof(htx->otherNXTaddr));
-    safecopy(htx->ipaddr,gp->ipaddr,sizeof(htx->ipaddr));
-    if ( atx->ARGS.otheripaddr[0] != 0 )
-        safecopy(htx->otheripaddr,atx->ARGS.otheripaddr,sizeof(htx->otheripaddr));
-}
-
 #ifdef test
-int32_t init_subatomic_tx(struct subatomic_tx *atx,int32_t flipped,int32_t type)
-{
-    struct daemon_info *cp,*destcp;
-    if ( type == ATOMICSWAP_TYPE )
-    {
-        if ( atx->longerflag == 0 )
-        {
-            atx->longerflag = 1;
-            if ( (calc_nxt64bits(atx->ARGS.NXTaddr) % 666) > (calc_nxt64bits(atx->ARGS.otherNXTaddr) % 666) )
-                atx->longerflag = 2;
-        }
-        printf("ATOMICSWAP.(%s <-> %s) longerflag.%d\n",atx->swap.NXTaddr,atx->swap.otherNXTaddr,atx->longerflag);
-        return(1 << flipped);
-    }
-    cp = get_daemon_info(atx->ARGS.coinid);
-    destcp = get_daemon_info(atx->ARGS.destcoinid);
-    if ( cp != 0 && destcp != 0 && atx->ARGS.coinaddr[flipped][0] != 0 && atx->ARGS.otherNXTaddr[0] != 0 && atx->ARGS.destcoinaddr[flipped][0] != 0 )
-    {
-        if ( atx->ARGS.amount != 0 && atx->ARGS.destamount != 0 && atx->ARGS.coinid != atx->ARGS.destcoinid )
-        {
-            if ( atx->longerflag == 0 )
-            {
-                atx->myhalf.minconfirms = cp->minconfirms;
-                atx->otherhalf.minconfirms = destcp->minconfirms;
-                atx->ARGS.numincr = SUBATOMIC_DEFAULTINCR;
-                atx->longerflag = 1;
-                if ( (calc_nxt64bits(atx->ARGS.NXTaddr) % 666) > (calc_nxt64bits(atx->ARGS.otherNXTaddr) % 666) )
-                    atx->longerflag = 2;
-            }
-            init_subatomic_halftx(&atx->myhalf,atx);
-            init_subatomic_halftx(&atx->otherhalf,atx);
-            atx->connsock = -1;
-            if ( flipped == 0 )
-            {
-                atx->myhalf.coinid = atx->ARGS.coinid; atx->myhalf.destcoinid = atx->ARGS.destcoinid;
-                atx->myhalf.amount = atx->ARGS.amount; atx->myhalf.destamount = atx->ARGS.destamount;
-                safecopy(atx->myhalf.coinaddr,atx->ARGS.coinaddr[0],sizeof(atx->myhalf.coinaddr));
-                safecopy(atx->myhalf.destcoinaddr,atx->ARGS.destcoinaddr[0],sizeof(atx->myhalf.destcoinaddr));
-                atx->myhalf.donation = atx->myhalf.amount * SUBATOMIC_DONATIONRATE;
-                //if ( atx->myhalf.donation < cp->txfee )
-                //    atx->myhalf.donation = cp->txfee;
-                atx->otherexpectedamount = atx->myhalf.amount - 2*cp->txfee - 2*atx->myhalf.donation;
-                subatomic_gen_pubkeys(atx,&atx->myhalf);
-            }
-            else
-            {
-                atx->otherhalf.coinid = atx->ARGS.destcoinid; atx->otherhalf.destcoinid = atx->ARGS.coinid;
-                atx->otherhalf.amount = atx->ARGS.destamount; atx->otherhalf.destamount = atx->ARGS.amount;
-                safecopy(atx->otherhalf.coinaddr,atx->ARGS.destcoinaddr[1],sizeof(atx->otherhalf.coinaddr));
-                safecopy(atx->otherhalf.destcoinaddr,atx->ARGS.coinaddr[1],sizeof(atx->otherhalf.destcoinaddr));
-                atx->otherhalf.donation = atx->otherhalf.amount * SUBATOMIC_DONATIONRATE;
-                //if ( atx->otherhalf.donation < destcp->txfee )
-                //    atx->otherhalf.donation = destcp->txfee;
-                atx->myexpectedamount = atx->otherhalf.amount - 2*destcp->txfee - 2*atx->otherhalf.donation;
-            }
-            printf("%p.(%s %s %.8f -> %.8f %s <-> %s %s %.8f <- %.8f %s) myhalf.(%s %s) %.8f <-> %.8f other.(%s %s) IP.(%s)\n",atx,atx->ARGS.NXTaddr,coinid_str(atx->myhalf.coinid),dstr(atx->myhalf.amount),dstr(atx->myhalf.destamount),coinid_str(atx->myhalf.destcoinid),atx->ARGS.otherNXTaddr,coinid_str(atx->otherhalf.coinid),dstr(atx->otherhalf.amount),dstr(atx->otherhalf.destamount),coinid_str(atx->otherhalf.destcoinid),atx->myhalf.coinaddr,atx->myhalf.destcoinaddr,dstr(atx->myexpectedamount),dstr(atx->otherexpectedamount),atx->otherhalf.coinaddr,atx->otherhalf.destcoinaddr,atx->ARGS.otheripaddr);
-            return(1 << flipped);
-        }
-    }
-    return(0);
-}
-
 void calc_OP_HASH160(unsigned char hash160[20],char *msg)
 {
     unsigned char sha256[32];
@@ -232,119 +146,8 @@ void calc_OP_HASH160(unsigned char hash160[20],char *msg)
     }
 }
 
-int32_t subatomic_gen_multisig(struct subatomic_tx *atx,struct subatomic_halftx *htx)
-{
-    char coinaddrs[3][64],pubkeys[3][128];
-    int32_t coinid;
-    struct daemon_info *cp;
-    coinid = atx->ARGS.coinid;
-    cp = get_daemon_info(coinid);
-    if ( cp == 0 )
-        return(-1);
-    if ( htx->coinaddr[0] != 0 && htx->pubkey[0] != 0 && atx->otherhalf.coinaddr[0] != 0 && atx->otherhalf.pubkey[0] != 0 )
-    {
-        safecopy(coinaddrs[0],htx->coinaddr,sizeof(coinaddrs[0]));
-        safecopy(pubkeys[0],htx->pubkey,sizeof(pubkeys[0]));
-        safecopy(coinaddrs[1],atx->otherhalf.coinaddr,sizeof(coinaddrs[1]));
-        safecopy(pubkeys[1],atx->otherhalf.pubkey,sizeof(pubkeys[1]));
-        htx->xferaddr = gen_multisig_addr(2,2,cp,htx->coinid,htx->NXTaddr,pubkeys,coinaddrs);
-        //#ifdef DEBUG_MODE
-        if ( htx->xferaddr != 0 )
-            get_bitcoind_pubkey(pubkeys[2],cp,htx->xferaddr->multisigaddr);
-        //#endif
-        return(htx->xferaddr != 0);
-    } else printf("cant gen multisig %d %d %d %d\n",htx->coinaddr[0],htx->pubkey[0],atx->otherhalf.coinaddr[0],atx->otherhalf.pubkey[0]);
-    return(-1);
-}
-
 // bitcoind functions
-cJSON *get_transaction_json(struct daemon_info *cp,char *txid)
-{
-    struct gateway_info *gp = Global_gp;
-    char txidstr[512],*transaction = 0;
-    cJSON *json = 0;
-    int32_t coinid;
-    if ( cp == 0 )
-        return(0);
-    coinid = cp->coinid;
-    sprintf(txidstr,"\"%s\"",txid);
-    transaction = bitcoind_RPC(cp->curl_handle,coinid_str(coinid),gp->serverport[coinid],gp->userpass[coinid],"gettransaction",txidstr);
-    if ( transaction != 0 && transaction[0] != 0 )
-    {
-        //printf("got transaction.(%s)\n",transaction);
-        json = cJSON_Parse(transaction);
-    }
-    if ( transaction != 0 )
-        free(transaction);
-    return(json);
-}
 
-int32_t subatomic_tx_confirmed(int32_t coinid,char *txid)
-{
-    cJSON *json;
-    int32_t numconfirmed = -1;
-    json = get_transaction_json(get_daemon_info(coinid),txid);
-    if ( json != 0 )
-    {
-        numconfirmed = (int32_t)get_cJSON_int(json,"confirmations");
-        free_json(json);
-    }
-    return(numconfirmed);
-}
-
-char *subatomic_broadcasttx(struct subatomic_halftx *htx,char *bytes,int32_t myincr,int32_t lockedblock)
-{
-    FILE *fp;
-    char fname[512],*retstr = 0;
-    struct daemon_info *cp = get_daemon_info(htx->coinid);
-    int32_t coinid;
-    cJSON *txjson;
-    if ( cp == 0 )
-        return(0);
-    coinid = cp->coinid;
-    txjson = get_decoderaw_json(cp,bytes);
-    if ( txjson != 0 )
-    {
-        retstr = cJSON_Print(txjson);
-        printf("broadcasting is disabled for now: (%s) ->\n(%s)\n",bytes,retstr);
-        sprintf(fname,"backups/%s_%lld_%s_%s_%lld.%03d_%d",coinid_str(coinid),(long long)htx->amount,htx->otherNXTaddr,coinid_str(htx->destcoinid),(long long)htx->destamount,myincr,lockedblock);
-        if ( (fp=fopen(fname,"w")) != 0 )
-        {
-            fprintf(fp,"%s\n%s\n",bytes,retstr);
-            fclose(fp);
-        }
-        free(retstr);
-    }
-    retstr = 0;
-    if ( Global_subatomic->enable_bitcoin_broadcast == 666 )
-    {
-        retstr = bitcoind_RPC(cp->curl_handle,coinid_str(coinid),Global_gp->serverport[coinid],Global_gp->userpass[coinid],"sendrawtransaction",bytes);
-        if ( retstr != 0 )
-        {
-            printf("sendrawtransaction returns.(%s)\n",retstr);
-        }
-    }
-    return(retstr);
-}
-
-cJSON *get_rawtransaction_json(struct daemon_info *cp,char *txid)
-{
-    struct gateway_info *gp = Global_gp;
-    char txidstr[512],*rawtransaction=0;
-    cJSON *json = 0;
-    int32_t coinid;
-    if ( cp == 0 )
-        return(0);
-    coinid = cp->coinid;
-    sprintf(txidstr,"\"%s\"",txid);
-    rawtransaction = bitcoind_RPC(cp->curl_handle,coinid_str(coinid),gp->serverport[coinid],gp->userpass[coinid],"getrawtransaction",txidstr);
-    if ( rawtransaction != 0 && rawtransaction[0] != 0 )
-        json = get_decoderaw_json(cp,rawtransaction);
-    else printf("error with getrawtransaction %s %s\n",coinid_str(coinid),txid);
-    if ( rawtransaction != 0 )
-        free(rawtransaction);
-    return(json);
-}
 
 void subatomic_uint32_splicer(char *txbytes,int32_t offset,uint32_t spliceval)
 {
@@ -519,222 +322,6 @@ uint32_t calc_vin0seqstart(char *txbytes)
  */
 
 // subatomic logic functions
-char *subatomic_create_fundingtx(struct subatomic_halftx *htx,int64_t amount)
-{
-    //2) Create and sign but do not broadcast a transaction (T1) that sets up a payment of amount to funding acct
-    struct daemon_info *cp = get_daemon_info(htx->coinid);
-    struct subatomic_unspent_tx *ups;
-    char *txid,*retstr = 0;
-    int32_t num,check_locktime,locktime = 0;
-    if ( cp == 0 )
-        return(0);
-    printf("CREATE FUNDING TX\n");
-    memset(&htx->funding,0,sizeof(htx->funding));
-    ups = gather_unspents(&num,cp,0);//htx->coinaddr);
-    if ( ups != 0 && num != 0 )
-    {
-        if ( subatomic_calc_rawinputs(cp,&htx->funding,amount,ups,num,htx->donation) >= amount )
-        {
-            htx->avail = amount;
-            if ( subatomic_calc_rawoutputs(htx,cp,&htx->funding,1.,htx->xferaddr->multisigaddr,0,htx->coinaddr) > 0 )
-            {
-                retstr = subatomic_gen_rawtransaction(htx->xferaddr->multisigaddr,cp,&htx->funding,htx->coinaddr,locktime,0xffffffff);
-                if ( retstr != 0 )
-                {
-                    txid = subatomic_decodetxid(0,htx->funding_scriptPubKey,&check_locktime,cp,htx->funding.rawtransaction,htx->xferaddr->multisigaddr);
-                    printf("txid.%s fundingtx %.8f -> %.8f %s completed.%d locktimes %d vs %d\n",txid,dstr(amount),dstr(htx->funding.amount),retstr,htx->funding.completed,check_locktime,locktime);
-                    printf("funding.(%s)\n",htx->funding.signedtransaction);
-                }
-            }
-        }
-    }
-    if ( ups != 0 )
-        free(ups);
-    return(retstr);
-}
-
-void subatomic_set_unspent_tx0(struct subatomic_unspent_tx *up,struct subatomic_halftx *htx)
-{
-    memset(up,0,sizeof(*up));
-    up->vout = 0;
-    up->amount = htx->avail;
-    safecopy(up->txid,htx->fundingtxid,sizeof(up->txid));
-    safecopy(up->address,htx->xferaddr->multisigaddr,sizeof(up->address));
-    safecopy(up->scriptPubKey,htx->funding_scriptPubKey,sizeof(up->scriptPubKey));
-    safecopy(up->redeemScript,htx->xferaddr->redeemScript,sizeof(up->redeemScript));
-}
-
-char *subatomic_create_paytx(struct subatomic_rawtransaction *rp,char *signcoinaddr,struct subatomic_halftx *htx,char *othercoinaddr,int32_t locktime,double myshare,int32_t seqid)
-{
-    struct daemon_info *cp = get_daemon_info(htx->coinid);
-    struct subatomic_unspent_tx U;
-    int32_t check_locktime;
-    int64_t value;
-    char *txid = 0;
-    if ( cp == 0 )
-        return(0);
-    printf("create paytx %s\n",coinid_str(cp->coinid));
-    subatomic_set_unspent_tx0(&U,htx);
-    rp->numinputs = 0;
-    rp->inputs[rp->numinputs++] = U;
-    rp->amount = (htx->avail - cp->txfee);
-    rp->change = 0;
-    rp->inputsum = htx->avail;
-    // jl777: make sure sequence number is not -1!!
-    if ( subatomic_calc_rawoutputs(htx,cp,rp,myshare,htx->coinaddr,othercoinaddr,0) > 0 )
-    {
-        subatomic_gen_rawtransaction(htx->xferaddr->multisigaddr,cp,rp,signcoinaddr,locktime,seqid);
-        txid = subatomic_decodetxid(&value,0,&check_locktime,cp,rp->rawtransaction,htx->coinaddr);
-        if ( check_locktime != locktime )
-        {
-            printf("check_locktime.%d vs locktime.%d\n",check_locktime,locktime);
-            return(0);
-        }
-        printf("created paytx %.8f to %s value %.8f, locktime.%d\n",dstr(value),htx->coinaddr,dstr(value),locktime);
-    }
-    return(txid);
-}
-
-int32_t subatomic_ensure_txs(struct subatomic_tx *atx,struct subatomic_halftx *htx,int32_t locktime)
-{
-    struct daemon_info *cp = get_daemon_info(htx->coinid);
-    int32_t blocknum = 0;
-    if ( cp == 0 || cp->coinid != htx->coinid || htx->xferaddr == 0 )
-    {
-        printf("cant get valid daemon for %s or no xferaddr.%p\n",coinid_str(htx->coinid),htx->xferaddr);
-        return(-1);
-    }
-    if ( locktime != 0 )
-    {
-        blocknum = (int32_t)get_blockheight(cp,htx->coinid);
-        if ( blocknum == 0 )
-        {
-            printf("cant get valid blocknum for %s\n",coinid_str(htx->coinid));
-            return(-1);
-        }
-        blocknum += (locktime/cp->estblocktime) + 1;
-    }
-    if ( htx->fundingtxid == 0 )
-    {
-        //printf("create funding TX\n");
-        if ( (htx->fundingtxid= subatomic_create_fundingtx(htx,htx->amount)) == 0 )
-            return(-1);
-        htx->avail = htx->myamount;
-    }
-    if ( htx->refundtxid == 0 )
-    {
-        // printf("create refund TX\n");
-        if ( (htx->refundtxid= subatomic_create_paytx(&htx->refund,0,htx,atx->otherhalf.coinaddr,blocknum,1.,SUBATOMIC_STARTING_SEQUENCEID-1)) == 0 )
-            return(-1);
-        //printf("created refundtx.(%s)\n",htx->refundtxid);
-        atx->refundlockblock = blocknum;
-    }
-    if ( htx->micropaytxid == 0 )
-    {
-        //printf("create micropay TX\n");
-        htx->micropaytxid = subatomic_create_paytx(&htx->micropay,htx->coinaddr,htx,atx->otherhalf.coinaddr,0,1.,SUBATOMIC_STARTING_SEQUENCEID);
-        if ( htx->micropaytxid == 0 )
-            return(-1);
-    }
-    return(0);
-}
-
-int32_t subatomic_validate_refund(struct subatomic_tx *atx,struct subatomic_halftx *htx)
-{
-    struct daemon_info *cp = get_daemon_info(htx->coinid);
-    int64_t value;
-    int32_t lockedblock;
-    if ( cp == 0 )
-        return(-1);
-    printf("validate refund\n");
-    if ( subatomic_signtx(atx->myhalf.xferaddr->multisigaddr,&lockedblock,&value,htx->coinaddr,htx->countersignedrefund,sizeof(htx->countersignedrefund),cp,cp->coinid,&htx->refund,htx->refund.signedtransaction) == 0 )
-    {
-        printf("error signing refund\n");
-        return(-1);
-    }
-    printf("refund signing completed.%d\n",htx->refund.completed);
-    if ( htx->refund.completed <= 0 )
-        return(-1);
-    printf(">>>>>>>>>>>>>>>>>>>>> refund at %d is locked! txid.%s completed %d %.8f -> %s\n",lockedblock,htx->refund.txid,htx->refund.completed,dstr(value),htx->coinaddr);
-    atx->status = SUBATOMIC_HAVEREFUND;
-    return(0);
-}
-
-double subatomic_calc_incr(struct subatomic_halftx *htx,int64_t value,int64_t den,int32_t numincr)
-{
-    //printf("value %.8f/%.8f numincr.%d -> %.6f\n",dstr(value),dstr(den),numincr,(((double)value/den) * numincr));
-    return((((double)value/den) * numincr));
-}
-
-int32_t subatomic_validate_micropay(struct subatomic_tx *atx,char *skipaddr,char *destbytes,int32_t max,int64_t *valuep,struct subatomic_rawtransaction *rp,struct subatomic_halftx *htx,int32_t srccoinid,int64_t srcamount,int32_t numincr,char *refcoinaddr)
-{
-    struct daemon_info *cp = get_daemon_info(htx->coinid);
-    int64_t value;
-    int32_t lockedblock;
-    if ( valuep != 0 )
-        *valuep = 0;
-    if ( cp == 0 )
-        return(-1);
-    if ( subatomic_signtx(skipaddr,&lockedblock,&value,refcoinaddr,destbytes,max,cp,cp->coinid,rp,rp->signedtransaction) == 0 )
-        return(-1);
-    if ( valuep != 0 )
-        *valuep = value;
-    if ( rp->completed <= 0 )
-        return(-1);
-    //printf("micropay is updated txid.%s completed %d %.8f -> %s, lockedblock.%d\n",rp->txid,rp->completed,dstr(value),htx->coinaddr,lockedblock);
-    return(lockedblock);
-}
-
-int32_t process_microtx(struct subatomic_tx *atx,struct subatomic_rawtransaction *rp,int32_t incr,int32_t otherincr)
-{
-    int64_t value;
-    if ( subatomic_validate_micropay(atx,0,atx->otherhalf.completedmicropay,(int32_t)sizeof(atx->otherhalf.completedmicropay),&value,rp,&atx->otherhalf,atx->ARGS.destcoinid,atx->ARGS.destamount,atx->ARGS.numincr,atx->myhalf.destcoinaddr) < 0 )
-    {
-        printf("Error validating micropay from NXT.%s %s %s\n",(atx->ARGS.otherNXTaddr),coinid_str(atx->myhalf.destcoinid),atx->myhalf.destcoinaddr);
-        //subatomic_sendabort(atx);
-        //atx->status = SUBATOMIC_ABORTED;
-        //if ( incr > 1 )
-        //    atx->claimtxid = subatomic_broadcasttx(&atx->otherhalf,atx->otherhalf.completedmicropay,0,0);
-        return(-1);
-    }
-    else
-    {
-        atx->myreceived = value;
-        otherincr = subatomic_calc_incr(&atx->otherhalf,value,atx->myexpectedamount,atx->ARGS.numincr);
-    }
-    if ( otherincr == atx->ARGS.numincr || value == atx->myhalf.destamount )
-    {
-        printf("TX complete!\n");
-        atx->claimtxid = subatomic_broadcasttx(&atx->otherhalf,atx->otherhalf.completedmicropay,0,0);
-        atx->status = SUBATOMIC_COMPLETED;
-    }
-    printf("[%5.2f%%] Received %12.8f of %12.8f | Sent %12.8f of %12.8f\n",100.*(double)atx->myreceived/atx->myexpectedamount,dstr(atx->myreceived),dstr(atx->myexpectedamount),dstr(atx->sent_to_other),dstr(atx->otherexpectedamount));
-    
-    //printf("incr.%d of %d, otherincr.%d %.8f %.8f \n",incr,atx->ARGS.numincr,otherincr,dstr(value),dstr(atx->myexpectedamount));
-    return(otherincr);
-}
-
-int64_t subatomic_calc_micropay(struct subatomic_tx *atx,struct subatomic_halftx *htx,char *othercoinaddr,double myshare,int32_t seqid)
-{
-    struct subatomic_unspent_tx U;
-    struct daemon_info *cp = get_daemon_info(htx->coinid);
-    struct subatomic_rawtransaction *rp = &htx->micropay;
-    if ( cp == 0 )
-        return(0);
-    subatomic_set_unspent_tx0(&U,htx);
-    rp->numinputs = 0;
-    rp->inputs[rp->numinputs++] = U;
-    rp->amount = (htx->avail - cp->txfee);
-    rp->change = 0;
-    rp->inputsum = htx->avail;
-    //printf("subatomic_sendincr myshare %f seqid.%d\n",myshare,seqid);
-    if ( subatomic_calc_rawoutputs(htx,cp,rp,myshare,htx->coinaddr,othercoinaddr,Global_gp->internalmarker[cp->coinid]) > 0 )
-    {
-        subatomic_gen_rawtransaction(htx->xferaddr->multisigaddr,cp,rp,htx->coinaddr,0,seqid);
-        return(htx->otheramount);
-    }
-    return(-1);
-}
 
 void subatomic_callback(struct NXT_acct *np,int32_t fragi,struct subatomic_tx *atx,struct json_AM *ap,cJSON *json,void *binarydata,int32_t binarylen,uint32_t *targetcrcs)
 {
@@ -892,45 +479,6 @@ int32_t share_atomictx(struct NXT_acct *np,char *txbytes,int32_t fragi)
     return(fragi+1);
 }
 
-int32_t share_tx(struct NXT_acct *np,struct subatomic_rawtransaction *rp,int32_t startfragi,int32_t funcid)
-{
-    uint32_t TCRC;
-    int32_t incr,size;
-    char i,n,jsonstr[512];
-    incr = (int32_t)(SYNC_FRAGSIZE - sizeof(struct json_AM) - 60);
-    size = (sizeof(*rp) - sizeof(rp->inputs) + sizeof(rp->inputs[0])*rp->numinputs);
-    n = size / incr;
-    if ( (size / incr) != 0 )
-        n++;
-    TCRC = _crc32(0,rp,sizeof(struct subatomic_rawtransaction));
-    for (i=0; i<n; i++)
-    {
-        sprintf(jsonstr,"{\"TCRC\":%u,\"starti\":%d,\"i\":%d,\"n\":%d,\"incr\":%d}",TCRC,startfragi,i,n,incr);
-        send_to_NXTaddr(&np->localcrcs[startfragi+i],np->H.NXTaddr,startfragi+i,SUBATOMIC_SIG,funcid,jsonstr,(void *)((long)rp+i*incr),incr);
-    }
-    return(startfragi + n);
-}
-
-int32_t share_refundtx(struct NXT_acct *np,struct subatomic_rawtransaction *rp,int32_t startfragi)
-{
-    return(share_tx(np,rp,startfragi,SUBATOMIC_REFUNDTX_NEEDSIG));
-}
-
-int32_t share_other_refundtx(struct NXT_acct *np,struct subatomic_rawtransaction *rp,int32_t startfragi)
-{
-    return(share_tx(np,rp,startfragi,SUBATOMIC_REFUNDTX_SIGNED));
-}
-
-int32_t share_fundingtx(struct NXT_acct *np,struct subatomic_rawtransaction *rp,int32_t startfragi)
-{
-    return(share_tx(np,rp,startfragi,SUBATOMIC_FUNDINGTX));
-}
-
-int32_t share_micropaytx(struct NXT_acct *np,struct subatomic_rawtransaction *rp,int32_t startfragi)
-{
-    return(share_tx(np,rp,startfragi,SUBATOMIC_SEND_MICROTX));
-}
-
 int32_t update_atomic(struct NXT_acct *np,struct subatomic_tx *atx)
 {
     cJSON *txjson,*json;
@@ -1042,295 +590,6 @@ int32_t update_atomic(struct NXT_acct *np,struct subatomic_tx *atx)
         }
     }
     return(status);
-}
-
-int32_t verify_txs_created(struct NXT_acct *np,struct subatomic_tx *atx)
-{
-    struct subatomic_halftx *htx = &atx->myhalf;
-    char signedtx[1024];
-    double myshare = .01;
-    struct atomic_swap *sp;
-    struct NXT_tx *utx,*refutx = 0;
-    if ( atx->type == NXTFOR_SUBATOMIC_TYPE || atx->type == ATOMICSWAP_TYPE )
-    {
-        sp = &atx->swap;
-        if ( sp->numfragis == 0 )
-        {
-            utx = set_NXT_tx(sp->jsons[0]);
-            if ( utx != 0 )
-            {
-                refutx = sign_NXT_tx(Global_subatomic->curl_handle,signedtx,utx,sp->fullhash[1],myshare);
-                if ( refutx != 0 )
-                {
-                    if ( NXTutxcmp(refutx,utx,myshare) == 0 )
-                    {
-                        printf("signed and referenced tx verified\n");
-                        safecopy(sp->signedtxbytes[0],signedtx,sizeof(sp->signedtxbytes[0]));
-                        //sp->numfragis = share_atomictx(np,sp->signedtxbytes[0],1);
-                        //status = SUBATOMIC_COMPLETED;
-                        sp->numfragis = 2;
-                        sp->mytx = utx;
-                        return(1);
-                    }
-                    free(refutx);
-                }
-                //free(utx);
-            }
-        }
-        return(0);
-    }
-    if ( atx->other_refundtx_done == 0 )
-        printf("[R%d S%d] multisig addrs %d %d %d %d | refundtx.%d xferaddr.%p\n",np->recvid,np->sentid,atx->myhalf.coinaddr[0],atx->myhalf.pubkey[0],atx->otherhalf.coinaddr[0],atx->otherhalf.pubkey[0],atx->other_refundtx_done,atx->myhalf.xferaddr);
-    if ( atx->other_refundtx_done == 0 )
-        atx->myrefund_fragi = share_pubkey(np,1,htx->destcoinid,htx->destcoinaddr,htx->destpubkey);
-    if ( atx->myhalf.xferaddr == 0 )
-    {
-        if ( atx->otherhalf.pubkey[0] != 0 )
-        {
-            printf(">>>> multisig addrs %d %d %d %d\n",htx->coinaddr[0],htx->pubkey[0],atx->otherhalf.coinaddr[0],atx->otherhalf.pubkey[0]);
-            subatomic_gen_multisig(atx,htx);
-            if ( atx->myhalf.xferaddr != 0 )
-                printf("generated multisig\n");
-        }
-    }
-    if ( atx->myhalf.xferaddr == 0 )
-    {
-        return(0);
-    }
-    if ( atx->txs_created == 0 && subatomic_ensure_txs(atx,htx,(atx->longerflag * SUBATOMIC_LOCKTIME)) < 0 )
-    {
-        printf("warning: cant create required transactions, probably lack of funds\n");
-        return(-1);
-    }
-    if ( atx->other_refund_fragi == 0 )
-        atx->other_refund_fragi = share_refundtx(np,&htx->refund,atx->myrefund_fragi);
-    return(1);
-}
-
-int32_t update_other_refundtxdone(struct NXT_acct *np,struct subatomic_tx *atx)
-{
-    struct subatomic_halftx *htx = &atx->myhalf;
-    struct subatomic_rawtransaction *rp;
-    int32_t lockedblock;
-    int64_t value;
-    if ( atx->type == SUBATOMIC_FORNXT_TYPE || atx->type == ATOMICSWAP_TYPE )
-    {
-        atx->other_refundtx_done = 1;
-    }
-    else
-    {
-        rp = &atx->otherhalf.refund;
-        if ( atx->other_refundtx_done == 0 )
-        {
-            if ( atx->other_refundtx_waiting != 0 )
-            {
-                if ( subatomic_signtx(0,&lockedblock,&value,htx->destcoinaddr,rp->signedtransaction,sizeof(rp->signedtransaction),get_daemon_info(htx->destcoinid),htx->destcoinid,rp,rp->rawtransaction) == 0 )
-                {
-                    printf("warning: error signing other's NXT.%s refund\n",htx->otherNXTaddr);
-                    return(0);
-                }
-                atx->funding_fragi = share_other_refundtx(np,rp,atx->other_refund_fragi);
-                atx->other_refundtx_done = 1;
-                printf("other refundtx done\n");
-            }
-        }
-    }
-    return(atx->other_refundtx_done);
-}
-
-int32_t update_my_refundtxdone(struct NXT_acct *np,struct subatomic_tx *atx)
-{
-    struct subatomic_halftx *htx = &atx->myhalf;
-    if ( atx->type == NXTFOR_SUBATOMIC_TYPE || atx->type == ATOMICSWAP_TYPE )
-    {
-        atx->myrefundtx_done = 1;
-    }
-    else
-    {
-        if ( atx->myrefundtx_done == 0 )
-        {
-            if ( atx->myrefundtx_waiting != 0 )
-            {
-                if ( subatomic_validate_refund(atx,htx) < 0 )
-                {
-                    printf("warning: other side NXT.%s returned invalid signed refund\n",htx->otherNXTaddr);
-                    return(0);
-                }
-                subatomic_broadcasttx(&atx->myhalf,atx->myhalf.countersignedrefund,0,atx->refundlockblock);
-                atx->myrefundtx_done = 1;
-                printf("myrefund done\n");
-            }
-        }
-    }
-    return(atx->myrefundtx_done);
-}
-
-int32_t update_fundingtx(struct NXT_acct *np,struct subatomic_tx *atx)
-{
-    struct subatomic_halftx *htx = &atx->myhalf;
-    if ( atx->type == SUBATOMIC_TYPE || atx->type == SUBATOMIC_FORNXT_TYPE )
-    {
-        if ( atx->microtx_fragi == 0 || atx->other_fundingtx_confirms == 0 )
-            atx->microtx_fragi = share_fundingtx(np,&htx->funding,atx->funding_fragi);
-    }
-    if ( atx->type == NXTFOR_SUBATOMIC_TYPE || atx->type == SUBATOMIC_TYPE )
-    {
-        if ( atx->other_fundingtx_confirms == 0 )
-        {
-            if ( atx->other_fundingtx_waiting != 0 )
-            {
-                subatomic_broadcasttx(&atx->otherhalf,atx->otherhalf.funding.signedtransaction,0,0);
-                atx->other_fundingtx_confirms = atx->otherhalf.minconfirms+1;
-                printf("broadcast other funding\n");
-            }
-        }
-    }
-    //else atx->other_fundingtx_confirms = get_numconfirms(&atx->otherhalf);  // jl777: critical to wait for both funding tx to get confirmed
-    return(atx->other_fundingtx_confirms);
-}
-
-int32_t update_otherincr(struct NXT_acct *np,struct subatomic_tx *atx)
-{
-    char *parsed;
-    cJSON *json;
-    double myshare;
-    int32_t retval = 0;
-    struct NXT_tx *refutx,*utx;
-    if ( atx->type == ATOMICSWAP_TYPE || atx->type == SUBATOMIC_FORNXT_TYPE )
-    {
-        if ( atx->swap.atomictx_waiting != 0 )
-        {
-            printf("GOT.(%s)\n",atx->swap.signedtxbytes[1]);
-            if ( (parsed = issue_parseTransaction(Global_subatomic->curl_handle,atx->swap.signedtxbytes[1])) != 0 )
-            {
-                json = cJSON_Parse(parsed);
-                if ( json != 0 )
-                {
-                    refutx = set_NXT_tx(atx->swap.jsons[1]);
-                    utx = set_NXT_tx(json);
-                    //printf("refutx.%p utx.%p verified.%d\n",refutx,utx,utx->verify);
-                    if ( utx != 0 && refutx != 0 && utx->verify != 0 )
-                    {
-                        myshare = (double)utx->amountNQT / refutx->amountNQT;
-                        if ( NXTutxcmp(refutx,utx,myshare) == 0 )
-                        {
-                            retval = myshare * atx->ARGS.numincr;
-                            printf("retval %d = myshare %.4f * numincr %d\n",retval,myshare,atx->ARGS.numincr);
-                        } else printf("miscompare myshare %.4f %lld/%lld\n",myshare,(long long)utx->amountNQT,(long long)refutx->amountNQT);
-                    }
-                }
-            }
-        }
-    }
-    else if ( atx->type == NXTFOR_SUBATOMIC_TYPE || atx->type == SUBATOMIC_TYPE )
-        retval = process_microtx(atx,&atx->otherhalf.micropay,atx->ARGS.incr,atx->ARGS.otherincr);
-    return(retval);
-}
-
-int32_t calc_micropay(struct NXT_acct *np,struct subatomic_tx *atx)
-{
-    struct NXT_tx *refutx;
-    char signedtx[1024];
-    if ( atx->type == ATOMICSWAP_TYPE || atx->type == NXTFOR_SUBATOMIC_TYPE )
-    {
-        refutx = sign_NXT_tx(Global_subatomic->curl_handle,signedtx,atx->swap.mytx,atx->swap.fullhash[1],atx->ARGS.myshare);
-        if ( refutx != 0 )
-        {
-            if ( NXTutxcmp(refutx,atx->swap.mytx,atx->ARGS.myshare) == 0 )
-            {
-                safecopy(atx->swap.signedtxbytes[0],signedtx,sizeof(atx->swap.signedtxbytes[0]));
-            }
-        }
-    }
-    else
-    {
-        if ( (atx->sent_to_other= subatomic_calc_micropay(atx,&atx->myhalf,atx->otherhalf.coinaddr,atx->ARGS.myshare,SUBATOMIC_STARTING_SEQUENCEID+atx->ARGS.incr)) > 0 )
-        {
-            // printf("micropay.(%s)\n",htx->micropay.signedtransaction);
-            //printf("send micropay share incr.%d otherincr.%d totalfragis.%d\n",atx->ARGS.incr,atx->ARGS.otherincr,totalfragis);
-            return(0);
-        }
-    }
-    return(-1);
-}
-
-int32_t send_micropay(struct NXT_acct *np,struct subatomic_tx *atx)
-{
-    if ( atx->type == ATOMICSWAP_TYPE || atx->type == NXTFOR_SUBATOMIC_TYPE )
-        share_atomictx(np,atx->swap.signedtxbytes[0],1);
-    else share_micropaytx(np,&atx->myhalf.micropay,atx->microtx_fragi);
-    return(0);
-}
-
-void update_subatomic_transfers(char *NXTaddr)
-{
-    static int64_t nexttime;
-    struct subatomic_info *gp = Global_subatomic;
-    struct subatomic_tx *atx;
-    struct NXT_acct *np;
-    int32_t i,j,txcreated,createdflag,retval;
-    //printf("update subatomics\n");
-    if ( microseconds() < nexttime )
-        return;
-    for (i=0; i<gp->numsubatomics; i++)
-    {
-        atx = gp->subatomics[i];
-        if ( atx->initflag == 3 && atx->status != SUBATOMIC_COMPLETED && atx->status != SUBATOMIC_ABORTED )
-        {
-            np = get_NXTacct(&createdflag,Global_mp,atx->ARGS.otherNXTaddr);
-            if ( (np->recvid == 0 || np->sentid == 0) && verify_peer_link(SUBATOMIC_SIG,atx->ARGS.otherNXTaddr) != 0 )
-            {
-                nexttime = (microseconds() + 1000000*300);
-                continue;
-            }
-            if ( atx->type == ATOMICSWAP_TYPE )
-            {
-                atx->status = update_atomic(np,atx);
-                continue;
-            }
-            txcreated = verify_txs_created(np,atx);
-            if ( txcreated < 0 )
-            {
-                atx->status = SUBATOMIC_ABORTED;
-                continue;
-            }
-            if ( (atx->txs_created= txcreated) == 0 )
-                continue;
-            update_other_refundtxdone(np,atx);
-            update_my_refundtxdone(np,atx);
-            if ( atx->myrefundtx_done <= 0 || atx->other_refundtx_done <= 0 )
-                continue;
-            update_fundingtx(np,atx);
-            if ( atx->other_fundingtx_confirms-1 < atx->otherhalf.minconfirms )
-                continue;
-            //printf("micropay loop: share incr.%d otherincr.%d totalfragis.%d\n",atx->ARGS.incr,atx->ARGS.otherincr,totalfragis);
-            if ( atx->other_micropaytx_waiting != 0 )
-            {
-                retval = update_otherincr(np,atx);//process_microtx(atx,&atx->otherhalf.micropay,atx->ARGS.incr,atx->ARGS.otherincr);
-                if ( retval >= 0 )
-                    atx->ARGS.otherincr = retval;
-                atx->other_micropaytx_waiting = 0;
-            }
-            if ( atx->ARGS.incr < atx->ARGS.numincr && atx->ARGS.incr <= atx->ARGS.otherincr+1 )
-            {
-                atx->ARGS.incr++;
-                if ( atx->ARGS.incr < atx->ARGS.otherincr )
-                    atx->ARGS.incr = atx->ARGS.otherincr;
-                atx->ARGS.myshare = ((double)atx->ARGS.numincr - atx->ARGS.incr) / atx->ARGS.numincr;
-                calc_micropay(np,atx);
-            }
-            if ( atx->ARGS.incr == 100 )
-            {
-                for (j=0; j<3; j++)
-                {
-                    send_micropay(np,atx);
-                    sleep(3);
-                }
-            }
-            else send_micropay(np,atx);
-        }
-    }
-    //printf("done update subatomics\n");
 }
 
 char *AM_subatomic(int32_t func,int32_t rating,char *destaddr,char *senderNXTaddr,char *jsontxt)
@@ -1887,6 +1146,11 @@ void test_atomictx()
 #endif
 #endif
 
+#define SUBATOMIC_ABORTED -1
+#define SUBATOMIC_HAVEREFUND 1
+#define SUBATOMIC_WAITFOR_CONFIRMS 2
+#define SUBATOMIC_COMPLETED 3
+
 #define MAX_SUBATOMIC_OUTPUTS 4
 #define MAX_SUBATOMIC_INPUTS 16
 #define SUBATOMIC_STARTING_SEQUENCEID 1000
@@ -1916,10 +1180,10 @@ struct subatomic_halftx
     int32_t minconfirms;
     int64_t destamount,avail,amount,donation,myamount,otheramount;  // amount = (myamount + otheramount + donation + txfee)
     struct subatomic_rawtransaction funding,refund,micropay;
-    struct destbuf funding_scriptPubKey;
+    struct destbuf funding_scriptPubKey,multisigaddr,redeemScript;
     char fundingtxid[128],refundtxid[128],micropaytxid[128],countersignedrefund[1024],completedmicropay[1024];
-    char NXTaddr[64],coinaddr[64],pubkey[128],ipaddr[32],coinstr[16],destcoinstr[16],redeemScript[4096];
-    char otherNXTaddr[64],destcoinaddr[64],destpubkey[128],otheripaddr[32],multisigaddr[128];
+    char NXTaddr[64],coinaddr[64],pubkey[128],ipaddr[32],coinstr[16],destcoinstr[16];
+    char otherNXTaddr[64],destcoinaddr[64],destpubkey[128],otheripaddr[32];
 };
 
 struct subatomic_tx_args
@@ -1942,7 +1206,205 @@ struct subatomic_tx
     unsigned char recvbufs[4][sizeof(struct subatomic_rawtransaction)];
 };
 
-struct subatomic_unspent_tx *gather_unspents(int32_t *nump,struct coin777 *coin,char *coinaddr)
+cJSON *get_transaction_json(struct coin777 *coin,char *txid)
+{
+    char txidstr[512],*transaction = 0; cJSON *json = 0;
+    if ( coin == 0 )
+        return(0);
+    sprintf(txidstr,"\"%s\"",txid);
+    if ( (transaction= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"gettransaction",txidstr)) != 0 && transaction[0] != 0 )
+    {
+        //printf("got transaction.(%s)\n",transaction);
+        json = cJSON_Parse(transaction);
+    }
+    if ( transaction != 0 )
+        free(transaction);
+    return(json);
+}
+
+int32_t subatomic_tx_confirmed(struct coin777 *coin,char *txid)
+{
+    cJSON *json; int32_t numconfirmed = -1;
+    if ( (json= get_transaction_json(coin,txid)) != 0 )
+    {
+        numconfirmed = (int32_t)get_cJSON_int(json,"confirmations");
+        free_json(json);
+    }
+    return(numconfirmed);
+}
+
+cJSON *get_decoderaw_json(struct coin777 *coin,char *rawtransaction)
+{
+    char *str,*retstr; cJSON *json = 0;
+    str = malloc(strlen(rawtransaction)+4);
+    //printf("got rawtransaction.(%s)\n",rawtransaction);
+    sprintf(str,"\"%s\"",rawtransaction);
+    if ( (retstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"decoderawtransaction",str)) != 0 && retstr[0] != 0 )
+    {
+        //printf("got decodetransaction.(%s)\n",retstr);
+        json = cJSON_Parse(retstr);
+    } else printf("error decoding.(%s)\n",str);
+    if ( retstr != 0 )
+        free(retstr);
+    free(str);
+    return(json);
+}
+
+cJSON *get_rawtransaction_json(struct coin777 *coin,char *txid)
+{
+    char txidstr[512],*rawtransaction=0; cJSON *json = 0;
+    if ( coin == 0 )
+        return(0);
+    sprintf(txidstr,"\"%s\"",txid);
+    if ( (rawtransaction= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"getrawtransaction",txidstr)) != 0 && rawtransaction[0] != 0 )
+        json = get_decoderaw_json(coin,rawtransaction);
+    else printf("error with getrawtransaction %s %s\n",coin->name,txid);
+    if ( rawtransaction != 0 )
+        free(rawtransaction);
+    return(json);
+}
+
+int32_t generate_multisigaddr(struct destbuf *multisigaddr,struct destbuf *redeemScript,struct coin777 *coin,char *serverport,char *userpass,int32_t addmultisig,char *params)
+{
+    char addr[1024],*retstr; cJSON *json,*redeemobj,*msigobj; int32_t flag = 0;
+    if ( addmultisig != 0 )
+    {
+        if ( (retstr= bitcoind_passthru(coin->name,serverport,userpass,"addmultisigaddress",params)) != 0 )
+        {
+            strcpy(multisigaddr->buf,retstr);
+            free(retstr);
+            sprintf(addr,"\"%s\"",multisigaddr->buf);
+            if ( (retstr= bitcoind_passthru(coin->name,serverport,userpass,"validateaddress",addr)) != 0 )
+            {
+                json = cJSON_Parse(retstr);
+                if ( json == 0 ) printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+                else
+                {
+                    if ( (redeemobj= cJSON_GetObjectItem(json,"hex")) != 0 )
+                    {
+                        copy_cJSON(redeemScript,redeemobj);
+                        flag = 1;
+                    } else printf("missing redeemScript in (%s)\n",retstr);
+                    free_json(json);
+                }
+                free(retstr);
+            }
+        } else printf("error creating multisig address\n");
+    }
+    else
+    {
+        if ( (retstr= bitcoind_passthru(coin->name,serverport,userpass,"createmultisig",params)) != 0 )
+        {
+            json = cJSON_Parse(retstr);
+            if ( json == 0 ) printf("Error before: [%s]\n",cJSON_GetErrorPtr());
+            else
+            {
+                if ( (msigobj= cJSON_GetObjectItem(json,"address")) != 0 )
+                {
+                    if ( (redeemobj= cJSON_GetObjectItem(json,"redeemScript")) != 0 )
+                    {
+                        copy_cJSON(multisigaddr,msigobj);
+                        copy_cJSON(redeemScript,redeemobj);
+                        flag = 1;
+                    } else printf("missing redeemScript in (%s)\n",retstr);
+                } else printf("multisig missing address in (%s) params.(%s)\n",retstr,params);
+                free_json(json);
+            }
+            free(retstr);
+        } else printf("error issuing createmultisig.(%s)\n",params);
+    }
+    return(flag);
+}
+
+char *createmultisig_json_params(struct pubkey_info *pubkeys,int32_t m,int32_t n,char *acctparm)
+{
+    int32_t i; char *paramstr = 0; cJSON *array,*mobj,*keys,*key;
+    keys = cJSON_CreateArray();
+    for (i=0; i<n; i++)
+    {
+        key = cJSON_CreateString(pubkeys[i].pubkey);
+        cJSON_AddItemToArray(keys,key);
+    }
+    mobj = cJSON_CreateNumber(m);
+    array = cJSON_CreateArray();
+    if ( array != 0 )
+    {
+        cJSON_AddItemToArray(array,mobj);
+        cJSON_AddItemToArray(array,keys);
+        if ( acctparm != 0 )
+            cJSON_AddItemToArray(array,cJSON_CreateString(acctparm));
+        paramstr = cJSON_Print(array);
+        _stripwhite(paramstr,' ');
+        free_json(array);
+    }
+    //printf("createmultisig_json_params.(%s)\n",paramstr);
+    return(paramstr);
+}
+
+int32_t issue_createmultisig(struct destbuf *multisigaddr,struct destbuf *redeemScript,struct coin777 *coin,char *serverport,char *userpass,int32_t use_addmultisig,int32_t m,int32_t n,char *NXTaddr)
+{
+    int32_t flag = 0; char *params; struct pubkey_info pubkeys[16];
+    params = createmultisig_json_params(pubkeys,m,n,(use_addmultisig != 0) ? NXTaddr : 0);
+    flag = 0;
+    if ( params != 0 )
+    {
+        flag = generate_multisigaddr(multisigaddr,redeemScript,coin,serverport,userpass,use_addmultisig,params);
+        free(params);
+    } else printf("error generating msig params\n");
+    return(flag);
+}
+
+int32_t subatomic_gen_multisig(struct subatomic_tx *atx,struct subatomic_halftx *htx)
+{
+    char coinaddrs[3][64]; struct destbuf pubkeys[3]; struct coin777 *coin;
+    if ( (coin= coin777_find(htx->coinstr,0)) == 0 )
+        return(-1);
+    if ( htx->coinaddr[0] != 0 && htx->pubkey[0] != 0 && atx->otherhalf.coinaddr[0] != 0 && atx->otherhalf.pubkey[0] != 0 )
+    {
+        safecopy(coinaddrs[0],htx->coinaddr,sizeof(coinaddrs[0]));
+        safecopy(pubkeys[0].buf,htx->pubkey,sizeof(pubkeys[0]));
+        safecopy(coinaddrs[1],atx->otherhalf.coinaddr,sizeof(coinaddrs[1]));
+        safecopy(pubkeys[1].buf,atx->otherhalf.pubkey,sizeof(pubkeys[1]));
+        issue_createmultisig(&htx->multisigaddr,&htx->redeemScript,coin,coin->serverport,coin->userpass,coin->mgw.use_addmultisig,1,2,0);
+        //#ifdef DEBUG_MODE
+        if ( htx->multisigaddr.buf[0] != 0 )
+            get_pubkey(&pubkeys[2],coin->name,coin->serverport,coin->userpass,htx->multisigaddr.buf);
+        //#endif
+        return(htx->multisigaddr.buf[0] != 0);
+    } else printf("cant gen multisig %d %d %d %d\n",htx->coinaddr[0],htx->pubkey[0],atx->otherhalf.coinaddr[0],atx->otherhalf.pubkey[0]);
+    return(-1);
+}
+
+char *subatomic_broadcasttx(struct subatomic_halftx *htx,char *bytes,int32_t myincr,int32_t lockedblock)
+{
+    FILE *fp; char fname[512],*retstr = 0; cJSON *txjson; struct coin777 *coin;
+    if ( (coin= coin777_find(htx->coinstr,0)) == 0 )
+        return(0);
+    txjson = get_decoderaw_json(coin,bytes);
+    if ( txjson != 0 )
+    {
+        retstr = cJSON_Print(txjson);
+        printf("broadcasting is disabled for now: (%s) ->\n(%s)\n",bytes,retstr);
+        sprintf(fname,"backups/%s_%lld_%s_%s_%lld.%03d_%d",coin->name,(long long)htx->amount,htx->otherNXTaddr,htx->destcoinstr,(long long)htx->destamount,myincr,lockedblock);
+        if ( (fp=fopen(fname,"w")) != 0 )
+        {
+            fprintf(fp,"%s\n%s\n",bytes,retstr);
+            fclose(fp);
+        }
+        free(retstr);
+    }
+    retstr = 0;
+    if ( 0 )
+    {
+        if ( (retstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",bytes)) != 0 )
+        {
+            printf("sendrawtransaction returns.(%s)\n",retstr);
+        }
+    }
+    return(retstr);
+}
+
+struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,struct coin777 *coin,char *coinaddr)
 {
     int32_t i,j,num; struct subatomic_unspent_tx *ups = 0; char params[128],*retstr; cJSON *json,*item;
     /*{
@@ -1953,10 +1415,11 @@ struct subatomic_unspent_tx *gather_unspents(int32_t *nump,struct coin777 *coin,
      "amount" : 2.00000000,
      "confirmations" : 72505
      },*/
+    *totalp = 0;
     sprintf(params,"%d, 99999999",coin->minconfirms);
     if ( (retstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"listunspent",params)) != 0 )
     {
-        printf("unspents (%s)\n",retstr);
+        //printf("unspents (%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             if ( is_cJSON_Array(json) != 0 && (num= cJSON_GetArraySize(json)) > 0 )
@@ -1973,6 +1436,7 @@ struct subatomic_unspent_tx *gather_unspents(int32_t *nump,struct coin777 *coin,
                         ups[j].vout = (int32_t)get_cJSON_int(item,"vout");
                         ups[j].amount = conv_cJSON_float(item,"amount");
                         ups[j].confirmations = (int32_t)get_cJSON_int(item,"confirmations");
+                        *totalp += ups[j].amount;
                         j++;
                     }
                 }
@@ -1981,6 +1445,8 @@ struct subatomic_unspent_tx *gather_unspents(int32_t *nump,struct coin777 *coin,
                 {
                     int _decreasing_signedint64(const void *a,const void *b);
                     qsort(ups,j,sizeof(*ups),_decreasing_signedint64);
+                    for (i=0; i<j; i++)
+                        printf("%s/v%-3d %13.6f %s confs.%-6d | total %.6f\n",ups[i].txid.buf,ups[i].vout,dstr(ups[i].amount),ups[i].address.buf,ups[i].confirmations,dstr(*totalp));
                 }
             }
             free_json(json);
@@ -1990,26 +1456,65 @@ struct subatomic_unspent_tx *gather_unspents(int32_t *nump,struct coin777 *coin,
     return(ups);
 }
 
+struct subatomic_unspent_tx *subatomic_bestfit(uint64_t *valuep,struct coin777 *coin,struct subatomic_unspent_tx *unspents,int32_t numunspents,uint64_t value)
+{
+    int32_t i; uint64_t above,below,gap,atx_value; struct subatomic_unspent_tx *vin,*abovevin,*belowvin;
+    abovevin = belowvin = 0;
+    *valuep = 0;
+    for (above=below=i=0; i<numunspents; i++)
+    {
+        vin = &unspents[i];
+        *valuep = atx_value = vin->amount;
+        if ( atx_value == value )
+            return(vin);
+        else if ( atx_value > value )
+        {
+            gap = (atx_value - value);
+            if ( above == 0 || gap < above )
+            {
+                above = gap;
+                abovevin = vin;
+            }
+        }
+        else
+        {
+            gap = (value - atx_value);
+            if ( below == 0 || gap < below )
+            {
+                below = gap;
+                belowvin = vin;
+            }
+        }
+    }
+    return((abovevin != 0) ? abovevin : belowvin);
+}
+
 int64_t subatomic_calc_rawinputs(struct coin777 *coin,struct subatomic_rawtransaction *rp,uint64_t amount,struct subatomic_unspent_tx *ups,int32_t num,uint64_t donation)
 {
-    uint64_t sum = 0; struct subatomic_unspent_tx *up; int32_t i;
+    uint64_t value,sum = 0; struct subatomic_unspent_tx *up; int32_t i;
     rp->inputsum = rp->numinputs = 0;
     printf("unspent num %d, amount %.8f vs donation %.8f txfee %.8f\n",num,dstr(amount),dstr(donation),dstr(coin->mgw.txfee));
-    if ( coin == 0 || (donation + coin->mgw.txfee) > amount )
+    if ( coin == 0 || (donation + coin->mgw.txfee) > amount || num == 0 )
         return(0);
+    
     for (i=0; i<num&&i<((int32_t)(sizeof(rp->inputs)/sizeof(*rp->inputs))); i++)
     {
-        up = &ups[i];
-        sum += up->amount;
-        rp->inputs[rp->numinputs++] = *up;
-        if ( sum >= amount )
+        if ( (up= subatomic_bestfit(&value,coin,ups,num,amount)) != 0 )
         {
-            rp->amount = (amount - coin->mgw.txfee);
-            rp->change = (sum - amount);
-            rp->inputsum = sum;
-            printf("numinputs %d sum %.8f vs amount %.8f change %.8f -> txfee %.8f\n",rp->numinputs,dstr(rp->inputsum),dstr(amount),dstr(rp->change),dstr(sum - rp->change - rp->amount));
-            return(rp->inputsum);
+            sum += up->amount;
+            printf("%.8f ",dstr(value));
+            rp->inputs[rp->numinputs++] = *up;
+            if ( sum >= amount )
+            {
+                rp->amount = (amount - coin->mgw.txfee);
+                rp->change = (sum - amount);
+                rp->inputsum = sum;
+                printf("numinputs %d sum %.8f vs amount %.8f change %.8f -> txfee %.8f\n",rp->numinputs,dstr(rp->inputsum),dstr(amount),dstr(rp->change),dstr(sum - rp->change - rp->amount));
+                return(rp->inputsum);
+            }
         }
+        printf("error getting bestfit unspent\n");
+        break;
     }
     printf("i.%d error numinputs %d sum %.8f\n",i,rp->numinputs,dstr(rp->inputsum));
     return(0);
@@ -2018,7 +1523,7 @@ int64_t subatomic_calc_rawinputs(struct coin777 *coin,struct subatomic_rawtransa
 int32_t subatomic_calc_rawoutputs(struct subatomic_halftx *htx,struct coin777 *coin,struct subatomic_rawtransaction *rp,double myshare,char *myaddr,char *otheraddr,char *changeaddr)
 {
     int32_t n = 0; int64_t donation;
-    //printf("rp->amount %.8f, (%.8f - %.8f), change %.8f (%.8f - %.8f) donation %.8f\n",dstr(rp->amount),dstr(htx->avail),dstr(cp->txfee),dstr(rp->change),dstr(rp->inputsum),dstr(htx->avail),dstr(htx->donation));
+    printf("rp->amount %.8f, (%.8f - %.8f), change %.8f (%.8f - %.8f) donation %.8f\n",dstr(rp->amount),dstr(htx->avail),dstr(coin->mgw.txfee),dstr(rp->change),dstr(rp->inputsum),dstr(htx->avail),dstr(htx->donation));
     if ( rp->amount == (htx->avail - coin->mgw.txfee) && rp->change == (rp->inputsum - htx->avail) )
     {
         if ( changeaddr == 0 )
@@ -2091,24 +1596,6 @@ int32_t script_has_coinaddr(cJSON *scriptobj,char *coinaddr)
         }
     }
     return(0);
-}
-
-cJSON *get_decoderaw_json(struct coin777 *coin,char *rawtransaction)
-{
-    char *str,*retstr; cJSON *json = 0;
-    str = malloc(strlen(rawtransaction)+4);
-    //printf("got rawtransaction.(%s)\n",rawtransaction);
-    sprintf(str,"\"%s\"",rawtransaction);
-    retstr = bitcoind_RPC(0,coin->name,coin->serverport,coin->userpass,"decoderawtransaction",str);
-    if ( retstr != 0 && retstr[0] != 0 )
-    {
-        //printf("got decodetransaction.(%s)\n",retstr);
-        json = cJSON_Parse(retstr);
-    } else printf("error decoding.(%s)\n",str);
-    if ( retstr != 0 )
-        free(retstr);
-    free(str);
-    return(json);
 }
 
 char *subatomic_decodetxid(int64_t *valuep,struct destbuf *scriptPubKey,int32_t *locktimep,struct coin777 *coin,char *rawtransaction,char *mycoinaddr)
@@ -2243,7 +1730,7 @@ char *subatomic_signtx(char *skipaddr,int32_t *lockedblockp,int64_t *valuep,char
     rp->txid[0] = deststr[0] = 0;
     rp->completed = -1;
     //printf("cp.%d vs %d: subatomic_signtx rawbytes.(%s)\n",cp->coinid,coinid,rawbytes);
-    if ( (signparams= subatomic_signraw_json_params(skipaddr,coinaddr,coin,rp,rawbytes)) != 0 )
+    if ( coin != 0 && (signparams= subatomic_signraw_json_params(skipaddr,coinaddr,coin,rp,rawbytes)) != 0 )
     {
         _stripwhite(signparams,' ');
         // printf("got signparams.(%s)\n",signparams);
@@ -2321,6 +1808,7 @@ char *subatomic_gen_rawtransaction(char *skipaddr,struct coin777 *coin,struct su
     if ( (rawparams = subatomic_rawtxid_json(coin,rp)) != 0 )
     {
         _stripwhite(rawparams,' ');
+        printf("create.(%s)\n",rawparams);
         if ( (retstr= bitcoind_RPC(0,coin->name,coin->serverport,coin->userpass,"createrawtransaction",rawparams)) != 0 )
         {
             if ( retstr[0] != 0 )
@@ -2364,7 +1852,7 @@ char *subatomic_gen_rawtransaction(char *skipaddr,struct coin777 *coin,struct su
 char *subatomic_create_fundingtx(struct subatomic_halftx *htx,int64_t amount)
 {
     //2) Create and sign but do not broadcast a transaction (T1) that sets up a payment of amount to funding acct
-    struct subatomic_unspent_tx *ups; struct coin777 *coin; char *txid,*retstr = 0; int32_t num,check_locktime,locktime = 0;
+    struct subatomic_unspent_tx *ups; struct coin777 *coin; char *txid,*retstr = 0; uint64_t total; int32_t num,check_locktime,locktime = 0;
     if ( (coin= coin777_find(htx->coinstr,0)) == 0 )
     {
         printf("subatomic_create_fundingtx: cant find (%s)\n",htx->coinstr);
@@ -2372,16 +1860,16 @@ char *subatomic_create_fundingtx(struct subatomic_halftx *htx,int64_t amount)
     }
     printf("CREATE FUNDING TX.(%s) for %.8f -> %s locktime.%d\n",coin->name,dstr(amount),htx->coinaddr,locktime);
     memset(&htx->funding,0,sizeof(htx->funding));
-    if ( (ups= gather_unspents(&num,coin,0)) && num != 0 )
+    if ( (ups= gather_unspents(&total,&num,coin,0)) && num != 0 )
     {
         if ( subatomic_calc_rawinputs(coin,&htx->funding,amount,ups,num,htx->donation) >= amount )
         {
             htx->avail = amount;
-            if ( subatomic_calc_rawoutputs(htx,coin,&htx->funding,1.,htx->multisigaddr,0,htx->coinaddr) > 0 )
+            if ( subatomic_calc_rawoutputs(htx,coin,&htx->funding,1.,htx->multisigaddr.buf,0,htx->coinaddr) > 0 )
             {
-                if ( (retstr= subatomic_gen_rawtransaction(htx->multisigaddr,coin,&htx->funding,htx->coinaddr,locktime,0xffffffff)) != 0 )
+                if ( (retstr= subatomic_gen_rawtransaction(htx->multisigaddr.buf,coin,&htx->funding,htx->coinaddr,locktime,0xffffffff)) != 0 )
                 {
-                    txid = subatomic_decodetxid(0,&htx->funding_scriptPubKey,&check_locktime,coin,htx->funding.rawtransaction,htx->multisigaddr);
+                    txid = subatomic_decodetxid(0,&htx->funding_scriptPubKey,&check_locktime,coin,htx->funding.rawtransaction,htx->multisigaddr.buf);
                     printf("txid.%s fundingtx %.8f -> %.8f %s completed.%d locktimes %d vs %d\n",txid,dstr(amount),dstr(htx->funding.amount),retstr,htx->funding.completed,check_locktime,locktime);
                     printf("funding.(%s)\n",htx->funding.signedtransaction);
                 }
@@ -2399,9 +1887,9 @@ void subatomic_set_unspent_tx0(struct subatomic_unspent_tx *up,struct subatomic_
     up->vout = 0;
     up->amount = htx->avail;
     safecopy(up->txid.buf,htx->fundingtxid,sizeof(up->txid));
-    safecopy(up->address.buf,htx->multisigaddr,sizeof(up->address));
+    safecopy(up->address.buf,htx->multisigaddr.buf,sizeof(up->address));
     safecopy(up->scriptPubKey.buf,htx->funding_scriptPubKey.buf,sizeof(up->scriptPubKey));
-    safecopy(up->redeemScript.buf,htx->redeemScript,sizeof(up->redeemScript));
+    safecopy(up->redeemScript.buf,htx->redeemScript.buf,sizeof(up->redeemScript));
 }
 
 char *subatomic_create_paytx(struct subatomic_rawtransaction *rp,char *signcoinaddr,struct subatomic_halftx *htx,char *othercoinaddr,int32_t locktime,double myshare,int32_t seqid)
@@ -2409,6 +1897,7 @@ char *subatomic_create_paytx(struct subatomic_rawtransaction *rp,char *signcoina
     struct subatomic_unspent_tx U; int32_t check_locktime; int64_t value; char *txid = 0; struct coin777 *coin = coin777_find(htx->coinstr,0);
     if ( coin == 0 )
         return(0);
+    //struct subatomic_unspent_tx *gather_unspents(int32_t *nump,struct coin777 *coin,char *coinaddr)
     printf("create paytx %s\n",coin->name);
     subatomic_set_unspent_tx0(&U,htx);
     rp->numinputs = 0;
@@ -2419,7 +1908,7 @@ char *subatomic_create_paytx(struct subatomic_rawtransaction *rp,char *signcoina
     // jl777: make sure sequence number is not -1!!
     if ( subatomic_calc_rawoutputs(htx,coin,rp,myshare,htx->coinaddr,othercoinaddr,0) > 0 )
     {
-        subatomic_gen_rawtransaction(htx->multisigaddr,coin,rp,signcoinaddr,locktime,seqid);
+        subatomic_gen_rawtransaction(htx->multisigaddr.buf,coin,rp,signcoinaddr,locktime,seqid);
         txid = subatomic_decodetxid(&value,0,&check_locktime,coin,rp->rawtransaction,htx->coinaddr);
         if ( check_locktime != locktime )
         {
@@ -2431,12 +1920,103 @@ char *subatomic_create_paytx(struct subatomic_rawtransaction *rp,char *signcoina
     return(txid);
 }
 
+int32_t subatomic_gen_pubkeys(struct subatomic_tx *atx,struct subatomic_halftx *htx)
+{
+    char coinaddrs[3][128],pubkeys[3][256],*coinstr; int32_t i,flag=0; struct destbuf pubkey; char *coinaddr,*pubkeystr; struct coin777 *coin;
+    if ( htx->multisigaddr.buf[0] == 0 )
+    {
+        memset(coinaddrs,0,sizeof(coinaddrs));
+        memset(pubkeys,0,sizeof(pubkeys));
+        for (i=0; i<2; i++)
+        {
+            if ( i == 0 )
+            {
+                pubkeystr = atx->myhalf.pubkey;
+                coinaddr = atx->myhalf.coinaddr;
+                coinstr = atx->ARGS.coinstr;
+            }
+            else
+            {
+                pubkeystr = atx->myhalf.destpubkey;
+                coinaddr = atx->myhalf.destcoinaddr;
+                coinstr = atx->ARGS.destcoinstr;
+            }
+            if ( pubkeystr[0] == 0 && (coin= coin777_find(coinstr,0)) != 0 )
+            {
+                get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
+                pubkeystr = pubkey.buf;
+            }
+            if ( pubkeystr[0] != 0 )
+            {
+                flag++;
+                safecopy(atx->ARGS.mypubkeys[i],pubkey.buf,sizeof(atx->ARGS.mypubkeys[i]));
+                printf("i.%d gen pubkey %s (%s) for (%s)\n",i,coinstr,pubkey.buf,coinaddr);
+            }
+            else
+            {
+                printf("i.%d cant generate %s pubkey for addr.%s\n",i,coinstr,coinaddr);
+                //return(-1);
+            }
+        }
+    }
+    return(flag);
+}
+
+// Alice sends a future transaction to Bob's address
+// Bob sends a phased tx to Alice that triggers off of his pubkey
+// When Bob spends the tx, the pubkey triggers his phased tx to bob.
+#define SUBATOMIC_SEND_PUBKEY 'P'
+#define SUBATOMIC_REFUNDTX_NEEDSIG 'R'
+#define SUBATOMIC_REFUNDTX_SIGNED 'S'
+#define SUBATOMIC_FUNDINGTX 'F'
+#define SUBATOMIC_SEND_MICROTX 'T'
+#define SUBATOMIC_SEND_ATOMICTX 'A'
+
+int32_t share_tx(struct subatomic_rawtransaction *rp,int32_t funcid)
+{
+    /*uint32_t TCRC;
+    int32_t incr,size;
+    char i,n,jsonstr[512];
+    incr = (int32_t)(SYNC_FRAGSIZE - sizeof(struct json_AM) - 60);
+    size = (sizeof(*rp) - sizeof(rp->inputs) + sizeof(rp->inputs[0])*rp->numinputs);
+    n = size / incr;
+    if ( (size / incr) != 0 )
+        n++;
+    TCRC = _crc32(0,rp,sizeof(struct subatomic_rawtransaction));
+    for (i=0; i<n; i++)
+    {
+        sprintf(jsonstr,"{\"TCRC\":%u,\"starti\":%d,\"i\":%d,\"n\":%d,\"incr\":%d}",TCRC,startfragi,i,n,incr);
+        send_to_NXTaddr(&np->localcrcs[startfragi+i],np->H.NXTaddr,startfragi+i,SUBATOMIC_SIG,funcid,jsonstr,(void *)((long)rp+i*incr),incr);
+    }*/
+    return(0);
+}
+
+int32_t share_refundtx(struct subatomic_rawtransaction *rp)
+{
+    return(share_tx(rp,SUBATOMIC_REFUNDTX_NEEDSIG));
+}
+
+int32_t share_other_refundtx(struct subatomic_rawtransaction *rp)
+{
+    return(share_tx(rp,SUBATOMIC_REFUNDTX_SIGNED));
+}
+
+int32_t share_fundingtx(struct subatomic_rawtransaction *rp)
+{
+    return(share_tx(rp,SUBATOMIC_FUNDINGTX));
+}
+
+int32_t share_micropaytx(struct subatomic_rawtransaction *rp)
+{
+    return(share_tx(rp,SUBATOMIC_SEND_MICROTX));
+}
+
 int32_t subatomic_ensure_txs(struct subatomic_halftx *otherhalf,struct subatomic_halftx *htx,int32_t locktime)
 {
     char *fundingtxid,*refundtxid,*micropaytxid; struct coin777 *coin; int32_t blocknum = 0;
-    if ( (coin= coin777_find(htx->coinstr,0)) == 0 || htx->multisigaddr[0] == 0 )
+    if ( (coin= coin777_find(htx->coinstr,0)) == 0 || htx->multisigaddr.buf[0] == 0 )
     {
-        printf("cant get valid daemon for %s or no xferaddr.%p\n",coin->name,htx->multisigaddr);
+        printf("cant get valid daemon for %s or no xferaddr.%s\n",coin->name,htx->multisigaddr.buf);
         return(-1);
     }
     if ( locktime != 0 )
@@ -2474,50 +2054,218 @@ int32_t subatomic_ensure_txs(struct subatomic_halftx *otherhalf,struct subatomic
             return(-1);
         safecopy(htx->micropaytxid,micropaytxid,sizeof(htx->micropaytxid));
         free(micropaytxid);
-  }
+    }
     return(blocknum);
 }
 
-int32_t subatomic_gen_pubkeys(struct subatomic_tx *atx,struct subatomic_halftx *htx)
+int32_t verify_txs_created(struct subatomic_tx *atx)
 {
-    char coinaddrs[3][128],pubkeys[3][256],*coinstr; int32_t i,flag=0; struct destbuf pubkey; char *coinaddr,*pubkeystr; struct coin777 *coin;
-    if ( htx->multisigaddr[0] == 0 )
+    struct subatomic_halftx *htx = &atx->myhalf;
+    if ( atx->other_refundtx_done == 0 )
+        printf("multisig addrs %d %d %d %d | refundtx.%d multisigaddr.%s\n",atx->myhalf.coinaddr[0],atx->myhalf.pubkey[0],atx->otherhalf.coinaddr[0],atx->otherhalf.pubkey[0],atx->other_refundtx_done,atx->myhalf.multisigaddr.buf);
+    //if ( atx->other_refundtx_done == 0 )
+    //    atx->myrefund_fragi = share_pubkey(np,1,htx->destcoinid,htx->destcoinaddr,htx->destpubkey);
+    if ( atx->myhalf.multisigaddr.buf[0] == 0 )
     {
-        memset(coinaddrs,0,sizeof(coinaddrs));
-        memset(pubkeys,0,sizeof(pubkeys));
-        for (i=0; i<2; i++)
+        if ( atx->otherhalf.pubkey[0] != 0 )
         {
-            if ( i == 0 )
+            printf(">>>> multisig addrs %d %d %d %d\n",htx->coinaddr[0],htx->pubkey[0],atx->otherhalf.coinaddr[0],atx->otherhalf.pubkey[0]);
+            subatomic_gen_multisig(atx,htx);
+            if ( atx->myhalf.multisigaddr.buf[0] != 0 )
+                printf("generated multisig.(%s)\n",atx->myhalf.multisigaddr.buf);
+        }
+    }
+    if ( atx->myhalf.multisigaddr.buf[0] == 0 )
+        return(0);
+    if ( atx->txs_created == 0 && subatomic_ensure_txs(&atx->otherhalf,htx,(atx->longerflag * SUBATOMIC_LOCKTIME)) < 0 )
+    {
+        printf("warning: cant create required transactions, probably lack of funds\n");
+        return(-1);
+    }
+    //if ( atx->other_refund_fragi == 0 )
+    //    atx->other_refund_fragi = share_refundtx(np,&htx->refund,atx->myrefund_fragi);
+    return(1);
+}
+
+int32_t update_other_refundtxdone(struct subatomic_tx *atx)
+{
+    int32_t lockedblock; int64_t value; struct coin777 *coin; struct subatomic_rawtransaction *rp; struct subatomic_halftx *htx = &atx->myhalf;
+    if ( (coin= coin777_find(htx->coinstr,0)) != 0 )
+    {
+        rp = &atx->otherhalf.refund;
+        if ( atx->other_refundtx_done == 0 )
+        {
+            if ( atx->other_refundtx_waiting != 0 )
             {
-                pubkeystr = atx->myhalf.pubkey;
-                coinaddr = atx->myhalf.coinaddr;
-                coinstr = atx->ARGS.coinstr;
-            }
-            else
-            {
-                pubkeystr = atx->myhalf.destpubkey;
-                coinaddr = atx->myhalf.destcoinaddr;
-                coinstr = atx->ARGS.destcoinstr;
-            }
-            if ( pubkeystr[0] == 0 && (coin= coin777_find(coinstr,0)) != 0 )
-            {
-                get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,coinaddr);
-                pubkeystr = pubkey.buf;
-            }
-            if ( pubkeystr[0] != 0 )
-            {
-                flag++;
-                safecopy(atx->ARGS.mypubkeys[i],pubkey.buf,sizeof(atx->ARGS.mypubkeys[i]));
-                printf("i.%d gen pubkey %s (%s) for (%s)\n",i,coinstr,pubkey.buf,coinaddr);
-            }
-            else
-            {
-                printf("i.%d cant generate %s pubkey for addr.%s\n",i,coinstr,coinaddr);
-                //return(-1);
+                if ( subatomic_signtx(0,&lockedblock,&value,htx->destcoinaddr,rp->signedtransaction,sizeof(rp->signedtransaction),coin777_find(htx->destcoinstr,0),rp,rp->rawtransaction) == 0 )
+                {
+                    printf("warning: error signing other's NXT.%s refund\n",htx->otherNXTaddr);
+                    return(0);
+                }
+                //atx->funding_fragi = share_other_refundtx(np,rp,atx->other_refund_fragi);
+                atx->other_refundtx_done = 1;
+                printf("other refundtx done\n");
             }
         }
     }
-    return(flag);
+    return(atx->other_refundtx_done);
+}
+
+int32_t subatomic_validate_refund(struct subatomic_tx *atx,struct subatomic_halftx *htx)
+{
+    struct coin777 *coin = coin777_find(htx->coinstr,0); int64_t value; int32_t lockedblock;
+    if ( coin == 0 )
+        return(-1);
+    printf("validate refund\n");
+    if ( subatomic_signtx(atx->myhalf.multisigaddr.buf,&lockedblock,&value,htx->coinaddr,htx->countersignedrefund,sizeof(htx->countersignedrefund),coin,&htx->refund,htx->refund.signedtransaction) == 0 )
+    {
+        printf("error signing refund\n");
+        return(-1);
+    }
+    printf("refund signing completed.%d\n",htx->refund.completed);
+    if ( htx->refund.completed <= 0 )
+        return(-1);
+    printf(">>>>>>>>>>>>>>>>>>>>> refund at %d is locked! txid.%s completed %d %.8f -> %s\n",lockedblock,htx->refund.txid,htx->refund.completed,dstr(value),htx->coinaddr);
+    atx->status = SUBATOMIC_HAVEREFUND;
+    return(0);
+}
+
+int32_t update_my_refundtxdone(struct subatomic_tx *atx)
+{
+    struct subatomic_halftx *htx = &atx->myhalf;
+    if ( atx->myrefundtx_done == 0 )
+    {
+        if ( atx->myrefundtx_waiting != 0 )
+        {
+            if ( subatomic_validate_refund(atx,htx) < 0 )
+            {
+                printf("warning: other side NXT.%s returned invalid signed refund\n",htx->otherNXTaddr);
+                return(0);
+            }
+            subatomic_broadcasttx(&atx->myhalf,atx->myhalf.countersignedrefund,0,atx->refundlockblock);
+            atx->myrefundtx_done = 1;
+            printf("myrefund done\n");
+        }
+    }
+    return(atx->myrefundtx_done);
+}
+
+int32_t update_fundingtx(struct subatomic_tx *atx)
+{
+    //struct subatomic_halftx *htx = &atx->myhalf;
+    /*if ( atx->type == SUBATOMIC_TYPE || atx->type == SUBATOMIC_FORNXT_TYPE )
+    {
+        if ( atx->microtx_fragi == 0 || atx->other_fundingtx_confirms == 0 )
+            atx->microtx_fragi = share_fundingtx(np,&htx->funding,atx->funding_fragi);
+    }
+    if ( atx->type == NXTFOR_SUBATOMIC_TYPE || atx->type == SUBATOMIC_TYPE )*/
+    {
+        if ( atx->other_fundingtx_confirms == 0 )
+        {
+            if ( atx->other_fundingtx_waiting != 0 )
+            {
+                subatomic_broadcasttx(&atx->otherhalf,atx->otherhalf.funding.signedtransaction,0,0);
+                atx->other_fundingtx_confirms = atx->otherhalf.minconfirms+1;
+                printf("broadcast other funding\n");
+            }
+        }
+    }
+    //else atx->other_fundingtx_confirms = get_numconfirms(&atx->otherhalf);  // jl777: critical to wait for both funding tx to get confirmed
+    return(atx->other_fundingtx_confirms);
+}
+
+double subatomic_calc_incr(struct subatomic_halftx *htx,int64_t value,int64_t den,int32_t numincr)
+{
+    //printf("value %.8f/%.8f numincr.%d -> %.6f\n",dstr(value),dstr(den),numincr,(((double)value/den) * numincr));
+    return((((double)value/den) * numincr));
+}
+
+int32_t subatomic_validate_micropay(struct subatomic_tx *atx,char *skipaddr,char *destbytes,int32_t max,int64_t *valuep,struct subatomic_rawtransaction *rp,struct subatomic_halftx *htx,struct coin777 *srccoin,int64_t srcamount,int32_t numincr,char *refcoinaddr)
+{
+    int64_t value; int32_t lockedblock; struct coin777 *coin = coin777_find(htx->coinstr,0);
+    if ( valuep != 0 )
+        *valuep = 0;
+    if ( coin == 0 )
+        return(-1);
+    if ( subatomic_signtx(skipaddr,&lockedblock,&value,refcoinaddr,destbytes,max,coin,rp,rp->signedtransaction) == 0 )
+        return(-1);
+    if ( valuep != 0 )
+        *valuep = value;
+    if ( rp->completed <= 0 )
+        return(-1);
+    //printf("micropay is updated txid.%s completed %d %.8f -> %s, lockedblock.%d\n",rp->txid,rp->completed,dstr(value),htx->coinaddr,lockedblock);
+    return(lockedblock);
+}
+
+int32_t process_microtx(struct subatomic_tx *atx,struct subatomic_rawtransaction *rp,int32_t incr,int32_t otherincr)
+{
+    int64_t value;
+    if ( subatomic_validate_micropay(atx,0,atx->otherhalf.completedmicropay,(int32_t)sizeof(atx->otherhalf.completedmicropay),&value,rp,&atx->otherhalf,coin777_find(atx->ARGS.destcoinstr,0),atx->ARGS.destamount,atx->ARGS.numincr,atx->myhalf.destcoinaddr) < 0 )
+    {
+        printf("Error validating micropay from NXT.%s %s %s\n",atx->ARGS.otherNXTaddr,atx->myhalf.destcoinstr,atx->myhalf.destcoinaddr);
+        //subatomic_sendabort(atx);
+        //atx->status = SUBATOMIC_ABORTED;
+        //if ( incr > 1 )
+        //    atx->claimtxid = subatomic_broadcasttx(&atx->otherhalf,atx->otherhalf.completedmicropay,0,0);
+        return(-1);
+    }
+    else
+    {
+        atx->myreceived = value;
+        otherincr = subatomic_calc_incr(&atx->otherhalf,value,atx->myexpectedamount,atx->ARGS.numincr);
+    }
+    if ( otherincr == atx->ARGS.numincr || value == atx->myhalf.destamount )
+    {
+        printf("TX complete!\n");
+        atx->claimtxid = subatomic_broadcasttx(&atx->otherhalf,atx->otherhalf.completedmicropay,0,0);
+        atx->status = SUBATOMIC_COMPLETED;
+    }
+    printf("[%5.2f%%] Received %12.8f of %12.8f | Sent %12.8f of %12.8f\n",100.*(double)atx->myreceived/atx->myexpectedamount,dstr(atx->myreceived),dstr(atx->myexpectedamount),dstr(atx->sent_to_other),dstr(atx->otherexpectedamount));
+    
+    //printf("incr.%d of %d, otherincr.%d %.8f %.8f \n",incr,atx->ARGS.numincr,otherincr,dstr(value),dstr(atx->myexpectedamount));
+    return(otherincr);
+}
+
+int64_t subatomic_calc_micropay(struct subatomic_tx *atx,struct subatomic_halftx *htx,char *othercoinaddr,double myshare,int32_t seqid)
+{
+    struct subatomic_unspent_tx U; struct coin777 *coin = coin777_find(htx->coinstr,0); struct subatomic_rawtransaction *rp = &htx->micropay;
+    if ( coin == 0 )
+        return(0);
+    subatomic_set_unspent_tx0(&U,htx);
+    rp->numinputs = 0;
+    rp->inputs[rp->numinputs++] = U;
+    rp->amount = (htx->avail - coin->mgw.txfee);
+    rp->change = 0;
+    rp->inputsum = htx->avail;
+    //printf("subatomic_sendincr myshare %f seqid.%d\n",myshare,seqid);
+    if ( subatomic_calc_rawoutputs(htx,coin,rp,myshare,htx->coinaddr,othercoinaddr,coin->mgw.marker) > 0 )
+    {
+        subatomic_gen_rawtransaction(htx->multisigaddr.buf,coin,rp,htx->coinaddr,0,seqid);
+        return(htx->otheramount);
+    }
+    return(-1);
+}
+
+int32_t calc_micropay(struct subatomic_tx *atx)
+{
+    if ( (atx->sent_to_other= subatomic_calc_micropay(atx,&atx->myhalf,atx->otherhalf.coinaddr,atx->ARGS.myshare,SUBATOMIC_STARTING_SEQUENCEID+atx->ARGS.incr)) > 0 )
+    {
+        // printf("micropay.(%s)\n",htx->micropay.signedtransaction);
+        //printf("send micropay share incr.%d otherincr.%d totalfragis.%d\n",atx->ARGS.incr,atx->ARGS.otherincr,totalfragis);
+        return(0);
+    }
+    return(-1);
+}
+
+int32_t send_micropay(struct subatomic_tx *atx)
+{
+    share_micropaytx(&atx->myhalf.micropay);
+    return(0);
+}
+
+int32_t update_otherincr(struct subatomic_tx *atx)
+{
+    return(process_microtx(atx,&atx->otherhalf.micropay,atx->ARGS.incr,atx->ARGS.otherincr));
 }
 
 void init_subatomic_halftx(struct subatomic_halftx *htx,struct subatomic_tx *atx)
@@ -2683,9 +2431,9 @@ int32_t decode_subatomic_json(struct subatomic_tx *atx,cJSON *json,char *sender,
     return(-1);
 }
 
+static struct subatomic_tx **Subatomics; static int32_t Numsubatomics;
 struct subatomic_tx *update_subatomic_state(cJSON *argjson,uint64_t nxt64bits,char *sender,char *receiver)  // the only path into the subatomics[], eg. via AM
 {
-    static struct subatomic_tx **Subatomics; static int32_t Numsubatomics;
     int32_t i,flipped,cmpval; struct subatomic_tx *atx = 0,T;
     memset(&T,0,sizeof(T));
     //printf("parse subatomic\n");
@@ -2707,19 +2455,19 @@ struct subatomic_tx *update_subatomic_state(cJSON *argjson,uint64_t nxt64bits,ch
                         strcpy(atx->ARGS.otheripaddr,T.ARGS.otheripaddr);
                 }
                 /*else
-                {
-                    if ( flipped != 0 )
-                    {
-                        strcpy(atx->ARGS.otheripaddr,T.swap.otheripaddr);
-                        strcpy(atx->ARGS.NXTaddr,T.swap.otherNXTaddr);
-                        strcpy(atx->ARGS.otherNXTaddr,T.swap.NXTaddr);
-                    }
-                    else
-                    {
-                        strcpy(atx->ARGS.NXTaddr,T.swap.NXTaddr);
-                        strcpy(atx->ARGS.otherNXTaddr,T.swap.otherNXTaddr);
-                    }
-                }*/
+                 {
+                 if ( flipped != 0 )
+                 {
+                 strcpy(atx->ARGS.otheripaddr,T.swap.otheripaddr);
+                 strcpy(atx->ARGS.NXTaddr,T.swap.otherNXTaddr);
+                 strcpy(atx->ARGS.otherNXTaddr,T.swap.NXTaddr);
+                 }
+                 else
+                 {
+                 strcpy(atx->ARGS.NXTaddr,T.swap.NXTaddr);
+                 strcpy(atx->ARGS.otherNXTaddr,T.swap.otherNXTaddr);
+                 }
+                 }*/
                 break;
             }
         }
@@ -2750,12 +2498,12 @@ struct subatomic_tx *update_subatomic_state(cJSON *argjson,uint64_t nxt64bits,ch
                 }
             }
             /*else
-            {
-                if ( flipped != 0 )
-                    strcpy(atx->ARGS.otheripaddr,T.swap.otheripaddr);
-                strcpy(atx->ARGS.NXTaddr,T.swap.NXTaddr);
-                strcpy(atx->ARGS.otherNXTaddr,T.swap.otherNXTaddr);
-            }*/
+             {
+             if ( flipped != 0 )
+             strcpy(atx->ARGS.otheripaddr,T.swap.otheripaddr);
+             strcpy(atx->ARGS.NXTaddr,T.swap.NXTaddr);
+             strcpy(atx->ARGS.otherNXTaddr,T.swap.otherNXTaddr);
+             }*/
             printf("alloc type.%d new %p atx.%d (%s <-> %s)\n",T.type,atx,Numsubatomics,atx->ARGS.NXTaddr,atx->ARGS.otherNXTaddr);
             Subatomics = realloc(Subatomics,(Numsubatomics + 1) * sizeof(*Subatomics));
             Subatomics[Numsubatomics] = atx, atx->tag = Numsubatomics;
@@ -2771,14 +2519,86 @@ struct subatomic_tx *update_subatomic_state(cJSON *argjson,uint64_t nxt64bits,ch
     return(atx);
 }
 
+void update_subatomic_transfers(char *NXTaddr)
+{
+    static double nexttime;
+    struct subatomic_tx *atx; int32_t i,j,txcreated,retval;
+    //printf("update subatomics\n");
+    if ( milliseconds() < nexttime )
+        return;
+    for (i=0; i<Numsubatomics; i++)
+    {
+        atx = Subatomics[i];
+        if ( atx->initflag == 3 && atx->status != SUBATOMIC_COMPLETED && atx->status != SUBATOMIC_ABORTED )
+        {
+            /*np = get_NXTacct(&createdflag,Global_mp,atx->ARGS.otherNXTaddr);
+            if ( (np->recvid == 0 || np->sentid == 0) && verify_peer_link(SUBATOMIC_SIG,atx->ARGS.otherNXTaddr) != 0 )
+            {
+                nexttime = (microseconds() + 1000000*300);
+                continue;
+            }
+            if ( atx->type == ATOMICSWAP_TYPE )
+            {
+                atx->status = update_atomic(np,atx);
+                continue;
+            }*/
+            txcreated = verify_txs_created(atx);
+            if ( txcreated < 0 )
+            {
+                atx->status = SUBATOMIC_ABORTED;
+                continue;
+            }
+            if ( (atx->txs_created= txcreated) == 0 )
+                continue;
+            update_other_refundtxdone(atx);
+            update_my_refundtxdone(atx);
+            if ( atx->myrefundtx_done <= 0 || atx->other_refundtx_done <= 0 )
+                continue;
+            update_fundingtx(atx);
+            if ( atx->other_fundingtx_confirms-1 < atx->otherhalf.minconfirms )
+                continue;
+            //printf("micropay loop: share incr.%d otherincr.%d totalfragis.%d\n",atx->ARGS.incr,atx->ARGS.otherincr,totalfragis);
+            if ( atx->other_micropaytx_waiting != 0 )
+            {
+                retval = update_otherincr(atx);//process_microtx(atx,&atx->otherhalf.micropay,atx->ARGS.incr,atx->ARGS.otherincr);
+                if ( retval >= 0 )
+                    atx->ARGS.otherincr = retval;
+                atx->other_micropaytx_waiting = 0;
+            }
+            if ( atx->ARGS.incr < atx->ARGS.numincr && atx->ARGS.incr <= atx->ARGS.otherincr+1 )
+            {
+                atx->ARGS.incr++;
+                if ( atx->ARGS.incr < atx->ARGS.otherincr )
+                    atx->ARGS.incr = atx->ARGS.otherincr;
+                atx->ARGS.myshare = ((double)atx->ARGS.numincr - atx->ARGS.incr) / atx->ARGS.numincr;
+                calc_micropay(atx);
+            }
+            if ( atx->ARGS.incr == 100 )
+            {
+                for (j=0; j<3; j++)
+                {
+                    send_micropay(atx);
+                    sleep(3);
+                }
+            }
+            else send_micropay(atx);
+        }
+    }
+    //printf("done update subatomics\n");
+}
+
 void test_subatomic()
 {
     char *teststr = "{\"requestType\":\"subatomic\",\"NXT\":\"423766016895692955\",\"coin\":\"BTCD\",\"amount\":\"100\",\"coinaddr\":\"RGLbLB5YHM6vngmd8XKvAFCUK8zDfWoSSr\",\"senderip\":\"209.126.71.170\",\"destNXT\":\"8989816935121514892\",\"destcoin\":\"LTC\",\"destamount\":\".1\",\"destcoinaddr\":\"LLedxvb1e5aCYmQfn8PHEPFR56AsbGgbUG\"}";
     struct subatomic_tx *atx;
     if ( (atx= update_subatomic_state(cJSON_Parse(teststr),SUPERNET.my64bits,SUPERNET.myipaddr,SUPERNET.myipaddr)) != 0 )
     {
-        strcpy(atx->myhalf.multisigaddr,"bGMMi9syucbu5qdLUbuprHCBMrEowzDDM4");
-        subatomic_create_paytx(&atx->myhalf.refund,0,&atx->myhalf,atx->otherhalf.coinaddr,100,1.,SUBATOMIC_STARTING_SEQUENCEID-1);
+        struct subatomic_unspent_tx *utx; int32_t num; uint64_t total; char *txid;
+        utx = gather_unspents(&total,&num,coin777_find("BTCD",0),0);
+        strcpy(atx->myhalf.multisigaddr.buf,"RDRWMSrDdoUcfZRBWUz7KZQSxPS9bZRerM");//bGMMi9syucbu5qdLUbuprHCBMrEowzDDM4");
+        txid = subatomic_create_fundingtx(&atx->myhalf,SATOSHIDEN);
+
+        //subatomic_create_paytx(&atx->myhalf.refund,0,&atx->myhalf,atx->otherhalf.coinaddr,100,1.,SUBATOMIC_STARTING_SEQUENCEID-1);
         //subatomic_ensure_txs(&atx->otherhalf,&atx->myhalf,333);
     }
     getchar();
