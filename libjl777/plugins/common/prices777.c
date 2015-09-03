@@ -975,6 +975,7 @@ void prices777_basketsloop(void *ptr)
         }
         if ( n == 0 )
             msleep(250);
+        else msleep(10);
     }
 }
 
