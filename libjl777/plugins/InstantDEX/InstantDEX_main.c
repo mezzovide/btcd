@@ -64,6 +64,11 @@ cJSON *InstantDEX_lottostats();
 #include "quotes.h"
 #include "subatomic.h"
 
+// {"plugin":"InstantDEX","method":"orderbook","baseid":"8688289798928624137","rel":"USD","exchange":"active","allfields":1}
+
+// {"plugin":"InstantDEX","method":"orderbook","baseid":"17554243582654188572","rel":"12071612744977229797","exchange":"active","allfields":1}
+// {"plugin":"InstantDEX","method":"orderbook","baseid":"6918149200730574743","rel":"XMR","exchange":"active","allfields":1}
+
 uint32_t prices777_NXTBLOCK,FIRST_EXTERNAL,MAX_DEPTH = 100;
 int32_t InstantDEX_idle(struct plugin_info *plugin) { return(0); }
 

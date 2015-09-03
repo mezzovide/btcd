@@ -612,7 +612,7 @@ int SuperNET_start(char *fname,char *myip)
         }
 #ifdef __APPLE__
         void test_subatomic();
-        //test_subatomic();
+        test_subatomic();
 #endif
     }
     strcpy(SUPERNET.myipaddr,ipaddr);
