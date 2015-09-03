@@ -163,7 +163,8 @@ void set_best_amounts(int64_t *baseamountp,int64_t *relamountp,double price,doub
 int32_t is_mscoin(char *assetidstr);
 uint32_t issue_getTime();
 
-#define MAX_DEPTH 50
+#define _MAX_DEPTH 100
+extern uint32_t MAX_DEPTH;
 #define MINUTES_FIFO (1024)
 #define HOURS_FIFO (64)
 #define DAYS_FIFO (512)
@@ -199,7 +200,7 @@ struct prices777_orderentry { struct prices777_order bid,ask; };
 struct prices777_basketinfo
 {
     int32_t numbids,numasks; uint32_t timestamp;
-    struct prices777_orderentry book[MAX_GROUPS+1][MAX_DEPTH];
+    struct prices777_orderentry book[MAX_GROUPS+1][_MAX_DEPTH];
 };
 
 struct pending_trade { struct queueitem DL; struct prices777_order order; uint64_t triggertxid,txid,quoteid,orderid; struct prices777 *prices; char *triggertx,*txbytes; cJSON *tradesjson; double price,volume; uint32_t timestamp; int32_t dir,type,version,size; };

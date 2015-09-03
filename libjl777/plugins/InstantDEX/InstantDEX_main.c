@@ -64,7 +64,7 @@ cJSON *InstantDEX_lottostats();
 #include "quotes.h"
 #include "subatomic.h"
 
-uint32_t prices777_NXTBLOCK,FIRST_EXTERNAL;
+uint32_t prices777_NXTBLOCK,FIRST_EXTERNAL,MAX_DEPTH = 100;
 int32_t InstantDEX_idle(struct plugin_info *plugin) { return(0); }
 
 int32_t supported_exchange(char *exchangestr)

@@ -114,8 +114,8 @@ struct prices777 *prices777_createbasket(int32_t addbasket,char *name,char *base
                 prices->groupwts[j] /= wtsum;
         }
     }
-    //if ( prices->numgroups == 1 )
-    //    prices->groupwts[0] = 1.;
+    if ( prices->numgroups == 1 )
+        prices->groupwts[0] = 1.;
     for (j=0; j<prices->numgroups; j++)
         printf("%9.6f ",prices->groupwts[j]);
     printf("groupwts %s\n",typestr);
@@ -328,15 +328,52 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
         jadd64bits(item,"quoteid",quoteid);
 }
 
+/*
+{"plugin":"InstantDEX","method":"orderbook","relid":"8688289798928624137","base":"BTC","exchange":"active","allfields":1}
+0x11b8f5000 i.1/15 addlink.unconf groupid.0 wt.1.000000 (BTC/NXT.17554243582654188572/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11b9ea000 i.2/15 addlink.InstantDEX groupid.0 wt.1.000000 (BTC/NXT.17554243582654188572/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11badf000 i.3/15 addlink.nxtae groupid.0 wt.1.000000 (BTC/NXT.4551058913252105307/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11bb51000 i.4/15 addlink.unconf groupid.0 wt.1.000000 (BTC/NXT.4551058913252105307/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11bbc3000 i.5/15 addlink.InstantDEX groupid.0 wt.1.000000 (BTC/NXT.4551058913252105307/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11bc35000 i.6/15 addlink.nxtae groupid.0 wt.1.000000 (BTC/NXT.12659653638116877017/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x119a3f000 i.7/15 addlink.unconf groupid.0 wt.1.000000 (BTC/NXT.12659653638116877017/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11bca7000 i.8/15 addlink.InstantDEX groupid.0 wt.1.000000 (BTC/NXT.12659653638116877017/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11bd19000 i.9/15 addlink.nxtae groupid.1 wt.-1.000000 (Jay/NXT.8688289798928624137/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11be0e000 i.10/15 addlink.unconf groupid.1 wt.-1.000000 (Jay/NXT.8688289798928624137/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11be80000 i.11/15 addlink.InstantDEX groupid.1 wt.-1.000000 (Jay/NXT.8688289798928624137/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11bef2000 i.12/15 addlink.poloniex groupid.0 wt.-1.000000 (NXT/BTC.5527630/4412482 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11bfe7000 i.13/15 addlink.bittrex groupid.0 wt.-1.000000 (NXT/BTC.5527630/4412482 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+0x11c15f000 i.14/15 addlink.btc38 groupid.0 wt.-1.000000 (NXT/BTC.5527630/4412482 -> BTC/Jay.4412482/8688289798928624137).basketNXT
+
+9047.344kb init_pair.(active) (BTC)(Jay).0 -> (BTC/Jay) keysize.39 crc.2237937591 (baseid.4412482 relid.8688289798928624137)
+0x11c3cc000 i.0/4 addlink.poloniex groupid.0 wt.-1.000000 (Jay/BTC.7954762/4412482 -> BTC/Jay.4412482/8688289798928624137).active
+0x11c43e000 i.1/4 addlink.bittrex groupid.0 wt.-1.000000 (Jay/BTC.7954762/4412482 -> BTC/Jay.4412482/8688289798928624137).active
+0x11c4b0000 i.2/4 addlink.InstantDEX groupid.0 wt.1.000000 (BTC/Jay.4412482/8688289798928624137 -> BTC/Jay.4412482/8688289798928624137).active
+0x11c2d7000 i.3/4 addlink.basketNXT groupid.0 wt.1.000000 (BTC/Jay.4412482/8688289798928624137 -> BTC/Jay.4412482/8688289798928624137).active
+ {"plugin":"InstantDEX","method":"orderbook","relid":"8688289798928624137","base":"BTC","exchange":"active","allfields":1}
+ 
+B.jay/nxt A.nxt/btc                               A.jay/nxt B.nxt/btc
+14.9 0.00003900 25641 1708  5811           4770     15.9  0.00003000 33333
+14.1 0.00004000 25000 1773  5640           3675     15.98 0.00002300 43478
+14.0 0.00004700 21276 1519  6580           3916     17.8  0.00002200 45454
+
+
+15.9 25641 1612.64, 25000/15.9 1572.32
+15.98 25641 1604.57, 25000/15.98 1564
+17.8 25641 1440.5 25000/17.8 1404.5
+*/
+
 cJSON *prices777_item(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,double origprice,double origvolume,double rootwt,double groupwt,double wt,uint64_t orderid,uint64_t quoteid)
 {
-    cJSON *item; double price,volume;
+    cJSON *item; double price,volume,oppo = 1.;
     item = cJSON_CreateObject();
     jaddstr(item,"basket",rootbidask == 0 ? "bid":"ask");
     //jaddnum(item,"rootwt",rootwt);
     //jaddnum(item,"groupwt",groupwt);
     //jaddnum(item,"wt",wt);
-    if ( rootwt*groupwt < 0 )
+    if ( wt*groupwt < 0. )
+        oppo = -1.;
+    if ( wt*groupwt < 0 )
     {
         volume = origprice * origvolume;
         price = 1./origprice;
@@ -388,7 +425,7 @@ cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct pr
         if ( (src= order->source) != 0 )
         {
             if ( src->basketsize == 0 )
-                jaddi(array,prices777_tradeitem(bidask,src,refgroup*10+i,srcbidask,srcslot,order->s.timestamp,order->s.price,order->ratio*order->s.vol,rootwt,groupwt,order->wt,order->id,order->s.quoteid));
+                jaddi(array,prices777_tradeitem(bidask,src,refgroup*10+i,srcbidask,srcslot,order->s.timestamp,order->s.price,order->ratio*order->s.vol,rootwt,groupwt/groupwt,order->wt,order->id,order->s.quoteid));
             else if ( src->O.timestamp == order->s.timestamp )
             {
                 for (j=0; j<src->numgroups; j++)
@@ -399,7 +436,7 @@ cJSON *prices777_tradesequence(struct prices777 *prices,int32_t bidask,struct pr
             {
                 for (j=0; j<src->numgroups; j++)
                     suborders[j] = (srcbidask == 0) ? &src->O2.book[j][srcslot].bid : &src->O2.book[j][srcslot].ask;
-                jaddi(array,prices777_tradesequence(src,bidask,suborders,rootwt,groupwt,order->wt,refgroup*10 + i));
+                jaddi(array,prices777_tradesequence(src,bidask,suborders,rootwt,groupwt/groupwt,order->wt,refgroup*10 + i));
             }
             else err =  1;
         }
@@ -466,6 +503,7 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct price
     expand_nxt64bits(NXTaddr,nxt64bits);
     expand_nxt64bits(assetA,invert==0 ? prices->baseid : prices->relid);
     expand_nxt64bits(assetB,invert!=0 ? prices->baseid : prices->relid);
+    cJSON_AddItemToObject(json,"exchange",cJSON_CreateString(prices->exchange));
     cJSON_AddItemToObject(json,"inverted",cJSON_CreateNumber(invert));
     cJSON_AddItemToObject(json,"contract",cJSON_CreateString(prices->contract));
     cJSON_AddItemToObject(json,"baseid",cJSON_CreateString(assetA));
@@ -636,22 +674,29 @@ void prices777_hbla(uint64_t *bidorderid,uint64_t *askorderid,int32_t *lowaski,i
     //printf("hbla.(%f %f)\n",price,vol);
 }
 
-void prices777_setorder(struct prices777_order *order,struct prices777_basket *group,int32_t coordinate,uint64_t orderid)
+void prices777_setorder(struct prices777_order *order,struct prices777_basket *group,int32_t coordinate,uint64_t orderid,double refprice,double refvol)
 {
-    int32_t bidask; struct prices777 *prices;
+    int32_t bidask; struct prices777 *prices; double price=0,vol=0;
     bidask = (coordinate & 1), coordinate >>= 1;
     prices = group[coordinate].prices;
     if ( bidask != 0 && group[coordinate].aski < prices->O.numasks )
-        order->slot_ba = (group[coordinate].aski++ << 1) | 1;
+        price = prices->O.book[MAX_GROUPS][group[coordinate].aski].ask.s.price, vol = prices->O.book[MAX_GROUPS][group[coordinate].aski].ask.s.vol, order->slot_ba = (group[coordinate].aski++ << 1) | 1;
     else if ( group[coordinate].bidi < prices->O.numbids )
-        order->slot_ba = (group[coordinate].bidi++ << 1);
+        price = prices->O.book[MAX_GROUPS][group[coordinate].bidi].bid.s.price, vol = prices->O.book[MAX_GROUPS][group[coordinate].bidi].bid.s.vol,order->slot_ba = (group[coordinate].bidi++ << 1);
     else printf("illegal coordinate.%d bidask.%d when bidi.%d aski.%d numbids.%d numasks.%d\n",coordinate,bidask,group[coordinate].bidi,group[coordinate].aski,prices->O.numbids,prices->O.numasks);
     order->source = prices;
     order->wt = group[coordinate].wt;
-    //printf("coordinate.%d wt %f\n",coordinate,order->wt);
     order->s.timestamp = prices->O.timestamp;
     order->id = orderid;
+    if ( order->wt < 0. )
+        vol *= price, price = (1. / price);
+    if ( fabs(price - refprice) > SMALLVAL || fabs(vol - refvol) > SMALLVAL )
+    {
+        printf("[ERROR] ");
+        printf("%s group.%d (%s/%s) bidask.%d coordinate.%d wt %f (%f %f) vs (%f %f)\n",prices->exchange,group[coordinate].groupid,prices->base,prices->rel,bidask,coordinate,order->wt,price,vol,refprice,refvol);
+    }
 }
+
 
 int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,double minvol,struct prices777_basket *group,int32_t groupsize)
 {
@@ -663,36 +708,37 @@ int32_t prices777_groupbidasks(struct prices777_orderentry *gp,double groupwt,do
     {
         if ( (feature= group[i].prices) != 0 )
         {
-            if ( strcmp(feature->base,group[0].rel) == 0 && strcmp(feature->rel,group[0].base) == 0 )
-                polarity = -1.;
-            else polarity = 1.;
+            //if ( strcmp(feature->base,group[0].rel) == 0 && strcmp(feature->rel,group[0].base) == 0 )
+            //    polarity = -1.;
+            //else polarity = 1.;
             //if ( group[i].wt * groupwt < 0 ) fixes supernet/BTC
-             //   polarity *= -1;
-            //polarity = group[i].wt;// * groupwt;
+            //   polarity *= -1;
+            polarity = group[i].wt;// * groupwt;
             order = &feature->O.book[MAX_GROUPS][group[i].bidi].bid;
             if ( group[i].bidi < feature->O.numbids && (vol= order->s.vol) > minvol && (price= order->s.price) > SMALLVAL )
             {
                 //printf("%d/%d: %s bidi.%d price.%f polarity.%f groupwt.%f -> ",i,groupsize,feature->exchange,group[i].bidi,price,polarity,groupwt);
-                if ( polarity * groupwt < 0. )
+                if ( polarity < 0. )
                     vol *= price, price = (1. / price);
-                prices777_hbla(&bidorderid,&askorderid,&lowaski,&highbidi,&highbid,&bidvol,&lowask,&askvol,-polarity * groupwt,i,0,price,vol,order->id);
+                prices777_hbla(&bidorderid,&askorderid,&lowaski,&highbidi,&highbid,&bidvol,&lowask,&askvol,-polarity,i,0,price,vol,order->id);
             }
             order = &feature->O.book[MAX_GROUPS][group[i].aski].ask;
             if ( group[i].aski < feature->O.numasks && (vol= order->s.vol) > minvol && (price= order->s.price) > SMALLVAL )
             {
                 //printf("%d/%d: %s aski.%d price.%f polarity.%f groupwt.%f -> ",i,groupsize,feature->exchange,group[i].aski,price,polarity,groupwt);
-                if ( polarity * groupwt < 0. )
+                if ( polarity < 0. )
                     vol *= price, price = (1. / price);
-                prices777_hbla(&bidorderid,&askorderid,&lowaski,&highbidi,&highbid,&bidvol,&lowask,&askvol,polarity * groupwt,i,1,price,vol,order->id);
+                prices777_hbla(&bidorderid,&askorderid,&lowaski,&highbidi,&highbid,&bidvol,&lowask,&askvol,polarity,i,1,price,vol,order->id);
             }
         } else printf("null feature.%p\n",feature);
     }
     gp->bid.s.price = highbid, gp->bid.s.vol = bidvol, gp->ask.s.price = lowask, gp->ask.s.vol = askvol;
     if ( highbidi >= 0 )
-        prices777_setorder(&gp->bid,group,highbidi,bidorderid);
+        prices777_setorder(&gp->bid,group,highbidi,bidorderid,highbid,bidvol);
     if ( lowaski >= 0 )
-        prices777_setorder(&gp->ask,group,lowaski,askorderid);
-//printf("groupwt %f groupsize.%d highbidi.%d %f %f lowaski.%d\n",groupwt,groupsize,highbidi,gp->bid.s.price,gp->ask.s.price,lowaski);
+        prices777_setorder(&gp->ask,group,lowaski,askorderid,lowask,askvol);
+//    if ( lowaski >= 0 && highbidi >= 0 )
+//printf("groupwt %f groupsize.%d %s highbidi.%d %f %f %s lowaski.%d wts.(%f %f)\n",groupwt,groupsize,gp->bid.source->exchange,highbidi,gp->bid.s.price,gp->ask.s.price,gp->ask.source->exchange,lowaski,gp->bid.wt,gp->ask.wt);
     if ( gp->bid.s.price > SMALLVAL && gp->ask.s.price > SMALLVAL )
         return(0);
     return(-1);
@@ -750,6 +796,8 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
     //printf("prices777_basket.(%s) %s (%s/%s) %llu/%llu basketsize.%d\n",prices->exchange,prices->contract,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,prices->basketsize);
     for (i=0; i<prices->basketsize; i++)
     {
+        if ( 0 && strcmp(prices->exchange,"active") == 0 && prices->basket[i].prices != 0 )
+            printf("%s.group.%d %10s %10s wt %3.0f %.8f %.8f\n",prices->exchange,i,prices->basket[i].prices->exchange,prices->basket[i].prices->contract,prices->basket[i].wt,prices->basket[i].prices->O.book[MAX_GROUPS][0].bid.s.price,prices->basket[i].prices->O.book[MAX_GROUPS][0].ask.s.price);
         if ( (feature= prices->basket[i].prices) != 0 )
         {
             if ( 0 && (gap= (prices->lastupdate - feature->lastupdate)) < 0 )
@@ -798,15 +846,15 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
         {
             groupsize = prices->basket[i].groupsize;
             gp = &OB.book[j][slot];
-            //printf("j%d slot.%d %s numgroups.%d groupsize.%d %p\n",j,slot,prices->contract,prices->numgroups,groupsize,&prices->basket[0].groupsize);
             if ( prices777_groupbidasks(gp,prices->groupwts[j],minvol,&prices->basket[i],groupsize) != 0 )
             {
-                //printf("prices777_groupbidasks i.%d j.%d error\n",i,j);
+                printf("prices777_groupbidasks i.%d j.%d error\n",i,j);
                 break;
             }
+            //printf("%s j%d slot.%d %s numgroups.%d groupsize.%d\n",prices->exchange,j,slot,prices->contract,prices->numgroups,groupsize);
             if ( bid > SMALLVAL && (b= gp->bid.s.price) > SMALLVAL && (bv= gp->bid.s.vol) > SMALLVAL )
             {
-                //if ( prices->groupwts[j] < 0 )
+                //if ( gp->bid.wt*prices->groupwts[j] < 0 )
                 //    bid /= b;
                 //else
                     bid *= b;
@@ -816,7 +864,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             } else bid = 0.;
             if ( ask > SMALLVAL && (a= gp->ask.s.price) > SMALLVAL && (av= gp->ask.s.vol) > SMALLVAL )
             {
-                //if ( prices->groupwts[j] < 0 )
+                //if ( gp->ask.wt*prices->groupwts[j] < 0 )
                 //    ask /= a;
                 //else
                     ask *= a;
@@ -825,7 +873,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
                 //printf("ask %f b %f bv %f %s %s %f\n",ask,a,av,gp->ask.source->base,gp->ask.source->rel,av*a);
             } else ask = 0.;
             if ( Debuglevel > 2 )
-                printf("%10s %10s/%10s %s (%s %s) wt %2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f ask %.8f inv %f %f\n",prices->exchange,gp->ask.source->exchange,gp->ask.source->exchange,prices->contract,gp->bid.source->contract,gp->ask.source->contract,prices->groupwts[j],j,b,bv,a,av,bid,ask,bv,av);
+                printf("%10s %10s/%10s %s (%s %s) wt:%f %2.0f/%2.0f j.%d: b %.8f %12.6f a %.8f %12.6f, bid %.8f ask %.8f inv %f %f\n",prices->exchange,gp->bid.source->exchange,gp->ask.source->exchange,prices->contract,gp->bid.source->contract,gp->ask.source->contract,prices->groupwts[j],gp->bid.wt,gp->ask.wt,j,b,bv,a,av,bid,ask,1/bid,1/ask);
         }
         for (j=0; j<prices->numgroups; j++)
         {
@@ -840,7 +888,7 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             gp->bid.ratio = (baseratio < relratio) ? baseratio : relratio;
             if ( j == 0 )
                 bidvol = (gp->bid.ratio * gp->bid.s.vol);
-            //printf("(%f %f) (%f %f) bid%d bidratio %f bidvol %f ",gp->bid.vol,baseratio,gp->bid.vol * gp->bid.price,relratio,j,gp->bid.ratio,bidvol);
+            //printf("(%f %f) (%f %f) bid%d bidratio %f bidvol %f ",gp->bid.s.vol,baseratio,gp->bid.s.vol * gp->bid.s.price,relratio,j,gp->bid.ratio,bidvol);
             baseratio = prices777_volratio(relvols,baseids,gp->ask.source->baseid,gp->ask.s.vol);
             relratio = prices777_volratio(relvols,baseids,gp->ask.source->relid,gp->ask.s.vol * gp->ask.s.price);
             gp->ask.ratio = (baseratio < relratio) ? baseratio : relratio;
@@ -874,9 +922,9 @@ double prices777_basket(struct prices777 *prices,int32_t maxdepth)
             gp->ask.s.timestamp = OB.timestamp, gp->ask.s.price = ask, gp->ask.s.vol = askvol, gp->ask.slot_ba = (OB.numasks++ << 1) | 1;
             gp->ask.source = prices, gp->ask.wt = prices->groupwts[j];
         }
-        //printf("%s slot.%d (%.8f %.6f %.8f %.6f) (%d %d)\n",prices->contract,slot,gp->bid.s.price,gp->bid.s.vol,gp->ask.s.price,gp->ask.s.vol,OB.numbids,OB.numasks);
+        //printf("%s %s slot.%d (%.8f %.6f %.8f %.6f) (%d %d)\n",prices->exchange,prices->contract,slot,gp->bid.s.price,gp->bid.s.vol,gp->ask.s.price,gp->ask.s.vol,OB.numbids,OB.numasks);
     }
-    //fprintf(stderr,"basket.%s slot.%d numbids.%d numasks.%d\n",prices->contract,slot,prices->O.numbids,prices->O.numasks);
+    //fprintf(stderr,"%s basket.%s slot.%d numbids.%d numasks.%d %f %f\n",prices->exchange,prices->contract,slot,prices->O.numbids,prices->O.numasks,prices->O.book[MAX_GROUPS][0].bid.s.price,prices->O.book[MAX_GROUPS][0].ask.s.price);
     if ( slot > 0 )
     {
         prices->O2 = prices->O;
@@ -1331,7 +1379,7 @@ int32_t calc_baseflags(char *exchange,char *base,uint64_t *baseidp)
                 }
             }
         }
-        if ( flags != BASE_ISASSET )
+        if ( (flags & (BASE_ISASSET|BASE_EXCHANGEASSET|BASE_ISMGW)) == 0 )
             *baseidp = stringbits(base);
     }
     printf("-> flags.%d (%s %llu) %s\n",flags,base,(long long)*baseidp,exchange);
@@ -1383,6 +1431,24 @@ int32_t nxt_basketjson(cJSON *array,int32_t groupid,int32_t polarity,char *base,
     return(dir * polarity);
 }
 
+void add_nxtbtc(cJSON *array,int32_t groupid,double wt)
+{
+    char *btcnxt_xchgs[] = { "poloniex", "bittrex", "btc38" };
+    int32_t i; cJSON *item;
+    if ( wt != 0 )
+    {
+        printf("add NXT/BTC\n");
+        for (i=0; i<sizeof(btcnxt_xchgs)/sizeof(*btcnxt_xchgs); i++)
+        {
+            item = cJSON_CreateObject(), jaddstr(item,"exchange",btcnxt_xchgs[i]);
+            setitemjson(item,"NXT/BTC","NXT",NXT_ASSETID,"BTC",BTC_ASSETID);
+            jaddnum(item,"wt",wt);
+            jaddnum(item,"group",groupid);
+            jaddi(array,item);
+        }
+    }
+}
+
 cJSON *make_arrayNXT(cJSON *directarray,cJSON **arrayBTCp,char *base,char *rel,uint64_t baseid,uint64_t relid)
 {
     cJSON *item,*arrayNXT = 0; char tmpstr[64],baseexchange[64],relexchange[64],*str;
@@ -1390,7 +1456,7 @@ cJSON *make_arrayNXT(cJSON *directarray,cJSON **arrayBTCp,char *base,char *rel,u
     baseflags = calc_baseflags(baseexchange,base,&baseid);
     relflags = calc_baseflags(relexchange,rel,&relid);
     sprintf(tmpstr,"%s/%s",base,rel);
-    printf("make_arrayNXT base.(%s) %llu rel.(%s) %llu\n",base,(long long)baseid,rel,(long long)relid);
+    printf("make_arrayNXT base.(%s) %llu rel.(%s) %llu baseflags.%d relflags.%d\n",base,(long long)baseid,rel,(long long)relid,baseflags,relflags);
     item = cJSON_CreateObject(), setitemjson(item,tmpstr,base,baseid,rel,relid);
     jaddstr(item,"exchange",INSTANTDEX_NAME);
     jaddnum(item,"wt",1), jaddnum(item,"group",0), jaddi(directarray,item);
@@ -1406,62 +1472,63 @@ cJSON *make_arrayNXT(cJSON *directarray,cJSON **arrayBTCp,char *base,char *rel,u
     }
     else if ( (baseflags & BASE_ISASSET) != 0 && (relflags & BASE_ISASSET) != 0 )
     {
-        printf("both are assets\n");
+        printf("both are assets (%s/%s)\n",base,rel);
         arrayNXT = cJSON_CreateArray();
         n = get_duplicates(duplicatebases,baseid);
         for (i=0; i<n; i++)
             nxt_basketjson(arrayNXT,0,1,base,duplicatebases[i],"NXT",NXT_ASSETID,base,rel);
+        if ( strcmp(base,"BTC") == 0 )
+            add_nxtbtc(arrayNXT,0,-1);
         sprintf(tmpstr,"%s/%s",rel,"NXT");
         m = get_duplicates(duplicaterels,relid);
         for (j=0; j<m; j++)
             nxt_basketjson(arrayNXT,1,-1,rel,duplicaterels[j],"NXT",NXT_ASSETID,base,rel);
-        printf("both are assets (%s) n.%d m.%d\n",jprint(arrayNXT,0),n,m);
+        if ( strcmp(rel,"BTC") == 0 )
+            add_nxtbtc(arrayNXT,1,1);
     }
     if ( (baseflags & BASE_EXCHANGEASSET) != 0 || (relflags & BASE_EXCHANGEASSET) != 0 )
     {
-        printf("have exchange asset\n");
+        printf("have exchange asset %d %d\n",baseflags,relflags);
         if ( (baseflags & BASE_EXCHANGEASSET) != 0 && (relflags & BASE_EXCHANGEASSET) != 0 )
         {
             printf("both are exchange asset\n");
             if ( *arrayBTCp == 0 )
                 *arrayBTCp = cJSON_CreateArray();
-            if ( strcmp(base,"BTC") != 0 )
+            if ( strcmp(base,"BTC") != 0 && strcmp(rel,"BTC") != 0 )
             {
+                printf("a both are exchange asset\n");
                 item = cJSON_CreateObject(), jaddstr(item,"exchange",baseexchange);
                 sprintf(tmpstr,"%s/%s",base,"BTC");
                 setitemjson(item,tmpstr,base,baseid,"BTC",stringbits("BTC"));
-                jaddnum(item,"wt",-1);
                 jaddi(*arrayBTCp,item);
-            }
-            if ( strcmp(rel,"BTC") != 0 )
-            {
                 item = cJSON_CreateObject(), jaddstr(item,"exchange",relexchange);
                 sprintf(tmpstr,"%s/%s",rel,"BTC");
                 setitemjson(item,tmpstr,rel,relid,"BTC",stringbits("BTC"));
                 jaddnum(item,"wt",-1);
+                jaddnum(item,"group",1);
                 jaddi(*arrayBTCp,item);
             }
         }
         else if ( (baseflags & BASE_EXCHANGEASSET) != 0 )
         {
-            if ( strcmp(base,"BTC") != 0 )
+            if ( strcmp(base,"BTC") != 0 && strcmp(rel,"BTC") == 0 )
             {
-                printf("base is exchangeasset\n");
+                printf("base.(%s/%s) is exchangeasset\n",base,rel);
                 item = cJSON_CreateObject(), jaddstr(item,"exchange",baseexchange);
                 sprintf(tmpstr,"%s/%s",base,"BTC");
                 setitemjson(item,tmpstr,base,baseid,"BTC",stringbits("BTC"));
-                jaddnum(item,"wt",-1);
                 jaddi(directarray,item);
             }
         }
         else
         {
-            if ( strcmp(rel,"BTC") != 0 )
+            if ( strcmp(rel,"BTC") != 0 && strcmp(base,"BTC") == 0 )
             {
-                printf("rel is exchangeasset\n");
+                printf("rel.(%s/%s) is exchangeasset\n",base,rel);
                 item = cJSON_CreateObject(), jaddstr(item,"exchange",relexchange);
                 sprintf(tmpstr,"%s/%s",rel,"BTC");
                 setitemjson(item,tmpstr,rel,relid,"BTC",stringbits("BTC"));
+                jaddnum(item,"wt",-1);
                 jaddi(directarray,item);
             }
         }
@@ -1561,7 +1628,8 @@ char *prices777_activebooks(char *name,char *_base,char *_rel,uint64_t baseid,ui
         basketjson = cJSON_CreateObject(), array = cJSON_CreateArray();
         sprintf(tmpstr,"%s/%s",base,rel);
         setitemjson(basketjson,tmpstr,base,baseid,rel,relid);
-        centralexchange_items(0,1,array,base,rel,tradeable,base,rel);
+        //if ( baseflags != BASE_ISASSET && relflags != BASE_ISASSET )
+            centralexchange_items(0,1,array,base,rel,tradeable,base,rel);
         if ( (arrayNXT= make_arrayNXT(array,&arrayBTC,base,rel,baseid,relid)) != 0 )
             n = make_subactive(baskets,n,arrayNXT,"NXT",base,rel,baseid,relid,maxdepth);
         if ( arrayBTC != 0 )

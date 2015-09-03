@@ -488,6 +488,11 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
 {
     extern queue_t InstantDEXQ;
     char *retstr = 0; int32_t inverted,dir; struct prices777 *prices; double price,volume; struct exchange_info *exchange;
+    if ( secret == 0 || activenxt == 0 )
+    {
+        secret = SUPERNET.NXTACCTSECRET;
+        activenxt = SUPERNET.NXTADDR;
+    }
     if ( exchangestr != 0 && (exchange= exchange_find(exchangestr)) != 0 )
         iQ->exchangeid = exchange->exchangeid;
     if ( iQ->exchangeid < 0 || (exchangestr= exchange_str(iQ->exchangeid)) == 0 )
