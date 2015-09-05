@@ -82,7 +82,7 @@
       "examples": [
         {
           "title": "RPC-Call-Example:",
-          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"balance\",\"exchange\":\"btc38\"}'\n./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"balance\",\"exchange\":\"poloniex\"}'",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"balance\",\"exchange\":\"btc38\"}'\n./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"balance\",\"exchange\":\"poloniex\"}'\n./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"balance\",\"exchange\":\"huobi\"}'",
           "type": "btcd"
         }
       ]
@@ -90,8 +90,8 @@
     "success": {
       "examples": [
         {
-          "title": "Response-Example:",
-          "content": "to be added",
+          "title": "Huobi-Response-Example:",
+          "content": "{\n\"total\": \"14.61\",\n\"net_asset\": \"14.61\",\n\"available_cny_display\": \"0.06\",\n\"available_btc_display\": \"0.0099\",\n\"available_ltc_display\": \"0.0000\",\n\"frozen_cny_display\": \"0.00\",\n\"frozen_btc_display\": \"0.0000\",\n\"frozen_ltc_display\": \"0.0000\",\n\"loan_cny_display\": \"0.00\",\n\"loan_btc_display\": \"0.0000\",\n\"loan_ltc_display\": \"0.0000\"\n}",
           "type": "json"
         }
       ]
