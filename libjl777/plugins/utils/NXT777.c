@@ -967,6 +967,37 @@ int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr,uint64_t assetid)
     return(type);
 }
 
+uint64_t is_NXT_native(uint64_t assetid)
+{
+    uint64_t mult; char *jsonstr,assetidstr[64]; cJSON *json; int32_t iter;
+    if ( assetid == NXT_ASSETID )
+        return(NXT_ASSETID);
+    else if ( is_MGWasset(&mult,assetid) != 0 )
+        return(0);
+    else
+    {
+        expand_nxt64bits(assetidstr,assetid);
+        for (iter=0; iter<2; iter++)
+        {
+            if ( (jsonstr= (iter == 0) ? _issue_getAsset(assetidstr) : _issue_getCurrency(assetidstr)) != 0 )
+            {
+                if ( (json= cJSON_Parse(jsonstr)) != 0 )
+                {
+                    if ( juint(json,"errorCode") == 0 && jstr(json,"name") != 0 )
+                    {
+                        free_json(json);
+                        free(jsonstr);
+                        return(assetid);
+                    }
+                    free_json(json);
+                }
+                free(jsonstr);
+            }
+        }
+    }
+    return(0);
+}
+
 uint64_t calc_baseamount(uint64_t *relamountp,uint64_t assetid,uint64_t qty,uint64_t priceNQT)
 {
     *relamountp = (qty * priceNQT);

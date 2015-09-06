@@ -168,42 +168,6 @@ void subatomic_uint32_splicer(char *txbytes,int32_t offset,uint32_t spliceval)
     }
 }
 
-int32_t pubkey_to_256bits(unsigned char *bytes,char *pubkey)
-{
-    //Bitcoin private keys are 32 bytes, but are often stored in their full OpenSSL-serialized form of 279 bytes. They are serialized as 51 base58 characters, or 64 hex characters.
-    //Bitcoin public keys (traditionally) are 65 bytes (the first of which is 0x04). They are typically encoded as 130 hex characters.
-    //Bitcoin compressed public keys (as of 0.6.0) are 33 bytes (the first of which is 0x02 or 0x03). They are typically encoded as 66 hex characters.
-    //Bitcoin addresses are RIPEMD160(SHA256(pubkey)), 20 bytes. They are typically encoded as 34 base58 characters.
-    char zpadded[65];
-    int32_t i,j,n;
-    if ( (n= (int32_t)strlen(pubkey)) > 66 )
-    {
-        printf("pubkey_to_256bits pubkey.(%s) len.%ld > 66\n",pubkey,strlen(pubkey));
-        return(-1);
-    }
-    if ( pubkey[0] != '0' || (pubkey[1] != '2' && pubkey[1] != '3') )
-    {
-        printf("pubkey_to_256bits pubkey.(%s) len.%ld unexpected first byte\n",pubkey,strlen(pubkey));
-        return(-1);
-    }
-    for (i=0; i<64; i++)
-        zpadded[i] = '0';
-    zpadded[64] = 0;
-    for (i=66-n,j=2; i<64; i++,j++)
-        zpadded[i] = pubkey[j];
-    if ( pubkey[j] != 0 )
-    {
-        printf("pubkey_to_256bits unexpected nonzero at j.%d\n",j);
-        return(-1);
-    }
-    printf("pubkey.(%s) -> zpadded.(%s)\n",pubkey,zpadded);
-    decode_hex(bytes,32,zpadded);
-    //for (i=0; i<32; i++)
-    //    printf("%02x",bytes[i]);
-    //printf("\n");
-    return(0);
-}
-
 struct btcinput_data
 {
     unsigned char txid[32];
@@ -956,6 +920,41 @@ void *subatomic_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *pa
     return(gp);
 }
 
+int32_t pubkey_to_256bits(uint8_t *bytes,char *pubkey)
+{
+    //Bitcoin private keys are 32 bytes, but are often stored in their full OpenSSL-serialized form of 279 bytes. They are serialized as 51 base58 characters, or 64 hex characters.
+    //Bitcoin public keys (traditionally) are 65 bytes (the first of which is 0x04). They are typically encoded as 130 hex characters.
+    //Bitcoin compressed public keys (as of 0.6.0) are 33 bytes (the first of which is 0x02 or 0x03). They are typically encoded as 66 hex characters.
+    //Bitcoin addresses are RIPEMD160(SHA256(pubkey)), 20 bytes. They are typically encoded as 34 base58 characters.
+    char zpadded[65]; int32_t i,j,n;
+    if ( (n= (int32_t)strlen(pubkey)) > 66 )
+    {
+        printf("pubkey_to_256bits pubkey.(%s) len.%ld > 66\n",pubkey,strlen(pubkey));
+        return(-1);
+    }
+    if ( pubkey[0] != '0' || (pubkey[1] != '2' && pubkey[1] != '3') )
+    {
+        printf("pubkey_to_256bits pubkey.(%s) len.%ld unexpected first byte\n",pubkey,strlen(pubkey));
+        return(-1);
+    }
+    for (i=0; i<64; i++)
+        zpadded[i] = '0';
+    zpadded[64] = 0;
+    for (i=66-n,j=2; i<64; i++,j++)
+        zpadded[i] = pubkey[j];
+    if ( pubkey[j] != 0 )
+    {
+        printf("pubkey_to_256bits unexpected nonzero at j.%d\n",j);
+        return(-1);
+    }
+    printf("pubkey.(%s) -> zpadded.(%s)\n",pubkey,zpadded);
+    decode_hex(bytes,32,zpadded);
+    //for (i=0; i<32; i++)
+    //    printf("%02x",bytes[i]);
+    //printf("\n");
+    return(0);
+}
+
 #ifdef bitcoin_doesnt_seem_to_support_nonstandard_tx
 /* https://bitcointalk.org/index.php?topic=193281.msg3315031#msg3315031
  
@@ -1034,17 +1033,6 @@ void *subatomic_handler(struct NXThandler_info *mp,struct NXT_protocol_parms *pa
 #define SCRIPT_OP_CHECKSIGVERIFY 0xad
 #define SCRIPT_OP_CHECKMULTISIGVERIFY 0xaf
 
-
-struct atomictx_half
-{
-    uint64_t amount;
-    int32_t vout,coinid;
-    char *srctxid,*srcscriptpubkey;
-    char *srcaddr,*srcpubkey,*destaddr,*destpubkey;
-    char *redeemScript,*refundtx,*claimtx;
-};
-
-
 int32_t atomictx_addbytes(unsigned char *hex,int32_t n,unsigned char *bytes,int32_t len)
 {
     int32_t i;
@@ -1056,10 +1044,12 @@ int32_t atomictx_addbytes(unsigned char *hex,int32_t n,unsigned char *bytes,int3
 char *create_atomictx_scriptPubkey(int a_or_b,char *pubkeyA,char *pubkeyB,unsigned char *hash160)
 {
     char *retstr;
-    unsigned char pubkeyAbytes[33],pubkeyBbytes[33],hex[4096];
+    unsigned char pubkeyAbytes[32],pubkeyBbytes[32],hex[4096];
     int32_t i,n = 0;
-    if ( pubkey_to_256bits(pubkeyAbytes,pubkeyA) < 0 || pubkey_to_256bits(pubkeyBbytes,pubkeyB) < 0 )
-        return(0);
+    //if ( pubkey_to_256bits(pubkeyAbytes,pubkeyA) < 0 || pubkey_to_256bits(pubkeyBbytes,pubkeyB) < 0 )
+    //    return(0);
+    decode_hex(pubkeyAbytes,32,pubkeyA);
+    decode_hex(pubkeyBbytes,32,pubkeyB);
     hex[n++] = SCRIPT_OP_IF;
     hex[n++] = 2;
     hex[n++] = 32, memcpy(&hex[n],pubkeyAbytes,32), n += 32;
@@ -1178,7 +1168,7 @@ struct subatomic_rawtransaction
 struct subatomic_halftx
 {
     int32_t minconfirms;
-    int64_t destamount,avail,amount,donation,myamount,otheramount;  // amount = (myamount + otheramount + donation + txfee)
+    int64_t destamount,avail,amount,myamount,otheramount;  // amount = (myamount + otheramount + donation + txfee)
     struct subatomic_rawtransaction funding,refund,micropay;
     struct destbuf funding_scriptPubKey,multisigaddr,redeemScript;
     char fundingtxid[128],refundtxid[128],micropaytxid[128],countersignedrefund[1024],completedmicropay[1024];
@@ -1205,6 +1195,64 @@ struct subatomic_tx
     int32_t other_refundtx_waiting,myrefundtx_waiting,other_fundingtx_waiting,other_micropaytx_waiting;
     unsigned char recvbufs[4][sizeof(struct subatomic_rawtransaction)];
 };
+
+
+#define SCRIPT_OP_IF 0x63
+#define SCRIPT_OP_ELSE 0x67
+#define SCRIPT_OP_DUP 0x76
+#define SCRIPT_OP_ENDIF 0x68
+#define SCRIPT_OP_TRUE 0x51
+#define SCRIPT_OP_2 0x52
+#define SCRIPT_OP_3 0x53
+#define SCRIPT_OP_EQUALVERIFY 0x88
+#define SCRIPT_OP_HASH160 0xa9
+#define SCRIPT_OP_EQUAL 0x87
+#define SCRIPT_OP_CHECKSIG 0xac
+#define SCRIPT_OP_CHECKMULTISIG 0xae
+#define SCRIPT_OP_CHECKMULTISIGVERIFY 0xaf
+
+char *create_atomictx_scripts(char *scriptPubKey,char *pubkeyA,char *pubkeyB,char *hash160str)
+{
+    // if ( refund ) OP_HASH160 <2of2 multisig hash> OP_EQUAL   // standard multisig
+    // else OP_DUP OP_HASH160 <hash160> OP_EQUALVERIFY OP_CHECKSIG // standard spend
+    char *retstr; uint8_t pubkeyAbytes[33],pubkeyBbytes[33],hash160[20],tmpbuf[24],hex[4096]; int32_t i,n = 0;
+    decode_hex(pubkeyAbytes,33,pubkeyA);
+    decode_hex(pubkeyBbytes,33,pubkeyB);
+    decode_hex(hash160,20,hash160str);
+    hex[n++] = SCRIPT_OP_IF;
+    hex[n++] = SCRIPT_OP_2;
+    hex[n++] = 33, memcpy(&hex[n],pubkeyAbytes,33), n += 33;
+    hex[n++] = 33, memcpy(&hex[n],pubkeyBbytes,33), n += 33;
+    hex[n++] = SCRIPT_OP_2;
+    hex[n++] = SCRIPT_OP_CHECKMULTISIG;
+    hex[n++] = SCRIPT_OP_ELSE;
+    hex[n++] = SCRIPT_OP_DUP;
+    hex[n++] = SCRIPT_OP_HASH160;
+    hex[n++] = 20; memcpy(&hex[n],hash160,20); n += 20;
+    hex[n++] = SCRIPT_OP_EQUALVERIFY;
+    hex[n++] = SCRIPT_OP_CHECKSIG;
+    hex[n++] = SCRIPT_OP_ENDIF;
+    retstr = calloc(1,n*2+16);
+    //printf("pubkeyA.(%s) pubkeyB.(%s) hash160.(%s) ->\n",pubkeyA,pubkeyB,hash160str);
+    //strcpy(retstr,"01");
+    //sprintf(retstr+2,"%02x",n);
+    for (i=0; i<n; i++)
+    {
+        retstr[4*0 + i*2] = hexbyte((hex[i]>>4) & 0xf);
+        retstr[4*0 + i*2 + 1] = hexbyte(hex[i] & 0xf);
+        //printf("%02x",hex[i]);
+    }
+    retstr[4*0 + n*2] = 0;
+    calc_OP_HASH160(scriptPubKey,tmpbuf+2,retstr+4*0);
+    tmpbuf[0] = SCRIPT_OP_HASH160;
+    tmpbuf[1] = 20;
+    tmpbuf[22] = SCRIPT_OP_EQUAL;
+    init_hexbytes_noT(scriptPubKey,tmpbuf,23);
+    //base58_conv(addr,5,tmpbuf+2);
+    //addr[0] = 0;
+    //printf("-> redeemScript.(%s) scriptPubKey.(%s) p2sh.(%s)\n",retstr,scriptPubKey,addr);
+    return(retstr);
+}
 
 cJSON *get_transaction_json(struct coin777 *coin,char *txid)
 {
@@ -1337,16 +1385,14 @@ char *createmultisig_json_params(struct pubkey_info *pubkeys,int32_t m,int32_t n
         _stripwhite(paramstr,' ');
         free_json(array);
     }
-    //printf("createmultisig_json_params.(%s)\n",paramstr);
+    printf("createmultisig_json_params.(%s)\n",paramstr);
     return(paramstr);
 }
 
-int32_t issue_createmultisig(struct destbuf *multisigaddr,struct destbuf *redeemScript,struct coin777 *coin,char *serverport,char *userpass,int32_t use_addmultisig,int32_t m,int32_t n,char *NXTaddr)
+int32_t subatomic_createmultisig(struct destbuf *multisigaddr,struct destbuf *redeemScript,struct coin777 *coin,char *serverport,char *userpass,int32_t use_addmultisig,int32_t m,int32_t n,char *account,struct pubkey_info *pubkeys)
 {
-    int32_t flag = 0; char *params; struct pubkey_info pubkeys[16];
-    params = createmultisig_json_params(pubkeys,m,n,(use_addmultisig != 0) ? NXTaddr : 0);
-    flag = 0;
-    if ( params != 0 )
+    int32_t flag = 0; char *params;
+    if ( (params = createmultisig_json_params(pubkeys,m,n,(use_addmultisig != 0) ? account : 0)) != 0 )
     {
         flag = generate_multisigaddr(multisigaddr,redeemScript,coin,serverport,userpass,use_addmultisig,params);
         free(params);
@@ -1356,7 +1402,7 @@ int32_t issue_createmultisig(struct destbuf *multisigaddr,struct destbuf *redeem
 
 int32_t subatomic_gen_multisig(struct subatomic_tx *atx,struct subatomic_halftx *htx)
 {
-    char coinaddrs[3][64]; struct destbuf pubkeys[3]; struct coin777 *coin;
+    char coinaddrs[3][64]; struct destbuf pubkeys[3]; struct coin777 *coin; struct pubkey_info pubkeydata[16];
     if ( (coin= coin777_find(htx->coinstr,0)) == 0 )
         return(-1);
     if ( htx->coinaddr[0] != 0 && htx->pubkey[0] != 0 && atx->otherhalf.coinaddr[0] != 0 && atx->otherhalf.pubkey[0] != 0 )
@@ -1365,7 +1411,9 @@ int32_t subatomic_gen_multisig(struct subatomic_tx *atx,struct subatomic_halftx 
         safecopy(pubkeys[0].buf,htx->pubkey,sizeof(pubkeys[0]));
         safecopy(coinaddrs[1],atx->otherhalf.coinaddr,sizeof(coinaddrs[1]));
         safecopy(pubkeys[1].buf,atx->otherhalf.pubkey,sizeof(pubkeys[1]));
-        issue_createmultisig(&htx->multisigaddr,&htx->redeemScript,coin,coin->serverport,coin->userpass,coin->mgw.use_addmultisig,1,2,0);
+        strcpy(pubkeydata[0].pubkey,pubkeys[0].buf);
+        strcpy(pubkeydata[1].pubkey,pubkeys[1].buf);
+        subatomic_createmultisig(&htx->multisigaddr,&htx->redeemScript,coin,coin->serverport,coin->userpass,coin->mgw.use_addmultisig,2,2,0,pubkeydata);
         //#ifdef DEBUG_MODE
         if ( htx->multisigaddr.buf[0] != 0 )
             get_pubkey(&pubkeys[2],coin->name,coin->serverport,coin->userpass,htx->multisigaddr.buf);
@@ -1445,8 +1493,10 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
                 {
                     int _decreasing_signedint64(const void *a,const void *b);
                     qsort(ups,j,sizeof(*ups),_decreasing_signedint64);
-                    for (i=0; i<j; i++)
-                        printf("%s/v%-3d %13.6f %s confs.%-6d | total %.6f\n",ups[i].txid.buf,ups[i].vout,dstr(ups[i].amount),ups[i].address.buf,ups[i].confirmations,dstr(*totalp));
+                    if ( coin->changeaddr[0] == 0 )
+                        strcpy(coin->changeaddr,ups[0].address.buf);
+                    //for (i=0; i<j; i++)
+                    //printf("%s/v%-3d %13.6f %s confs.%-6d | total %.6f\n",ups[i].txid.buf,ups[i].vout,dstr(ups[i].amount),ups[i].address.buf,ups[i].confirmations,dstr(*totalp));
                 }
             }
             free_json(json);
@@ -1496,7 +1546,7 @@ int64_t subatomic_calc_rawinputs(struct coin777 *coin,struct subatomic_rawtransa
     printf("unspent num %d, amount %.8f vs donation %.8f txfee %.8f\n",num,dstr(amount),dstr(donation),dstr(coin->mgw.txfee));
     if ( coin == 0 || (donation + coin->mgw.txfee) > amount || num == 0 )
         return(0);
-    
+    amount += coin->mgw.txfee + donation;
     for (i=0; i<num&&i<((int32_t)(sizeof(rp->inputs)/sizeof(*rp->inputs))); i++)
     {
         if ( (up= subatomic_bestfit(&value,coin,ups,num,amount)) != 0 )
@@ -1506,7 +1556,7 @@ int64_t subatomic_calc_rawinputs(struct coin777 *coin,struct subatomic_rawtransa
             rp->inputs[rp->numinputs++] = *up;
             if ( sum >= amount )
             {
-                rp->amount = (amount - coin->mgw.txfee);
+                rp->amount = (amount - coin->mgw.txfee - donation);
                 rp->change = (sum - amount);
                 rp->inputsum = sum;
                 printf("numinputs %d sum %.8f vs amount %.8f change %.8f -> txfee %.8f\n",rp->numinputs,dstr(rp->inputsum),dstr(amount),dstr(rp->change),dstr(sum - rp->change - rp->amount));
@@ -1520,28 +1570,38 @@ int64_t subatomic_calc_rawinputs(struct coin777 *coin,struct subatomic_rawtransa
     return(0);
 }
 
-int32_t subatomic_calc_rawoutputs(struct subatomic_halftx *htx,struct coin777 *coin,struct subatomic_rawtransaction *rp,double myshare,char *myaddr,char *otheraddr,char *changeaddr)
+int32_t subatomic_calc_rawoutputs(struct subatomic_halftx *htx,struct coin777 *coin,struct subatomic_rawtransaction *rp,double myshare,char *myaddr,char *otheraddr,char *changeaddr,uint64_t donation)
 {
-    int32_t n = 0; int64_t donation;
-    printf("rp->amount %.8f, (%.8f - %.8f), change %.8f (%.8f - %.8f) donation %.8f\n",dstr(rp->amount),dstr(htx->avail),dstr(coin->mgw.txfee),dstr(rp->change),dstr(rp->inputsum),dstr(htx->avail),dstr(htx->donation));
-    if ( rp->amount == (htx->avail - coin->mgw.txfee) && rp->change == (rp->inputsum - htx->avail) )
+    int32_t n = 0;
+    printf("rp->amount %.8f vs %.8f, txfee %.8f, change %.8f vs %.8f (%.8f - %.8f) donation %.8f\n",dstr(rp->amount),dstr(htx->avail),dstr(coin->mgw.txfee),dstr(rp->change),dstr(rp->inputsum - htx->avail),dstr(rp->inputsum),dstr(htx->avail),dstr(donation));
+    if ( rp->amount == htx->avail && rp->change == (rp->inputsum - htx->avail - coin->mgw.txfee - donation) )
     {
         if ( changeaddr == 0 )
-            changeaddr = coin->mgw.marker;
-        if ( htx->donation != 0 && coin->mgw.marker != 0 )
-            donation = htx->donation;
-        else donation = 0;
-        htx->myamount = (rp->amount - donation) * myshare;
+            changeaddr = coin->donationaddress;
+        if ( coin->donationaddress[0] == 0 )
+            donation = 0;
+        htx->myamount = rp->amount * myshare;
         if ( htx->myamount > rp->amount )
             htx->myamount = rp->amount;
-        htx->otheramount = (rp->amount - htx->myamount - donation);
-        if ( htx->myamount > 0 )
+        htx->otheramount = (rp->amount - htx->myamount);
+        if ( htx->myamount > 0 && myaddr != 0 )
         {
+            if ( otheraddr != 0 && strcmp(myaddr,otheraddr) == 0 )
+            {
+                htx->myamount += htx->otheramount;
+                htx->otheramount = 0;
+            }
+            if ( changeaddr != 0 && strcmp(myaddr,changeaddr) == 0 )
+            {
+                htx->myamount += rp->change;
+                rp->change = 0;
+            }
             safecopy(rp->destaddrs[n],myaddr,sizeof(rp->destaddrs[n]));
             rp->destamounts[n] = htx->myamount;
+            //printf("(%s) <- %.8f mine\n",myaddr,dstr(htx->myamount));
             n++;
         }
-        if ( otheraddr == 0 )
+        if ( otheraddr == 0 && htx->otheramount != 0 )
         {
             printf("no otheraddr, boost donation by %.8f\n",dstr(htx->otheramount));
             donation += htx->otheramount;
@@ -1551,9 +1611,10 @@ int32_t subatomic_calc_rawoutputs(struct subatomic_halftx *htx,struct coin777 *c
         {
             safecopy(rp->destaddrs[n],otheraddr,sizeof(rp->destaddrs[n]));
             rp->destamounts[n] = htx->otheramount;
+            //printf("(%s) <- %.8f other\n",otheraddr,dstr(htx->otheramount));
             n++;
         }
-        if ( changeaddr == 0 )
+        if ( changeaddr == 0 && (rp->change != 0 || strcmp(changeaddr,coin->donationaddress) == 0) )
         {
             printf("no changeaddr, boost donation %.8f\n",dstr(rp->change));
             donation += rp->change;
@@ -1563,16 +1624,18 @@ int32_t subatomic_calc_rawoutputs(struct subatomic_halftx *htx,struct coin777 *c
         {
             safecopy(rp->destaddrs[n],changeaddr,sizeof(rp->destaddrs[n]));
             rp->destamounts[n] = rp->change;
+            //printf("(%s) <- %.8f change\n",changeaddr,dstr(rp->change));
             n++;
         }
-        if ( donation > 0 && coin->mgw.marker != 0 )
+        if ( donation > 0 && coin->donationaddress[0] != 0 )
         {
-            safecopy(rp->destaddrs[n],coin->mgw.marker,sizeof(rp->destaddrs[n]));
+            safecopy(rp->destaddrs[n],coin->donationaddress,sizeof(rp->destaddrs[n]));
             rp->destamounts[n] = donation;
+            //printf("(%s) <- %.8f donation\n",coin->donationaddress,dstr(donation));
             n++;
         }
-        //printf("myshare %.6f %.8f -> %s, other %.8f -> %s, change %.8f -> %s, donation %.8f -> %s | ",myshare,dstr(htx->myamount),myaddr,dstr(htx->otheramount),otheraddr,dstr(rp->change),changeaddr,dstr(donation),gp->marker[coinid]);
     }
+    else printf("error myshare %.6f %.8f -> %s, other %.8f -> %s, change %.8f -> %s, donation %.8f -> %s \n",myshare,dstr(htx->myamount),myaddr,dstr(htx->otheramount),otheraddr,dstr(rp->change),changeaddr,dstr(donation),coin->donationaddress);
     rp->numoutputs = n;
     //printf("numoutputs.%d\n",n);
     return(n);
@@ -1674,10 +1737,14 @@ cJSON *subatomic_privkeys_json_params(struct coin777 *coin,char **coinaddrs,int3
     //bitcoind_RPC(0,coin->name,coin->serverport,coin->userpass,"walletpassphrase",walletkey);
     for (i=0; i<n; i++)
     {
-        if ( (privkey= dumpprivkey(coin->name,coin->serverport,coin->userpass,coinaddrs[i])) != 0 )
+        if ( coinaddrs[i][0] != 0 )
         {
-            jaddistr(array,privkey);
-            free(privkey);
+            printf("privkeys.(%s)\n",coinaddrs[i]);
+            if ( (privkey= dumpprivkey(coin->name,coin->serverport,coin->userpass,coinaddrs[i])) != 0 )
+            {
+                jaddistr(array,privkey);
+                free(privkey);
+            }
         }
     }
     return(array);
@@ -1705,9 +1772,8 @@ char *subatomic_signraw_json_params(char *skipaddr,char *coinaddr,struct coin777
             //printf("i.%d j.%d flag.%d\n",i,j,flag);
             if ( coinaddr != 0 && flag == 0 )
                 coinaddrs[j++] = coinaddr;
-            coinaddrs[j++] = 0;
+            coinaddrs[j] = 0;
             keysobj = subatomic_privkeys_json_params(coin,coinaddrs,j);
-            //printf("subatomic_privkeys_json_params\n");
             if ( keysobj != 0 )
             {
                 array = cJSON_CreateArray();
@@ -1808,7 +1874,7 @@ char *subatomic_gen_rawtransaction(char *skipaddr,struct coin777 *coin,struct su
     if ( (rawparams = subatomic_rawtxid_json(coin,rp)) != 0 )
     {
         _stripwhite(rawparams,' ');
-        printf("create.(%s)\n",rawparams);
+        //printf("create.(%s)\n",rawparams);
         if ( (retstr= bitcoind_RPC(0,coin->name,coin->serverport,coin->userpass,"createrawtransaction",rawparams)) != 0 )
         {
             if ( retstr[0] != 0 )
@@ -1827,17 +1893,15 @@ char *subatomic_gen_rawtransaction(char *skipaddr,struct coin777 *coin,struct su
                 {
                     if ( (cointx= _decode_rawtransaction(rp->rawtransaction,coin->mgw.oldtx_format)) != 0 )
                     {
-                        printf("%s\n->\n",rp->rawtransaction);
+                        //printf("%s\n->\n",rp->rawtransaction);
                         cointx->nlocktime = locktime;
                         cointx->inputs[0].sequence = vin0sequenceid;
+                        _emit_cointx(rp->rawtransaction,sizeof(rp->rawtransaction),cointx,coin->mgw.oldtx_format);
                         _validate_decoderawtransaction(rp->rawtransaction,cointx,coin->mgw.oldtx_format);
-                        printf("spliced tx.(%s)\n",rp->rawtransaction);
-                        //subatomic_uint32_splicer(rp->rawtransaction,(int32_t)(len - sizeof(uint32_t)*2),locktime);
-                        //if ( 0 && vin0sequenceid != 0xffffffff )
-                        //    subatomic_uint32_splicer(rp->rawtransaction,calc_vin0seqstart(rp->rawtransaction),vin0sequenceid);
+                        //printf("spliced tx.(%s)\n",rp->rawtransaction);
                         free(cointx);
                     }
-                    printf("locktime.%d sequenceid.%d\n",locktime,vin0sequenceid);
+                    printf("locktime.%d sequenceid.%d signcoinaddr.(%s)\n",locktime,vin0sequenceid,signcoinaddr!=0?signcoinaddr:"");
                 }
                 if ( signcoinaddr != 0 )
                     retstr = subatomic_signtx(skipaddr,0,&value,signcoinaddr,rp->signedtransaction,sizeof(rp->signedtransaction),coin,rp,rp->rawtransaction);
@@ -1849,29 +1913,44 @@ char *subatomic_gen_rawtransaction(char *skipaddr,struct coin777 *coin,struct su
     return(retstr);
 }
 
-char *subatomic_create_fundingtx(struct subatomic_halftx *htx,int64_t amount)
+uint64_t subatomic_donation(struct coin777 *coin,uint64_t amount)
+{
+    uint64_t donation = 0;
+    if ( coin->donationaddress[0] != 0 )
+    {
+        donation = amount >> 11;
+        if ( donation < coin->mgw.txfee )
+            donation = coin->mgw.txfee;
+    }
+    return(donation);
+}
+
+char *subatomic_create_fundingtx(struct subatomic_halftx *htx,int64_t amount,int32_t lockgap,char *changeaddr)
 {
     //2) Create and sign but do not broadcast a transaction (T1) that sets up a payment of amount to funding acct
-    struct subatomic_unspent_tx *ups; struct coin777 *coin; char *txid,*retstr = 0; uint64_t total; int32_t num,check_locktime,locktime = 0;
+    struct subatomic_unspent_tx *ups; struct coin777 *coin; char *txid,*retstr = 0; uint64_t total,donation; int32_t num,check_locktime,locktime;
     if ( (coin= coin777_find(htx->coinstr,0)) == 0 )
     {
         printf("subatomic_create_fundingtx: cant find (%s)\n",htx->coinstr);
         return(0);
     }
-    printf("CREATE FUNDING TX.(%s) for %.8f -> %s locktime.%d\n",coin->name,dstr(amount),htx->coinaddr,locktime);
+    if ( (locktime= lockgap) != 0 )
+        locktime = (uint32_t)(time(NULL) + lockgap);
+    donation = subatomic_donation(coin,amount);
+    printf("CREATE FUNDING TX.(%s) for %.8f -> %s locktime.%u donation %.8f\n",coin->name,dstr(amount),htx->coinaddr,locktime,dstr(donation));
     memset(&htx->funding,0,sizeof(htx->funding));
     if ( (ups= gather_unspents(&total,&num,coin,0)) && num != 0 )
     {
-        if ( subatomic_calc_rawinputs(coin,&htx->funding,amount,ups,num,htx->donation) >= amount )
+        if ( subatomic_calc_rawinputs(coin,&htx->funding,amount,ups,num,donation) >= amount )
         {
             htx->avail = amount;
-            if ( subatomic_calc_rawoutputs(htx,coin,&htx->funding,1.,htx->multisigaddr.buf,0,htx->coinaddr) > 0 )
+            if ( subatomic_calc_rawoutputs(htx,coin,&htx->funding,1.,htx->multisigaddr.buf,0,changeaddr,donation) > 0 )
             {
                 if ( (retstr= subatomic_gen_rawtransaction(htx->multisigaddr.buf,coin,&htx->funding,htx->coinaddr,locktime,0xffffffff)) != 0 )
                 {
                     txid = subatomic_decodetxid(0,&htx->funding_scriptPubKey,&check_locktime,coin,htx->funding.rawtransaction,htx->multisigaddr.buf);
-                    printf("txid.%s fundingtx %.8f -> %.8f %s completed.%d locktimes %d vs %d\n",txid,dstr(amount),dstr(htx->funding.amount),retstr,htx->funding.completed,check_locktime,locktime);
-                    printf("funding.(%s)\n",htx->funding.signedtransaction);
+                    //printf("txid.%s fundingtx %.8f -> %.8f %s completed.%d locktimes %d vs %d\n",txid,dstr(amount),dstr(htx->funding.amount),retstr,htx->funding.completed,check_locktime,locktime);
+                    //printf("(%s)\nfunding.(%s)\n",htx->funding.rawtransaction,htx->funding.signedtransaction);
                 }
             }
         }
@@ -1894,19 +1973,20 @@ void subatomic_set_unspent_tx0(struct subatomic_unspent_tx *up,struct subatomic_
 
 char *subatomic_create_paytx(struct subatomic_rawtransaction *rp,char *signcoinaddr,struct subatomic_halftx *htx,char *othercoinaddr,int32_t locktime,double myshare,int32_t seqid)
 {
-    struct subatomic_unspent_tx U; int32_t check_locktime; int64_t value; char *txid = 0; struct coin777 *coin = coin777_find(htx->coinstr,0);
+    struct subatomic_unspent_tx U; int32_t check_locktime; int64_t value,donation; char *txid = 0; struct coin777 *coin = coin777_find(htx->coinstr,0);
     if ( coin == 0 )
         return(0);
     //struct subatomic_unspent_tx *gather_unspents(int32_t *nump,struct coin777 *coin,char *coinaddr)
     printf("create paytx %s\n",coin->name);
     subatomic_set_unspent_tx0(&U,htx);
+    donation = subatomic_donation(coin,htx->avail);
     rp->numinputs = 0;
     rp->inputs[rp->numinputs++] = U;
-    rp->amount = (htx->avail - coin->mgw.txfee);
+    rp->amount = (htx->avail - coin->mgw.txfee - donation);
     rp->change = 0;
     rp->inputsum = htx->avail;
     // jl777: make sure sequence number is not -1!!
-    if ( subatomic_calc_rawoutputs(htx,coin,rp,myshare,htx->coinaddr,othercoinaddr,0) > 0 )
+    if ( subatomic_calc_rawoutputs(htx,coin,rp,myshare,htx->coinaddr,othercoinaddr,0,donation) > 0 )
     {
         subatomic_gen_rawtransaction(htx->multisigaddr.buf,coin,rp,signcoinaddr,locktime,seqid);
         txid = subatomic_decodetxid(&value,0,&check_locktime,coin,rp->rawtransaction,htx->coinaddr);
@@ -2032,7 +2112,7 @@ int32_t subatomic_ensure_txs(struct subatomic_halftx *otherhalf,struct subatomic
     if ( htx->fundingtxid == 0 )
     {
         //printf("create funding TX\n");
-        if ( (fundingtxid= subatomic_create_fundingtx(htx,htx->amount)) == 0 )
+        if ( (fundingtxid= subatomic_create_fundingtx(htx,htx->amount,SUBATOMIC_LOCKTIME,htx->coinaddr)) == 0 )
             return(-1);
         safecopy(htx->fundingtxid,fundingtxid,sizeof(htx->fundingtxid));
         free(fundingtxid);
@@ -2228,17 +2308,18 @@ int32_t process_microtx(struct subatomic_tx *atx,struct subatomic_rawtransaction
 
 int64_t subatomic_calc_micropay(struct subatomic_tx *atx,struct subatomic_halftx *htx,char *othercoinaddr,double myshare,int32_t seqid)
 {
-    struct subatomic_unspent_tx U; struct coin777 *coin = coin777_find(htx->coinstr,0); struct subatomic_rawtransaction *rp = &htx->micropay;
+    struct subatomic_unspent_tx U; uint64_t donation; struct coin777 *coin = coin777_find(htx->coinstr,0); struct subatomic_rawtransaction *rp = &htx->micropay;
     if ( coin == 0 )
         return(0);
     subatomic_set_unspent_tx0(&U,htx);
+    donation = subatomic_donation(coin,htx->avail);
     rp->numinputs = 0;
     rp->inputs[rp->numinputs++] = U;
-    rp->amount = (htx->avail - coin->mgw.txfee);
+    rp->amount = (htx->avail - coin->mgw.txfee - donation);
     rp->change = 0;
     rp->inputsum = htx->avail;
     //printf("subatomic_sendincr myshare %f seqid.%d\n",myshare,seqid);
-    if ( subatomic_calc_rawoutputs(htx,coin,rp,myshare,htx->coinaddr,othercoinaddr,coin->mgw.marker) > 0 )
+    if ( subatomic_calc_rawoutputs(htx,coin,rp,myshare,htx->coinaddr,othercoinaddr,coin->donationaddress,donation) > 0 )
     {
         subatomic_gen_rawtransaction(htx->multisigaddr.buf,coin,rp,htx->coinaddr,0,seqid);
         return(htx->otheramount);
@@ -2307,10 +2388,10 @@ int32_t init_subatomic_tx(struct subatomic_tx *atx,int32_t flipped)
                 atx->myhalf.amount = atx->ARGS.amount; atx->myhalf.destamount = atx->ARGS.destamount;
                 safecopy(atx->myhalf.coinaddr,atx->ARGS.coinaddr[0],sizeof(atx->myhalf.coinaddr));
                 safecopy(atx->myhalf.destcoinaddr,atx->ARGS.destcoinaddr[0],sizeof(atx->myhalf.destcoinaddr));
-                atx->myhalf.donation = atx->myhalf.amount * SUBATOMIC_DONATIONRATE;
-                if ( atx->myhalf.donation < coin->mgw.txfee )
-                    atx->myhalf.donation = coin->mgw.txfee;
-                atx->otherexpectedamount = atx->myhalf.amount - 2*coin->mgw.txfee - 2*atx->myhalf.donation;
+                //atx->myhalf.donation = atx->myhalf.amount * SUBATOMIC_DONATIONRATE;
+                //if ( atx->myhalf.donation < coin->mgw.txfee )
+                //    atx->myhalf.donation = coin->mgw.txfee;
+                atx->otherexpectedamount = atx->myhalf.amount;// - 2*coin->mgw.txfee - 2*atx->myhalf.donation;
                 subatomic_gen_pubkeys(atx,&atx->myhalf);
             }
             else
@@ -2319,10 +2400,10 @@ int32_t init_subatomic_tx(struct subatomic_tx *atx,int32_t flipped)
                 atx->otherhalf.amount = atx->ARGS.destamount; atx->otherhalf.destamount = atx->ARGS.amount;
                 safecopy(atx->otherhalf.coinaddr,atx->ARGS.destcoinaddr[1],sizeof(atx->otherhalf.coinaddr));
                 safecopy(atx->otherhalf.destcoinaddr,atx->ARGS.coinaddr[1],sizeof(atx->otherhalf.destcoinaddr));
-                atx->otherhalf.donation = atx->otherhalf.amount * SUBATOMIC_DONATIONRATE;
-                if ( atx->otherhalf.donation < destcoin->mgw.txfee )
-                    atx->otherhalf.donation = destcoin->mgw.txfee;
-                atx->myexpectedamount = atx->otherhalf.amount - 2*destcoin->mgw.txfee - 2*atx->otherhalf.donation;
+                //atx->otherhalf.donation = atx->otherhalf.amount * SUBATOMIC_DONATIONRATE;
+                //if ( atx->otherhalf.donation < destcoin->mgw.txfee )
+                //    atx->otherhalf.donation = destcoin->mgw.txfee;
+                atx->myexpectedamount = atx->otherhalf.amount;// - 2*destcoin->mgw.txfee - 2*atx->otherhalf.donation;
             }
             printf("%p.(%s %s %.8f -> %.8f %s <-> %s %s %.8f <- %.8f %s) myhalf.(%s %s) %.8f <-> %.8f other.(%s %s) IP.(%s)\n",atx,atx->ARGS.NXTaddr,atx->myhalf.coinstr,dstr(atx->myhalf.amount),dstr(atx->myhalf.destamount),atx->myhalf.destcoinstr,atx->ARGS.otherNXTaddr,atx->otherhalf.coinstr,dstr(atx->otherhalf.amount),dstr(atx->otherhalf.destamount),atx->otherhalf.destcoinstr,atx->myhalf.coinaddr,atx->myhalf.destcoinaddr,dstr(atx->myexpectedamount),dstr(atx->otherexpectedamount),atx->otherhalf.coinaddr,atx->otherhalf.destcoinaddr,atx->ARGS.otheripaddr);
             return(1 << flipped);
@@ -2587,20 +2668,382 @@ void update_subatomic_transfers(char *NXTaddr)
     //printf("done update subatomics\n");
 }
 
-void test_subatomic()
+/*
+ Alice send a pubkey to Bob, who makes a 2of3 multisig with 2 of his pubkeys and sends this address to alice
+
+she then creates an unsigned funding tx for the full amount and sends it to Bob
+
+Bob and Alice sign a postdated refund transaction that returns all the funds to Alice, say 2 hours in the future
+
+When Alice gets this tx in pocket along with Bob's phased secret tx, she signs and broadcasts the funding tx (edited)
+Now if 2 hours goes by the money just comes back to Alice
+Bob can only spend the funds by revealing the second of his pubkeys and if he does, Alice can approve the phased secret tx
+race condition: Bob cashes the payment right before the refund, not giving Alice anytime to approve the phased tx, so the phased tx must expire after the refund
+
+if alice never broadcasts the signed funding tx, everything expires
+if there is a 2+ hour btc block, then the refund tx is triggered and Bob is not getting the funds, but if he puts a higher txfee than alice's refund tx, his tx should get priority, so as long as he submits the spend immediately, we are down to the edge case of a new block where alice broadcast her refundtx, but bob's cashing of it didnt make it until the next block, which ended up being a 2+hr block and Alice sniffed the unconfirmed tx to grab the pubkey and approved the phased tx
+the tradeoff is the 2hour time period, since Bob is at risk, he can set the expiration time required, but the finish height is an Alice tradeoff, so I guess she sets that
+with well behaved traders, all this could happen in realtime
+not sure if there is a malleability attack alice can do with the funding tx... i think she can spend the inputs of the funding tx, so bob need to wait for it to confirm
+*/
+char *subatomic_txid(char *txbytes,struct coin777 *coin,char *destaddr,uint64_t amount,int32_t future)
+{
+    struct subatomic_halftx *H; struct subatomic_unspent_tx *utx; int32_t num; uint64_t total; char *txid = 0;
+    if ( coin != 0 && destaddr != 0 && destaddr[0] != 0 )
+    {
+        H = calloc(1,sizeof(*H));
+        strcpy(H->coinstr,coin->name);
+        utx = gather_unspents(&total,&num,coin,0);
+        strcpy(H->multisigaddr.buf,destaddr);
+        if ( (txid= subatomic_create_fundingtx(H,amount,future,coin->changeaddr)) != 0 ) //*SUBATOMIC_LOCKTIME);
+            strcpy(txbytes,H->funding.rawtransaction);
+        free(H);
+    }
+    return(txid);
+}
+
+void oldtest_subatomic()
 {
     char *teststr = "{\"requestType\":\"subatomic\",\"NXT\":\"423766016895692955\",\"coin\":\"BTCD\",\"amount\":\"100\",\"coinaddr\":\"RGLbLB5YHM6vngmd8XKvAFCUK8zDfWoSSr\",\"senderip\":\"209.126.71.170\",\"destNXT\":\"8989816935121514892\",\"destcoin\":\"LTC\",\"destamount\":\".1\",\"destcoinaddr\":\"LLedxvb1e5aCYmQfn8PHEPFR56AsbGgbUG\"}";
-    struct subatomic_tx *atx;
+    struct subatomic_tx *atx; char *redeem,scriptPubKey[1024];
     if ( (atx= update_subatomic_state(cJSON_Parse(teststr),SUPERNET.my64bits,SUPERNET.myipaddr,SUPERNET.myipaddr)) != 0 )
     {
-        struct subatomic_unspent_tx *utx; int32_t num; uint64_t total; char *txid;
+        struct subatomic_unspent_tx *utx; int32_t num; uint64_t total; char *txid,txbytes[8192],hexstr[1024]; uint8_t tmpbuf[128];
         utx = gather_unspents(&total,&num,coin777_find("BTCD",0),0);
         strcpy(atx->myhalf.multisigaddr.buf,"RDRWMSrDdoUcfZRBWUz7KZQSxPS9bZRerM");//bGMMi9syucbu5qdLUbuprHCBMrEowzDDM4");
-        txid = subatomic_create_fundingtx(&atx->myhalf,SATOSHIDEN);
+        txid = subatomic_create_fundingtx(&atx->myhalf,SATOSHIDEN,0*SUBATOMIC_LOCKTIME,"RDRWMSrDdoUcfZRBWUz7KZQSxPS9bZRerM");
+        subatomic_txid(txbytes,coin777_find("BTCD",1),"RDRWMSrDdoUcfZRBWUz7KZQSxPS9bZRerM",SATOSHIDEN,0);
+        printf("funding.(%s)\n",txbytes);
+        // A "RGgbJiV2Hs8eWJbZmZ3hZLS8sSzFA7tYNu", B "REsAF17mNLqPgeeUN8oRkvPmSfSkKzRwPt", rmd160 of "RDRWMSrDdoUcfZRBWUz7KZQSxPS9bZRerM" -> "0235e49408b9714427d3378156dc28abece43ad3f6354aba3d2137a0cbca8cab50" -> "2d7315f3abb363f7bbe8ce5583896e76ac41762b"
+        //redeem = create_atomictx_scripts(scriptPubKey,"024aa82667ac0dd37c50c860a4cf6f2ed04e9434b8bf4465cb8da61cc3c0e45f7f","027013ac01bd51a0147623a14e622fc3639551e325da845692563bf95643f23cf3","2d7315f3abb363f7bbe8ce5583896e76ac41762b");
+        // A 14XrJHhqMvDszMMwKR2d6u5PPvDeRieQoG -> 03b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd05
+        // B 17Y5rr67RpTtuCd929dS6muyKZmjqJZQpr -> 037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc0
+        // S 1NBKFDmmHSpSzFnP9bX5bDWnm9zqD6nUv4 -> 03c8a7e64c763e908549aa0f93974ab346a559b486eba32bf14338542b4282b916 -> e84e0808b8cd32c38fa2093a490efabc6be53d7a
+        
+        // createmultisig 2 '["03b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd05", "037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc0"]'
+        // addmultisigaddress 2 '["03b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd05", "037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc0"]'
+        calc_OP_HASH160(hexstr,tmpbuf,"03c8a7e64c763e908549aa0f93974ab346a559b486eba32bf14338542b4282b916");
+        printf("rmd160.(%s)\n",hexstr);
+        redeem = create_atomictx_scripts(scriptPubKey,"03b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd05","037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc0",hexstr);
+        // -> redeemScript.(63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68) scriptPubKey.(a9143d0f47bf8892b8f2847c35cffa576fd74d3436f587) p2sh.(053d0f47bf8892b8f2847c35cffa576fd74d3436f50f7335bf) [3d0f47bf8892b8f2847c35cffa576fd74d3436f5]
+        // -> 37FsSwJ59z5UuRjNFjtfNYWVFquBEsUGHC
+        // 3d0f47bf8892b8f2847c35cffa576fd74d3436f5
+        // txid: b1b915dcbfb9becc368ed5c56c145de26929232ae56b74af76cfe9c0f915896c/v0 has 0.00025
+        
+        // createrawtransaction '[{"txid":"b1b915dcbfb9becc368ed5c56c145de26929232ae56b74af76cfe9c0f915896c","vout":0,"scriptPubKey":"a9143d0f47bf8892b8f2847c35cffa576fd74d3436f587","redeemScript":"63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68"}]' '{"37FsSwJ59z5UuRjNFjtfNYWVFquBEsUGHC":0.00015}'
+        // signrawtransaction 01000000016c8915f9c0e9cf76af746be52a232969e25d146cc5d58e36ccbeb9bfdc15b9b10000000000ffffffff01983a00000000000017a9143d0f47bf8892b8f2847c35cffa576fd74d3436f58700000000 '[{"txid":"b1b915dcbfb9becc368ed5c56c145de26929232ae56b74af76cfe9c0f915896c","vout":0,"scriptPubKey":"a9143d0f47bf8892b8f2847c35cffa576fd74d3436f587","redeemScript":"63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68"}]' '["L5o9SpeVSyvyaAwMKBFz69zicpynRuD1cJcmk4hg2XFLFG8YzMDf", "KwzgGzkgWPAbLcnFvXQ2J4JQYAE7Bt3f13WLggvk3CaDoPVVELxx", "KziNoJpt9tLXCn7wHBQATKbi9Kg3vuAD5pUwfFVExBFeZbeuyqHu"]'
+        // signrawtransaction 01000000016c8915f9c0e9cf76af746be52a232969e25d146cc5d58e36ccbeb9bfdc15b9b10000000000ffffffff01983a00000000000017a9143d0f47bf8892b8f2847c35cffa576fd74d3436f58700000000 '[{"txid":"b1b915dcbfb9becc368ed5c56c145de26929232ae56b74af76cfe9c0f915896c","vout":0,"scriptPubKey":"a9143d0f47bf8892b8f2847c35cffa576fd74d3436f587","redeemScript":"63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68"}]' '["L5o9SpeVSyvyaAwMKBFz69zicpynRuD1cJcmk4hg2XFLFG8YzMDf", "KwzgGzkgWPAbLcnFvXQ2J4JQYAE7Bt3f13WLggvk3CaDoPVVELxx"]'
 
-        //subatomic_create_paytx(&atx->myhalf.refund,0,&atx->myhalf,atx->otherhalf.coinaddr,100,1.,SUBATOMIC_STARTING_SEQUENCEID-1);
-        //subatomic_ensure_txs(&atx->otherhalf,&atx->myhalf,333);
+        // --> 01000000016c8915f9c0e9cf76af746be52a232969e25d146cc5d58e36ccbeb9bfdc15b9b100000000654c6363522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68ffffffff01983a00000000000017a9143d0f47bf8892b8f2847c35cffa576fd74d3436f58700000000
+        
+      //93694eb171f41e988617e047136e6c8688ee90e6
+        
+        // signed 473044022029fd8c662036f2e7aeb73ea3415162310fdd67e8ffa47ce9d7d84e0e6f9833e002203794cbf352e62c2ddcbce333a456f686d7c1c7f950ab52457b3cd16a7c00216d012103478201a961466c245c00a2cf2dfd87ded6dd3945a8da00c2b99c06d492b0b111
+        
+        // createrawtransaction '[{"txid":"3b6a96d80c579040442e594da8dde81bac966e3448748c2f32017f7fddfc1a9c","vout":0,"scriptPubKey":"a914eb2d8cbcf2aef2bafa76f57523b974f76dbc060887","redeemScript":"522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae"}]' '{"36h3SVq4dR6M3WJiSNsB6t5ZCz4QNauBAL":0.0009}'
+        // signrawtransaction 01000000019c1afcdd7f7f01322f8c7448346e96ac1be8dda84d592e444090570cd8966a3b0000000000ffffffff01905f01000000000017a91436d9e510cef4bfb5757265a8d840f037dc6df0968700000000 '[{"txid":"3b6a96d80c579040442e594da8dde81bac966e3448748c2f32017f7fddfc1a9c","vout":0,"scriptPubKey":"a91436d9e510cef4bfb5757265a8d840f037dc6df09687","redeemScript":"522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae"}]' '["L5o9SpeVSyvyaAwMKBFz69zicpynRuD1cJcmk4hg2XFLFG8YzMDf", "KwzgGzkgWPAbLcnFvXQ2J4JQYAE7Bt3f13WLggvk3CaDoPVVELxx"]'
+        
+        //struct rawvin { char txidstr[128]; uint16_t vout; };
+        //struct rawvout { char coinaddr[128],script[2048]; uint64_t value; };
+        // struct cointx_input { struct rawvin tx; char coinaddr[64],sigs[1024]; uint64_t value; uint32_t sequence; char used; };
+        /* struct cointx_info
+        {
+            uint32_t crc; // MUST be first
+            char coinstr[16],cointxid[128];
+            uint64_t inputsum,amount,change,redeemtxid;
+            uint32_t allocsize,batchsize,batchcrc,gatewayid,isallocated,completed;
+            // bitcoin tx order
+            uint32_t version,timestamp,numinputs;
+            uint32_t numoutputs;
+            struct cointx_input inputs[MAX_COINTX_INPUTS];
+            struct rawvout outputs[MAX_COINTX_OUTPUTS];
+            uint32_t nlocktime;
+            // end bitcoin txcalc_nxt64bits
+            char signedtx[];
+        };*/
+        // createrawtransaction '[{"txid":"b1b915dcbfb9becc368ed5c56c145de26929232ae56b74af76cfe9c0f915896c","vout":0,"scriptPubKey":"a9143d0f47bf8892b8f2847c35cffa576fd74d3436f587","redeemScript":"63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68"}]' '{"37FsSwJ59z5UuRjNFjtfNYWVFquBEsUGHC":0.00015}'
+        // signrawtransaction 01000000016c8915f9c0e9cf76af746be52a232969e25d146cc5d58e36ccbeb9bfdc15b9b10000000000ffffffff01983a00000000000017a9143d0f47bf8892b8f2847c35cffa576fd74d3436f58700000000 '[{"txid":"b1b915dcbfb9becc368ed5c56c145de26929232ae56b74af76cfe9c0f915896c","vout":0,"scriptPubKey":"a9143d0f47bf8892b8f2847c35cffa576fd74d3436f587","redeemScript":"63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68"}]' '["L5o9SpeVSyvyaAwMKBFz69zicpynRuD1cJcmk4hg2XFLFG8YzMDf", "KwzgGzkgWPAbLcnFvXQ2J4JQYAE7Bt3f13WLggvk3CaDoPVVELxx"]'
+        // signrawtransaction 01000000019c1afcdd7f7f01322f8c7448346e96ac1be8dda84d592e444090570cd8966a3b0000000000ffffffff01905f01000000000017a91436d9e510cef4bfb5757265a8d840f037dc6df0968700000000 '[{"txid":"b1b915dcbfb9becc368ed5c56c145de26929232ae56b74af76cfe9c0f915896c","vout":0,"scriptPubKey":"a9143d0f47bf8892b8f2847c35cffa576fd74d3436f587","redeemScript":"002103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc05163522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68"}]' '["L5o9SpeVSyvyaAwMKBFz69zicpynRuD1cJcmk4hg2XFLFG8YzMDf", "KwzgGzkgWPAbLcnFvXQ2J4JQYAE7Bt3f13WLggvk3CaDoPVVELxx"]'
+         //00
+        //2103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd05
+        //21037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc0
+        //51
+        //63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68
+     
+        //00
+        //21037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc0
+        //00
+        //63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68
+
+        //strcpy(T.inputs[0].sigs,"002103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc05163522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68");
+        //strcpy(T.inputs[0].sigs,"63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68");
+     }
+    getchar();
+}
+
+#include <stdbool.h>
+
+struct bp_key { void *k; };
+typedef struct cstring {
+	char	*str;		// string data, incl. NUL
+	size_t	len;		// length of string, not including NUL
+	size_t	alloc;		// total allocated buffer length
+} cstring;
+
+extern bool bp_key_init(struct bp_key *key);
+extern void bp_key_free(struct bp_key *key);
+extern bool bp_key_generate(struct bp_key *key);
+extern bool bp_privkey_set(struct bp_key *key, const void *privkey, size_t pk_len);
+extern bool bp_pubkey_set(struct bp_key *key, const void *pubkey, size_t pk_len);
+extern bool bp_key_secret_set(struct bp_key *key, const void *privkey_, size_t pk_len);
+extern bool bp_privkey_get(const struct bp_key *key, void **privkey, size_t *pk_len);
+extern bool bp_pubkey_get(const struct bp_key *key, void **pubkey, size_t *pk_len);
+extern bool bp_key_secret_get(void *p, size_t len, const struct bp_key *key);
+extern bool bp_sign(const struct bp_key *key, const void *data, size_t data_len,void **sig_, size_t *sig_len_);
+extern bool bp_verify(const struct bp_key *key, const void *data, size_t data_len,const void *sig, size_t sig_len);
+
+void cstr_free(cstring *s, bool free_buf);
+cstring *base58_encode_check(unsigned char addrtype,bool have_addrtype,const void *data,size_t data_len);
+cstring *base58_decode_check(unsigned char *addrtype, const char *s_in);
+
+struct btcaddr
+{
+	struct bp_key key;
+    uint8_t *pubkey; uint16_t p2sh;
+    char addr[36],coin[8];
+    uint8_t privkey[280];
+};
+
+struct btcaddr *btcaddr_new(char *coin,char *p2sh_script)
+{
+    uint8_t script[8192],md160[20],addrtype; char pubkeystr[512],privkeystr[512],hashstr[41];
+    void *privkey=0,*pubkey=0; int32_t n; size_t len,slen; cstring *btc_addr; struct btcaddr *btc;
+    btc = calloc(1,sizeof(*btc));
+    strncpy(btc->coin,coin,sizeof(btc->coin)-1);
+    if ( p2sh_script != 0 )
+    {
+        if ( strcmp("BTC",coin) == 0 )
+            addrtype = 5;
+        else if ( strcmp("BTCD",coin) == 0 )
+            addrtype = 85;
+        else addrtype = 5;
+        calc_OP_HASH160(0,md160,p2sh_script);
+        btc->p2sh = n = (int32_t)strlen(p2sh_script) >> 1;
+        decode_hex(script,n,p2sh_script);
+        if ( (btc_addr= base58_encode_check(addrtype,true,md160,sizeof(md160))) != 0 )
+        {
+            if ( n > sizeof(btc->privkey)-23 )
+            {
+                printf("script.(%s) len.%d is too big\n",p2sh_script,n);
+                free(btc);
+                return(0);
+            }
+            strcpy(btc->addr,btc_addr->str);
+            memcpy(btc->privkey,script,n);
+            btc->pubkey = &btc->privkey[sizeof(btc->privkey) - 23];
+            btc->pubkey[0] = SCRIPT_OP_HASH160;
+            btc->pubkey[2] = 20;
+            memcpy(&btc->pubkey[2],md160,20);
+            btc->pubkey[22] = SCRIPT_OP_EQUAL;
+            init_hexbytes_noT(privkeystr,script,n);
+            printf("type.%u btcaddr.%ld addr.(%s) %ld p2sh.(%s) %d\n",addrtype,sizeof(struct btcaddr),btc->addr,strlen(btc->addr),privkeystr,n);
+            cstr_free(btc_addr,true);
+        } else free(btc), btc = 0;
+        return(btc);
     }
+    else if ( bp_key_init(&btc->key) != 0 && bp_key_generate(&btc->key) != 0 && bp_pubkey_get(&btc->key,&pubkey,&len) != 0 && bp_privkey_get(&btc->key,&privkey,&slen) != 0 )
+    {
+        if ( len == 33 && slen == 214 && memcmp((void *)((long)privkey + slen - 33),pubkey,33) == 0 )
+        {
+            init_hexbytes_noT(pubkeystr,pubkey,len);
+            init_hexbytes_noT(privkeystr,privkey,slen);
+            if ( strcmp("BTC",coin) == 0 )
+                addrtype = 0;
+            else if ( strcmp("BTCD",coin) == 0 )
+                addrtype = 60;
+            else addrtype = 0;
+            calc_OP_HASH160(hashstr,md160,pubkeystr);
+            if ( (btc_addr= base58_encode_check(addrtype,true,md160,sizeof(md160))) != 0 )
+            {
+                strcpy(btc->addr,btc_addr->str);
+                memcpy(btc->privkey,privkey,slen);
+                btc->pubkey = &btc->privkey[slen - len];
+                printf("type.%u btcaddr.%ld rmd160.(%s) addr.(%s) %ld pubkey.(%s) %ld privkey.(%s) %ld\n",addrtype,sizeof(struct btcaddr),hashstr,btc->addr,strlen(btc->addr),pubkeystr,len,privkeystr,slen);
+                cstr_free(btc_addr,true);
+            }
+            else free(btc), btc = 0;
+        } else free(btc), btc = 0;
+    }
+    return(btc);
+}
+
+void testmain()
+{
+    btcaddr_new("BTC",0);
+    btcaddr_new("BTC","63522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68");
+    btcaddr_new("BTCD",0);
+    btcaddr_new("BTCD","635221024aa82667ac0dd37c50c860a4cf6f2ed04e9434b8bf4465cb8da61cc3c0e45f7f21027013ac01bd51a0147623a14e622fc3639551e325da845692563bf95643f23cf352ae6776a9142d7315f3abb363f7bbe8ce5583896e76ac41762b88ac68");
+}
+
+int32_t btc_getpubkey(char pubkeystr[67],uint8_t pubkeybuf[33],struct bp_key *key)
+{
+    void *pubkey = 0; size_t len = 0;
+    bp_pubkey_get(key,&pubkey,&len);
+    if ( pubkey != 0 )
+    {
+        if ( len < 34 )
+        {
+            init_hexbytes_noT(pubkeystr,pubkey,(int32_t)len);
+            memcpy(pubkeybuf,pubkey,len);
+        }
+        else printf("btc_getpubkey error len.%ld\n",len), len = -1;
+        //printf("btc_getpubkey len.%ld (%s).%p\n",len,pubkeystr,pubkeystr);
+    } else len = -1;
+    return((int32_t)len);
+}
+
+int32_t btc_coinaddr(char *coinaddr,struct bp_key *key,uint8_t addrtype,char *pubkeystr)
+{
+    uint8_t md160[20]; char hashstr[41]; cstring *btc_addr;
+    calc_OP_HASH160(hashstr,md160,pubkeystr);
+    if ( (btc_addr= base58_encode_check(addrtype,true,md160,sizeof(md160))) != 0 )
+    {
+        strcpy(coinaddr,btc_addr->str);
+        cstr_free(btc_addr,true);
+    }
+    return(-1);
+}
+
+int32_t btc_convwip(uint8_t *privkey,char *wipstr)
+{
+    uint8_t addrtype; cstring *cstr; int32_t len = -1;
+    if ( (cstr= base58_decode_check(&addrtype,(const char *)wipstr)) != 0 )
+    {
+        init_hexbytes_noT((void *)privkey,(void *)cstr->str,cstr->len);
+        if ( cstr->str[cstr->len-1] == 0x01 )
+            cstr->len--;
+        memcpy(privkey,cstr->str,cstr->len);
+        len = (int32_t)cstr->len;
+        //printf("addrtype.%02x wipstr.(%s) len.%d\n",addrtype,privkey,len);
+        cstr_free(cstr,true);
+    }
+    return(len);
+}
+
+void test_subatomic()
+{
+    struct cointx_info T,refT; bits256 hash2; char hexstr[8192],scriptPubKey[128],*p2sh_script,pubA[67],pubB[67],pubP[67];
+    uint8_t data[8192],tmpbuf[512],privA[256],privB[256],privP[256],sigbuf[512],pubkeyA[33],pubkeyB[33],pubkeyP[33];
+    struct bp_key keyA,keyB,keyP; int32_t i,lenA,lenB,lenP,msigredeem;
+  	void *sig = NULL; size_t siglen = 0; struct btcaddr *btc; struct coin777 *coin = coin777_find("BTC",1);
+    // A 14XrJHhqMvDszMMwKR2d6u5PPvDeRieQoG -> 03b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd05
+    // B 17Y5rr67RpTtuCd929dS6muyKZmjqJZQpr -> 037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc0
+    // S 1NBKFDmmHSpSzFnP9bX5bDWnm9zqD6nUv4 -> 03c8a7e64c763e908549aa0f93974ab346a559b486eba32bf14338542b4282b916 -> e84e0808b8cd32c38fa2093a490efabc6be53d7a
+    // ["L5o9SpeVSyvyaAwMKBFz69zicpynRuD1cJcmk4hg2XFLFG8YzMDf", "KwzgGzkgWPAbLcnFvXQ2J4JQYAE7Bt3f13WLggvk3CaDoPVVELxx", "KziNoJpt9tLXCn7wHBQATKbi9Kg3vuAD5pUwfFVExBFeZbeuyqHu"]
+    lenA = btc_convwip(privA,"L5o9SpeVSyvyaAwMKBFz69zicpynRuD1cJcmk4hg2XFLFG8YzMDf");
+    lenB = btc_convwip(privB,"KwzgGzkgWPAbLcnFvXQ2J4JQYAE7Bt3f13WLggvk3CaDoPVVELxx");
+    lenP = btc_convwip(privP,"KziNoJpt9tLXCn7wHBQATKbi9Kg3vuAD5pUwfFVExBFeZbeuyqHu");
+    //04c431daf9d7de4836a1f00808247d6b28253add0b188af3eb12f85917fd7d06f2ca91163564308b6841b4255c1ae02216ab91d8148647ebc1eb9d205f16d393fc
+    //02c431daf9d7de4836a1f00808247d6b28253add0b188af3eb12f85917fd7d06f2
+    bp_key_init(&keyA), bp_key_init(&keyB), bp_key_init(&keyP);
+    if ( bp_key_secret_set(&keyA,privA,lenA) == 0 )
+        printf("error setting privkeyA\n");
+    if ( bp_key_secret_set(&keyB,privB,lenB) == 0 )
+        printf("error setting privkeyB\n");
+    if ( bp_key_secret_set(&keyP,privP,lenP) == 0 )
+        printf("error setting privkeyP\n");
+    if ( btc_getpubkey(pubA,pubkeyA,&keyA) == 33 && btc_getpubkey(pubB,pubkeyB,&keyB) == 33 && btc_getpubkey(pubP,pubkeyP,&keyP) == 33 )
+    {
+        if ( strcmp(pubA,"03b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd05") != 0 )
+            printf("%p pubA.(%s) vs (%s)\n",pubA,pubA,"03b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd05");
+        if ( strcmp(pubB,"037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc0") != 0 )
+            printf("%p pubB.(%s) vs (%s)\n",pubB,pubB,"037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc0");
+        if ( strcmp(pubP,"03c8a7e64c763e908549aa0f93974ab346a559b486eba32bf14338542b4282b916") != 0 )
+            printf("%p pubP.(%s) vs (%s)\n",pubP,pubP,"03c8a7e64c763e908549aa0f93974ab346a559b486eba32bf14338542b4282b916");
+    }
+    //printf("(%d %d %d) pubA.(%s) pubB.(%s) pubP.(%s)\n",lenA,lenB,lenP,pubA,pubB,pubP);
+    calc_OP_HASH160(hexstr,tmpbuf,pubP);
+    p2sh_script = create_atomictx_scripts(scriptPubKey,pubA,pubB,hexstr);
+    btc = btcaddr_new(coin->name,p2sh_script);
+    //printf("rmd160.(%s) addr.(%s) scriptPubKey.(%s)\n",hexstr,btc->addr,scriptPubKey);
+    if ( strcmp(coin->name,"BTC") == 0 )
+        coin->mgw.oldtx_format = 1;
+    memset(&refT,0,sizeof(refT));
+    refT.version = 1;
+    refT.timestamp = (uint32_t)time(NULL);
+    strcpy(refT.inputs[0].tx.txidstr,"aac8f093b131d9ceac458850577142f2f99516db74bc08af7255da78a03bfd35");
+    refT.inputs[0].tx.vout = 0;
+    //refT.inputs[0].value = (uint64_t)(SATOSHIDEN * 0.0004);
+    refT.inputs[0].sequence = (uint32_t)-1;
+    refT.numinputs = 1;
+    
+    strcpy(refT.outputs[0].coinaddr,btc->addr);
+    strcpy(refT.outputs[0].script,scriptPubKey);
+    refT.outputs[0].value = 2500;
+    refT.numoutputs = 1;
+    
+    // strcpy(T.inputs[0].sigs,"002103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc05163522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68");
+    for (msigredeem=0; msigredeem<2; msigredeem++)
+    {
+        T = refT;
+        for (i=0; i<T.numinputs; i++)
+            strcpy(T.inputs[i].sigs,"00");
+        strcpy(T.inputs[0].sigs,p2sh_script);
+        T.nlocktime = (msigredeem == 0) ? 0 : (uint32_t)373280;
+        if ( msigredeem == 0 )
+        {
+            strcpy(T.outputs[0].coinaddr,"1NBKFDmmHSpSzFnP9bX5bDWnm9zqD6nUv4");
+            sprintf(T.outputs[0].script,"76a914%s88ac","e84e0808b8cd32c38fa2093a490efabc6be53d7a");
+            T.inputs[0].sequence = (uint32_t)-1;
+        }
+        else
+        {
+            strcpy(T.outputs[0].coinaddr,"14XrJHhqMvDszMMwKR2d6u5PPvDeRieQoG");
+            calc_OP_HASH160(hexstr,tmpbuf,"03b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd05");
+            sprintf(T.outputs[0].script,"76a914%s88ac",hexstr);
+            T.inputs[0].sequence = (uint32_t)time(NULL);
+        }
+        disp_cointx(&T);
+        emit_cointx(&hash2,data,sizeof(data),&T,coin->mgw.oldtx_format,SIGHASH_ALL);
+        if ( msigredeem != 0 )
+        {
+            strcpy(T.inputs[0].sigs,"00");
+            if ( bp_sign(&keyA,hash2.bytes,sizeof(hash2),&sig,&siglen) != 0 )
+            {
+                memcpy(sigbuf,sig,siglen);
+                sigbuf[siglen++] = SIGHASH_ALL;
+                init_hexbytes_noT(hexstr,sigbuf,(int32_t)siglen);
+                sprintf(&T.inputs[0].sigs[strlen(T.inputs[0].sigs)],"%02lx%s",siglen,hexstr);//%02lx%s",siglen,hexstr,strlen(pubA)/2,pubA);
+                //printf("after A.(%s) siglen.%02lx\n",T.inputs[0].sigs,siglen);
+            }
+            if ( bp_sign(&keyB,hash2.bytes,sizeof(hash2),&sig,&siglen) != 0 )
+            {
+                memcpy(sigbuf,sig,siglen);
+                sigbuf[siglen++] = SIGHASH_ALL;
+                init_hexbytes_noT(hexstr,sigbuf,(int32_t)siglen);
+                sprintf(&T.inputs[0].sigs[strlen(T.inputs[0].sigs)],"%02lx%s",siglen,hexstr);//%02lx%s",siglen,hexstr,strlen(pubB)/2,pubB);
+                //printf("after B.(%s) siglen.%02lx\n",T.inputs[0].sigs,siglen);
+            }
+            strcat(T.inputs[0].sigs,"51");
+        }
+        else
+        {
+            if ( bp_sign(&keyP,hash2.bytes,sizeof(hash2),&sig,&siglen) != 0 )
+            {
+                memcpy(sigbuf,sig,siglen);
+                sigbuf[siglen++] = SIGHASH_ALL;
+                init_hexbytes_noT(hexstr,sigbuf,(int32_t)siglen);
+                sprintf(T.inputs[0].sigs,"%02lx%s%02lx%s00",siglen,hexstr,strlen(pubP)/2,pubP);
+                printf("after P.(%s) siglen.%02lx\n",T.inputs[0].sigs,siglen);
+            }
+        }
+        sprintf(&T.inputs[0].sigs[strlen(T.inputs[0].sigs)],"4c%02lx%s",strlen(p2sh_script)/2,p2sh_script);
+        printf("scriptSig.(%s)\n",T.inputs[0].sigs);
+        _emit_cointx(hexstr,sizeof(hexstr),&T,coin->mgw.oldtx_format);
+        printf("T.msigredeem %d -> (%s)\n",msigredeem,hexstr);
+    }
+    // spend 01000000016c8915f9c0e9cf76af746be52a232969e25d146cc5d58e36ccbeb9bfdc15b9b100000000d2493046022100f1de426daa15d0e9efc9f89afc52afca5f0d8478333b00e563a0d72b4dfd710f022100ecb147fbaf98153f2769cd50dbe90e882d6b235ffbfb4e13d67cc3ed3cac72ed012103c8a7e64c763e908549aa0f93974ab346a559b486eba32bf14338542b4282b916004c6363522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68ffffffff01c40900000000000017a9143d0f47bf8892b8f2847c35cffa576fd74d3436f58700000000
+    // refund 01000000016c8915f9c0e9cf76af746be52a232969e25d146cc5d58e36ccbeb9bfdc15b9b100000000f900493046022100ac06c041bec6e946e9d96acebf0e81b13f6ddac7b731c2aea5848dfc70c37e3c022100d8a3d5a2866c52dfdf1eb382541e6dc21c21d22f10e6d51fcf1c591691c4bc3801473044022064c5412a74afef10e02ca3260faa50bacc7c59dd9f6eb40a79f300e34c10046a0220194ab536be7caa3723b46e09568a9d1be2a8db3bf3d1e3085de7ebeb5917803b01514c6363522103b4143b6e7a064a78bc66dab0ca72251fea3d6fd8db1f4c48b91996d7af62dd0521037387677a21b8ebb472ff2d00892098dcd990a9a21b09b8e22aefece8b1cbbdc052ae6776a914e84e0808b8cd32c38fa2093a490efabc6be53d7a88ac68ffffffff01c40900000000000017a9143d0f47bf8892b8f2847c35cffa576fd74d3436f587fe0dec55 -> aac8f093b131d9ceac458850577142f2f99516db74bc08af7255da78a03bfd35
     getchar();
 }
 

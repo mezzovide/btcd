@@ -720,6 +720,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     {
         {"nxtae", prices777_NXT, NXT_supports, NXT_tradestub }, {"unconf", prices777_unconfNXT, NXT_supports, NXT_tradestub },
         {"InstantDEX", prices777_InstantDEX, InstantDEX_supports, InstantDEX_tradestub },
+        {"wallet", prices777_InstantDEX, InstantDEX_supports, InstantDEX_tradestub },
         {"basket", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
         {"basketNXT", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
         {"basketBTC", prices777_basket, InstantDEX_supports, InstantDEX_tradestub },
@@ -821,6 +822,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
     }
     else
     {
+        prices->basemult = prices->relmult = 1;
         safecopy(prices->base,base,sizeof(prices->base)), touppercase(prices->base);
         safecopy(prices->lbase,base,sizeof(prices->lbase)), tolowercase(prices->lbase);
         if ( rel == 0 && prices777_ispair(basebuf,relbuf,base) >= 0 )

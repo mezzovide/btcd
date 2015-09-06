@@ -276,19 +276,67 @@ int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendq
     return(0);
 }
 
+cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendasset,uint64_t orderid,uint64_t quoteid)
+{
+    int32_t iter; uint64_t assetid; struct coin777 *coin; struct destbuf pubkey; char buf[128],account[128],*addr,*str; cJSON *item = 0;
+    for (iter=0; iter<2; iter++)
+    {
+        addr = 0;
+        str = (iter == 0) ? recv : send;
+        assetid = (iter == 0) ? recvasset : sendasset;
+        if ( (coin= coin777_find(str,1)) != 0 )
+        {
+            if ( item == 0 )
+                item = cJSON_CreateObject();
+            sprintf(account,"atomic%s",iter == 0 ? "recv" : "send");
+            sprintf(buf,"%spubkey",iter == 0 ? "recv" : "send");
+            if ( is_NXT_native(assetid) != 0 )
+            {
+                addr = SUPERNET.NXTADDR;
+                if ( iter == 1 )
+                {
+                    jaddstr(item,"sendphased","yes");
+                    fee_triggerhash(buf,orderid,quoteid,ORDERBOOK_EXPIRATION/60 + 60);
+                    jaddstr(item,"triggerhash",buf);
+                }
+            }
+            else
+            {
+                addr = (iter == 0) ? coin->atomicrecv : coin->atomicsend;
+                if ( addr[0] == 0 )
+                    addr = get_acct_coinaddr(addr,str,coin->serverport,coin->userpass,account);
+            }
+            if ( addr != 0 )
+            {
+                jaddstr(item,account,addr);
+                if ( is_NXT_native(assetid) == 0 )
+                {
+                    get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,addr);
+                    jaddstr(item,buf,pubkey.buf);
+                }
+            }
+        } else printf("cant find coin.(%s)\n",iter == 0 ? recv : send);
+    }
+    if ( item == 0 )
+        item = cJSON_CreateObject(), jaddstr(item,"error","cant find local coin daemons");
+    return(item);
+}
+
 void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t bidask,double price,double volume,uint64_t orderid,uint64_t quoteid)
 {
-    uint64_t baseqty,relqty; char basec,relc; struct InstantDEX_quote *iQ;
+    uint64_t baseqty,relqty; int32_t iswallet = 0; char basec,relc; struct InstantDEX_quote *iQ;
     jaddnum(item,"group",group);
     jaddstr(item,"exchange",prices->exchange);
-    if ( strcmp(prices->exchange,"nxtae") == 0 || strcmp(prices->exchange,"unconf") == 0 || strcmp(prices->exchange,"InstantDEX") == 0 )
+    jaddstr(item,"base",prices->base), jaddstr(item,"rel",prices->rel);
+    if ( strcmp(prices->exchange,"nxtae") == 0 || strcmp(prices->exchange,"unconf") == 0 || strcmp(prices->exchange,"InstantDEX") == 0 || strcmp(prices->exchange,"wallet") == 0 )
     {
         jadd64bits(item,prices->type == 5 ? "currency" : "asset",prices->baseid);
         if ( (iQ= find_iQ(quoteid)) != 0 )
             jadd64bits(item,"offerNXT",iQ->s.offerNXT);
         //else if ( quoteid != 0 ) printf("cant find offerNXT.%llu\n",(long long)quoteid);
         jadd64bits(item,"baseid",prices->baseid), jadd64bits(item,"relid",prices->relid);
-        if ( strcmp(prices->exchange,"InstantDEX") == 0 )
+        iswallet = (strcmp(prices->exchange,"wallet") == 0);
+        if ( strcmp(prices->exchange,"InstantDEX") == 0 || iswallet != 0 )
         {
             jaddstr(item,"trade","swap");
             baseqty = calc_qty(prices->basemult,prices->baseid,SATOSHIDEN * volume + 0.5/SATOSHIDEN);
@@ -299,26 +347,28 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
                 basec = '+', relc = '-';
                 jadd64bits(item,"recvbase",baseqty);
                 jadd64bits(item,"sendrel",relqty);
+                if ( iswallet != 0 )
+                    jadd(item,"wallet",wallet_swapjson(prices->base,prices->baseid,prices->rel,prices->relid,orderid,quoteid));
             }
             else
             {
                 basec = '-', relc = '+';
                 jadd64bits(item,"sendbase",baseqty);
                 jadd64bits(item,"recvrel",relqty);
+                if ( iswallet != 0 )
+                    jadd(item,"wallet",wallet_swapjson(prices->rel,prices->relid,prices->base,prices->baseid,orderid,quoteid));
             }
             //printf("(%s %cbaseqty.%llu <-> %s %crelqty.%llu) basemult.%llu baseid.%llu vol %f amount %llu\n",prices->base,basec,(long long)baseqty,prices->rel,relc,(long long)relqty,(long long)prices->basemult,(long long)prices->baseid,volume,(long long)volume*SATOSHIDEN);
         }
         else
         {
             jaddstr(item,"trade",bidask == 0 ? "sell" : "buy");
-            jaddstr(item,"base",prices->base), jaddstr(item,"rel",prices->rel);
         }
     }
     else
     {
         jaddstr(item,"trade",bidask == 0 ? "sell" : "buy");
         jaddstr(item,"name",prices->contract);
-        jaddstr(item,"base",prices->base), jaddstr(item,"rel",prices->rel);
     }
     jaddnum(item,"orderprice",price);
     jaddnum(item,"ordervolume",volume);
@@ -327,41 +377,6 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
     if ( quoteid != 0 )
         jadd64bits(item,"quoteid",quoteid);
 }
-
-/*
-{"plugin":"InstantDEX","method":"orderbook","relid":"8688289798928624137","base":"BTC","exchange":"active","allfields":1}
-0x11b8f5000 i.1/15 addlink.unconf groupid.0 wt.1.000000 (BTC/NXT.17554243582654188572/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11b9ea000 i.2/15 addlink.InstantDEX groupid.0 wt.1.000000 (BTC/NXT.17554243582654188572/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11badf000 i.3/15 addlink.nxtae groupid.0 wt.1.000000 (BTC/NXT.4551058913252105307/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11bb51000 i.4/15 addlink.unconf groupid.0 wt.1.000000 (BTC/NXT.4551058913252105307/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11bbc3000 i.5/15 addlink.InstantDEX groupid.0 wt.1.000000 (BTC/NXT.4551058913252105307/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11bc35000 i.6/15 addlink.nxtae groupid.0 wt.1.000000 (BTC/NXT.12659653638116877017/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x119a3f000 i.7/15 addlink.unconf groupid.0 wt.1.000000 (BTC/NXT.12659653638116877017/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11bca7000 i.8/15 addlink.InstantDEX groupid.0 wt.1.000000 (BTC/NXT.12659653638116877017/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11bd19000 i.9/15 addlink.nxtae groupid.1 wt.-1.000000 (Jay/NXT.8688289798928624137/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11be0e000 i.10/15 addlink.unconf groupid.1 wt.-1.000000 (Jay/NXT.8688289798928624137/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11be80000 i.11/15 addlink.InstantDEX groupid.1 wt.-1.000000 (Jay/NXT.8688289798928624137/5527630 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11bef2000 i.12/15 addlink.poloniex groupid.0 wt.-1.000000 (NXT/BTC.5527630/4412482 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11bfe7000 i.13/15 addlink.bittrex groupid.0 wt.-1.000000 (NXT/BTC.5527630/4412482 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-0x11c15f000 i.14/15 addlink.btc38 groupid.0 wt.-1.000000 (NXT/BTC.5527630/4412482 -> BTC/Jay.4412482/8688289798928624137).basketNXT
-
-9047.344kb init_pair.(active) (BTC)(Jay).0 -> (BTC/Jay) keysize.39 crc.2237937591 (baseid.4412482 relid.8688289798928624137)
-0x11c3cc000 i.0/4 addlink.poloniex groupid.0 wt.-1.000000 (Jay/BTC.7954762/4412482 -> BTC/Jay.4412482/8688289798928624137).active
-0x11c43e000 i.1/4 addlink.bittrex groupid.0 wt.-1.000000 (Jay/BTC.7954762/4412482 -> BTC/Jay.4412482/8688289798928624137).active
-0x11c4b0000 i.2/4 addlink.InstantDEX groupid.0 wt.1.000000 (BTC/Jay.4412482/8688289798928624137 -> BTC/Jay.4412482/8688289798928624137).active
-0x11c2d7000 i.3/4 addlink.basketNXT groupid.0 wt.1.000000 (BTC/Jay.4412482/8688289798928624137 -> BTC/Jay.4412482/8688289798928624137).active
- {"plugin":"InstantDEX","method":"orderbook","relid":"8688289798928624137","base":"BTC","exchange":"active","allfields":1}
- 
-B.jay/nxt A.nxt/btc                               A.jay/nxt B.nxt/btc
-14.9 0.00003900 25641 1708  5811           4770     15.9  0.00003000 33333
-14.1 0.00004000 25000 1773  5640           3675     15.98 0.00002300 43478
-14.0 0.00004700 21276 1519  6580           3916     17.8  0.00002200 45454
-
-
-15.9 25641 1612.64, 25000/15.9 1572.32
-15.98 25641 1604.57, 25000/15.98 1564
-17.8 25641 1440.5 25000/17.8 1404.5
-*/
 
 cJSON *prices777_item(int32_t rootbidask,struct prices777 *prices,int32_t group,int32_t bidask,double origprice,double origvolume,double rootwt,double groupwt,double wt,uint64_t orderid,uint64_t quoteid)
 {
@@ -965,7 +980,8 @@ struct prices777 *prices777_addbundle(int32_t *validp,int32_t loadprices,struct 
             {
                 printf("First pair for (%s), start polling]\n",exchange_str(prices->exchangeid));
                 exchange->polling = 1;
-                portable_thread_create((void *)prices777_exchangeloop,&Exchanges[prices->exchangeid]);
+                if ( strcmp(exchange->name,"wallet") != 0 )
+                    portable_thread_create((void *)prices777_exchangeloop,&Exchanges[prices->exchangeid]);
             }
             BUNDLE.ptrs[BUNDLE.num] = prices;
             printf("prices777_addbundle.(%s) (%s/%s).%s %llu %llu\n",prices->contract,prices->base,prices->rel,prices->exchange,(long long)prices->baseid,(long long)prices->relid);
