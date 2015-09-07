@@ -822,6 +822,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
             else // Alice
             {
                 // from placeask {"orderid":"7805939386657356384","quoteid":"16200058522698151101","offerNXT":"423766016895692955","plugin":"InstantDEX","method":"swap","exchange":"wallet","base":"BTCD","rel":"NXT","baseid":"11060861818140490423","relid":"5527630","baseqty":"100000000","relqty":"-20000000000","price":200,"volume":1,"F":"513443","T":"44261a163b0d18e04cd6750593aa30f1e18a79dd411eb87604c85ee9b0c129cf","FH":"ae2245501363e98266e6959755c02da8969784ec8c50f17e68b0a468ba4e51b1","U":"00109e615703e8034e5bbad625df3d536fa90b1e6a28c3f5a56e1fcbe34132391c8d3fd7f671cb199b30f378f284e10500c817a80400000000e1f5050000000044261a163b0d18e04cd6750593aa30f1e18a79dd411eb87604c85ee9b0c129cfZ01000000d8d40700ec0d80ba02fba51d01200000803630336166316237383334343534366362643734663631313635326264326530","S":"8581451b53b19733a171e018ad6dcbe2589d5480173be4cced05add7f30f9c32","a":"11060861818140490423","q":"100000000","msig":"","phasesecret":"59afab618a8b05cec480129eb182aa75203e6eac","tag":"9422372703776258788"}
+                pubB = 0;
                 if ( (pkhash= jstr(origjson,"phasesecret")) != 0 && (pubB= jstr(origjson,"pubB")) != 0 ) // Alice
                 {
                     char *subatomic_fundingtx(char *refredeemscript,struct subatomic_rawtransaction *funding,struct coin777 *coin,char *mypubkey,char *otherpubkey,char *pkhash,uint64_t amount,int32_t lockblocks);
@@ -834,8 +835,8 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             free(str);
                         free(refundtx);
                         return(clonestr(swapbuf));
-                    }
-                }
+                    } else printf("fundingtx returned null redeem.(%s)\n",refredeemscript);
+                } else printf("missing pkhash.%p or pubB.%p\n",pkhash,pubB);
             }
             return(clonestr("{\"result\":\"processed wallet swap\"}"));
         }
