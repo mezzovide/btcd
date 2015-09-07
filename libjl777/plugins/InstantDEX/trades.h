@@ -829,7 +829,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                     char refredeemscript[4096],*refundtx; struct subatomic_rawtransaction funding;
                     if ( (refundtx= subatomic_fundingtx(refredeemscript,&funding,coin,coin->atomicrecvpubkey,pubB,pkhash,amount,10)) != 0 )
                     {
-                        printf("FUNDINGTX.(%s)\n",funding.rawtransaction);
+                        printf("FUNDINGTX.(%s)\n",funding.signedtransaction);
                         sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"funding\",\"exchange\":\"wallet\",\"coin\":\"%s\",\"amount\":\"%lld\",\"pubA\":\"%s\",\"refundtx\":\"%s\",\"rs\":\"%s\"}",(long long)orderid,(long long)quoteid,SUPERNET.NXTADDR,coin->name,(long long)amount,coin->atomicrecvpubkey,refundtx,refredeemscript);
                         if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
                             free(str);

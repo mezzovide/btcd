@@ -3024,7 +3024,7 @@ char *subatomic_fundingtx(char *refredeemscript,struct subatomic_rawtransaction 
                         free(refT);
                     } else printf("cant get %s addr from (%s)\n",coin->name,mypubkey);
                 }
-            }
+            } else printf("error: probably not enough funds\n");
         }
         free(redeemscript);
     } else printf("subatomic_fundingtx: cant create redeemscript\n");
