@@ -1383,11 +1383,11 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
      "amount" : 2.00000000,
      "confirmations" : 72505
      },*/
-    *totalp = 0;
+    *totalp = *nump = 0;
     sprintf(params,"%d, 99999999",coin->minconfirms);
     if ( (retstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"listunspent",params)) != 0 )
     {
-        //printf("unspents (%s)\n",retstr);
+        printf("unspents (%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
             if ( is_cJSON_Array(json) != 0 && (num= cJSON_GetArraySize(json)) > 0 )
@@ -1409,10 +1409,11 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
                     }
                 }
                 *nump = j;
-                if ( j > 1 )
+                if ( j > 0 )
                 {
                     int _decreasing_signedint64(const void *a,const void *b);
-                    qsort(ups,j,sizeof(*ups),_decreasing_signedint64);
+                    if ( j > 1 )
+                        qsort(ups,j,sizeof(*ups),_decreasing_signedint64);
                     if ( coin->changeaddr[0] == 0 )
                         strcpy(coin->changeaddr,ups[0].address.buf);
                     //for (i=0; i<j; i++)
@@ -1423,6 +1424,8 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
         }
         free(retstr);
     }
+    if ( *nump == 0 )
+        printf("no unspents\n");
     return(ups);
 }
 
@@ -2968,7 +2971,7 @@ char *subatomic_fundingtx(char *refredeemscript,struct subatomic_rawtransaction 
         if ( btc_coinaddr(mycoinaddr,coin->addrtype,mypubkey) != 0 && (utx= gather_unspents(&total,&num,coin,0)) != 0 )
         {
             donation = subatomic_donation(coin,amount);
-            //printf("CREATE FUNDING TX.(%s) for %.8f -> %s locktime.%u donation %.8f\n",coin->name,dstr(amount),p2shaddr,lockblock,dstr(donation));
+            printf("CREATE FUNDING TX.(%s) for %.8f -> %s locktime.%u donation %.8f\n",coin->name,dstr(amount),p2shaddr,lockblock,dstr(donation));
             if ( subatomic_calc_rawinputs(coin,funding,amount,utx,num,donation) >= amount )
             {
                 if ( funding->amount == amount && funding->change == (funding->inputsum - amount - coin->mgw.txfee - donation) )
@@ -3025,7 +3028,7 @@ char *subatomic_fundingtx(char *refredeemscript,struct subatomic_rawtransaction 
                     } else printf("cant get %s addr from (%s)\n",coin->name,mypubkey);
                 }
             } else printf("error: probably not enough funds\n");
-        }
+        } else printf("error: btc_coinaddr.(%s)\n",mycoinaddr);
         free(redeemscript);
     } else printf("subatomic_fundingtx: cant create redeemscript\n");
     return(refundtx);
@@ -3097,7 +3100,7 @@ void test_subatomic()
     char pkhash[8192],pubA[67],pubB[67],pubP[67]; uint8_t tmpbuf[512]; struct coin777 *coin;
     struct subatomic_rawtransaction funding; char refredeemscript[4096],swapacct[64],othercoinaddr[64],mycoinaddr[64],onetimeaddr[64],refundsig[512],*signedrefund,*refundtx=0,*spendtx=0;
     uint64_t amount; struct destbuf pubkey;
-    coin = coin777_find("BTCD",1);
+    coin = coin777_find("BTC",1);
     strcpy(mycoinaddr,coin->atomicsend),get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,mycoinaddr), strcpy(pubA,pubkey.buf);
     strcpy(othercoinaddr,coin->atomicrecv),get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,othercoinaddr), strcpy(pubB,pubkey.buf);
     sprintf(swapacct,"%u",777);
@@ -3105,11 +3108,11 @@ void test_subatomic()
     {
         get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,onetimeaddr);
         strcpy(pubP,pubkey.buf);
-        //printf("onetimeadddr.(%s) pubkey.(%s)\n",onetimeaddr,pubP);
+        printf("onetimeadddr.(%s) pubkey.(%s)\n",onetimeaddr,pubP);
     }
     calc_OP_HASH160(pkhash,tmpbuf,pubP);
     amount = 20000;
-    //printf("pkhash.(%s)\n",pkhash);
+    printf("pkhash.(%s)\n",pkhash);
     if ( (refundtx= subatomic_fundingtx(refredeemscript,&funding,coin,pubA,pubB,pkhash,20000,10)) != 0 )
     {
         printf("FUNDING.(%s)\n",funding.signedtransaction);
