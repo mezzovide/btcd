@@ -660,8 +660,8 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             sprintf(fieldpkhash,"%spkhash",recvstr), rpkhash = jstr(walletitem,fieldpkhash);
             sendcoin = coin777_find(sendstr,1);
             sprintf(fieldA,"%spubA",sendstr), spubA = jstr(walletitem,fieldA);
-            spubB = recvcoin->atomicrecvpubkey;
-            subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,iQ->s.quoteid), spkhash = pkhash;
+            spubB = sendcoin->atomicrecvpubkey;
+            subatomic_pubkeyhash(pubkeystr,pkhash,sendcoin,iQ->s.quoteid), spkhash = pkhash;
             // placeask -> recvbase/sendrel, placebid -> sendbase/recvrel, it is relative to the one that placed quote
             if ( strcmp(sendstr,"NXT") == 0 ) // placeask COIN/NXT or placebid NXT/COIN
             {
@@ -684,6 +684,8 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             }
             else if ( strcmp(recvstr,"NXT") == 0 )
             {
+                sprintf(fieldB,"%spubB",sendstr);
+                sprintf(fieldpkhash,"%spkhash",sendstr);
                 if ( spubA != 0 && spubB != 0 && spkhash[0] != 0 ) // Bob <- sendcoin from Alice, send NXT -> Alice
                 {
                     if ( (redeemscript= create_atomictx_scripts(sendcoin->p2shtype,scriptPubKey,p2shaddr,spubA,spubB,spkhash)) != 0 )
@@ -694,7 +696,12 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                         sprintf(swapbuf+strlen(swapbuf)-1,",\"sendcoin\":\"%s\",\"sendamount\":\"%llu\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"recvasset\":\"%llu\",\"recvqty\":\"%llu\"}",sendstr,(long long)sendamount,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,(long long)recvasset,(long long)recvamount);
                         free(redeemscript);
                     }
-                } else return(clonestr("{\"error\":\"recvNXT without spubB or spkhash\"}\n"));
+                }
+                else
+                {
+                    sprintf(buf,"{\"error\":\"recvNXT sendstr.(%s) spubA.(%s) without %s spubB.(%s) or %s spkhash.(%s)\"}\n",sendstr,spubA,fieldB,spubB,fieldpkhash,spkhash);
+                    return(clonestr(buf));
+                }
             }
             else if ( rpubA[0] != 0 && rpubB != 0 && rpkhash != 0 && spubA != 0 && spubB != 0 && spkhash[0] != 0 && (strcmp(sendstr,"BTC") == 0 || strcmp(recvstr,"BTC") == 0) )
             {
@@ -759,7 +766,8 @@ int32_t swap_verifyNXT(uint32_t *finishp,uint32_t *deadlinep,cJSON *origjson,cha
     char UTX[32768],*triggerhash,*utx,*sighash,*jsonstr=0,*parsed,*fullhash,*cmpstr; cJSON *json=0,*txobj,*attachment; int32_t retval = -1;
     uint64_t otherbits,otherqty,recvasset; struct destbuf calchash; int64_t recvqty; uint32_t i,j,timestamp,now,finishheight;
     *finishp = 0;
-    triggerhash = jstr(origjson,"T");
+    if ( (triggerhash= jstr(origjson,"T")) == 0 )
+        triggerhash = jstr(origjson,"trigger");
     otherbits = j64bits(origjson,"a");
     otherqty = j64bits(origjson,"q");
     fullhash = jstr(origjson,"FH");
@@ -915,6 +923,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 recvcoin = coin777_find(recvstr,0);
             if ( (sendstr= jstr(origjson,"sendcoin")) != 0 )
                 sendcoin = coin777_find(sendstr,0);
+            printf("recvstr.%p sendstr.%p\n",recvstr,sendstr);
             if ( recvstr != 0 && sendstr != 0 )
             {
                 if ( (sendamount= j64bits(origjson,"sendamount")) != 0 && (recvamount= j64bits(origjson,"recvamount")) != 0 && sendcoin != 0 && recvcoin != 0 && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 && (rpubA= jstr(origjson,"rpubA")) != 0  && (rpubB= jstr(origjson,"rpubB")) != 0  && (rpkhash= jstr(origjson,"rpkhash")) != 0 && triggerhash != 0 && (spubA= jstr(origjson,"spubA")) != 0  && (spubB= jstr(origjson,"spubB")) != 0  && (spkhash= jstr(origjson,"spkhash")) != 0 )
@@ -932,7 +941,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                     if ( (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
                     {
                         subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
-                        //printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
+                        printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
                         if ( strcmp(recvcoin->atomicrecvpubkey,rpubB) == 0 && strcmp(pkhash,rpkhash) == 0 && (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (sendasset= j64bits(origjson,"sendasset")) != 0 && (sendqty= j64bits(origjson,"sendqty")) != 0 )
                         {
                             if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,pubkeystr,recvamount,refundtx,redeemscript)) != 0 )
@@ -946,11 +955,11 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                     gen_NXTtx(&sendtx,calc_nxt64bits(offerNXT.buf),sendasset,sendqty,orderid,quoteid,deadline,triggerhash,0,_get_NXTheight(0)+finishheight,rpkhash);
                                     //issue_broadcastTransaction(&errcode,&txstr,sendtx.txbytes,SUPERNET.NXTACCTSECRET);
                                     printf(">>>>>>>>>>>> broadcast fee and phased.(%s) trigger.%s\n",sendtx.txbytes,triggerhash);
-                                    sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"a\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"recvcoin\":\"%s\",\"recvamount\":\"%lld\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"refundsig\":\"%s\",\"phasedtx\":\"%s\",\"spendtxid\":\"%s\",\"sendasset\":\"%llu\",\"q\":\"%llu\",\"trigger\":\"%s\"}",(long long)orderid,(long long)quoteid,offerNXT.buf,recvcoin->name,(long long)recvamount,fieldA,rpubA,fieldB,rpubB,fieldpkhash,rpkhash,refundsig,sendtx.txbytes,spendtxid.buf,(long long)sendasset,(long long)sendqty,triggerhash);
+                                    sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"a\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"recvcoin\":\"%s\",\"recvamount\":\"%lld\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"refundsig\":\"%s\",\"phasedtx\":\"%s\",\"spendtxid\":\"%s\",\"a\":\"%llu\",\"q\":\"%llu\",\"trigger\":\"%s\"}",(long long)orderid,(long long)quoteid,offerNXT.buf,recvcoin->name,(long long)recvamount,fieldA,rpubA,fieldB,rpubB,fieldpkhash,rpkhash,refundsig,sendtx.txbytes,spendtxid.buf,(long long)sendasset,(long long)sendqty,triggerhash);
                                     if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
                                         free(str);
                                     // poll for vin then broadcast spendtx
-                                    printf(">>>>>>>>>>>>>>>>>>>> SPENDTX.(%s) AFTER funded\n",spendtx);
+                                    printf(">>>>>>>>>>>>>>>>>>>> SPENDTX.(%s) AFTER funded -> (%s)\n",spendtx,swapbuf);
                                 }
                                 free(spendtx);
                                 return(clonestr(swapbuf));
@@ -959,7 +968,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                     }
                     else if ( (str= jstr(origjson,"refundsig")) != 0 && str[0] != 0 && (phasedtx= jstr(origjson,"phasedtx")) != 0 && phasedtx[0] != 0 ) // Alice to verify NXTtx and send recvcoin
                     {
-                        if ( swap_verifyNXT(&finishheight,&deadline,origjson,offerNXT.buf,exchange.buf,orderid,quoteid,iQ,phasedtx) == 0 )
+                        if ( 1 )//swap_verifyNXT(&finishheight,&deadline,origjson,offerNXT.buf,exchange.buf,orderid,quoteid,iQ,phasedtx) == 0 )
                         {
                             if ( recvcoin->refundtx != 0 && (recvcoin->signedrefund= subatomic_validate(recvcoin,rpubA,rpubB,rpkhash,recvcoin->refundtx,str)) != 0 )
                             {
@@ -984,21 +993,23 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 sprintf(fieldA,"%spubA",sendcoin->name);
                 sprintf(fieldB,"%spubB",sendcoin->name);
                 sprintf(fieldpkhash,"%spkhash",sendcoin->name);
+                printf("triggerhash.(%s)\n",triggerhash);
                 if ( (sendamount= j64bits(origjson,"sendamount")) != 0 && sendcoin != 0 && triggerhash != 0 && (spubA= jstr(origjson,fieldA)) != 0  && (spubB= jstr(origjson,fieldB)) != 0  && (spkhash= jstr(origjson,fieldpkhash)) != 0 )
                 {
                     subatomic_pubkeyhash(pubkeystr,pkhash,sendcoin,quoteid);
-                    if ( strcmp(recvcoin->atomicsendpubkey,spubB) == 0 && strcmp(pkhash,spkhash) == 0 && (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (recvasset= j64bits(origjson,"recvasset")) != 0 && (recvqty= j64bits(origjson,"recvqty")) != 0 )
+                    if ( strcmp(sendcoin->atomicrecvpubkey,spubB) == 0 && strcmp(pkhash,spkhash) == 0 && (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (recvasset= j64bits(origjson,"recvasset")) != 0 && (recvqty= j64bits(origjson,"recvqty")) != 0 )
                     {
                         if ( sendcoin->funding.signedtransaction[0] == 0 && (refundtx= subatomic_fundingtx(refredeemscript,&sendcoin->funding,sendcoin,spubA,spubB,spkhash,sendamount,10)) != 0 )
                         {
                             deadline = 3600;
                             gen_NXTtx(&sendcoin->trigger,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,0,0,0,0);
-                            sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"%s\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"trigger\":\"%s\",\"sendasset\":\"%llu\",\"sendqty\":\"%llu\"}",(long long)orderid,(long long)quoteid,SUPERNET.NXTADDR,exchange.buf,(long long)sendamount,refundtx,refredeemscript,sendstr,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,sendcoin->trigger.fullhash,(long long)recvasset,(long long)recvqty);
+                            sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"%s\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"trigger\":\"%s\",\"sendasset\":\"%llu\",\"sendqty\":\"%llu\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)orderid,(long long)quoteid,SUPERNET.NXTADDR,exchange.buf,(long long)sendamount,refundtx,refredeemscript,sendstr,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,sendcoin->trigger.fullhash,(long long)recvasset,(long long)recvqty,base,rel);
                             sendcoin->refundtx = refundtx;
                             if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
                                 free(str);
+                            printf("BUSDATA.(%s)\n",swapbuf);
                         } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
-                    }
+                    } else printf("mismatched send (%s vs %s) or (%s vs %s)\n",sendcoin->atomicrecvpubkey,spubB,spkhash,pkhash);
                 }
             }
             return(clonestr("{\"result\":\"processed wallet swap\"}"));
