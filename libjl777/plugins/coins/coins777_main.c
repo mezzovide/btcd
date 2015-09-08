@@ -304,7 +304,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
             strcpy(coin->donationaddress,"177MRHRjAxCZc7Sr5NViqHRivDu1sNwkHZ");
     }
     else if ( strcmp(coin->name,"LTC") == 0 )
-        coin->addrtype = 48, coin->p2shtype = 5;
+        coin->addrtype = 48, coin->p2shtype = 5, coin->minconfirms = 1, coin->mgw.txfee = 100000, coin->usep2sh = 0;
     else if ( strcmp(coin->name,"BTCD") == 0 )
         coin->addrtype = 60, coin->p2shtype = 85;
     else if ( strcmp(coin->name,"DOGE") == 0 )

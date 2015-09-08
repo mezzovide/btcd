@@ -278,7 +278,7 @@ int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendq
 
 cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendasset,uint64_t orderid,uint64_t quoteid)
 {
-    int32_t iter; uint64_t assetid; struct coin777 *coin; struct destbuf pubkey; char buf[128],account[128],*addr,*str; cJSON *item = 0;
+    int32_t iter; uint64_t assetid; struct coin777 *coin; struct destbuf pubkey; char buf[128],pkhash[128],account[128],*addr,*str; cJSON *item = 0;
     for (iter=0; iter<2; iter++)
     {
         addr = 0;
@@ -288,18 +288,18 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
         {
             if ( item == 0 )
                 item = cJSON_CreateObject();
-            sprintf(account,"atomic%s",iter == 0 ? "recv" : "send");
-            sprintf(buf,"%spubkey",iter == 0 ? "recv" : "send");
-            if ( is_NXT_native(assetid) != 0 )
+            if ( iter == 0 )
             {
-                addr = SUPERNET.NXTADDR;
-                if ( iter == 1 )
-                {
-                    jaddstr(item,"sendphased","yes");
-                    fee_triggerhash(buf,orderid,quoteid,ORDERBOOK_EXPIRATION/60 + 60);
-                    jaddstr(item,"triggerhash",buf);
-                }
+                sprintf(account,"%srecv",str);
+                sprintf(buf,"%spubB",str);
             }
+            else
+            {
+                sprintf(account,"%ssend",str);
+                sprintf(buf,"%spubA",str);
+            }
+            if ( is_NXT_native(assetid) != 0 )
+                addr = SUPERNET.NXTADDR;
             else
             {
                 addr = (iter == 0) ? coin->atomicrecv : coin->atomicsend;
@@ -313,6 +313,12 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
                 {
                     get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,addr);
                     jaddstr(item,buf,pubkey.buf);
+                    if ( iter == 0 )
+                    {
+                        subatomic_pubkeyhash(pubkey.buf,pkhash,coin,quoteid);
+                        sprintf(buf,"%spkhash",str);
+                        jaddstr(item,buf,pkhash);
+                    }
                 }
             }
         } else printf("cant find coin.(%s)\n",iter == 0 ? recv : send);

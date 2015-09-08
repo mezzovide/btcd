@@ -1017,7 +1017,7 @@ char *get_acct_coinaddr(char *coinaddr,char *coinstr,char *serverport,char *user
         return(0);
     sprintf(addr,"\"%s\"",NXTaddr);
     retstr = bitcoind_passthru(coinstr,serverport,userpass,"getaccountaddress",addr);
-    printf("get_acct_coinaddr.(%s) -> (%s)\n",NXTaddr,retstr);
+    //printf("get_acct_coinaddr.(%s) -> (%s)\n",NXTaddr,retstr);
     if ( retstr != 0 )
     {
         strcpy(coinaddr,retstr);
