@@ -522,13 +522,21 @@ int32_t is_specialexchange(char *exchangestr)
 
 char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr,char *name,char *base,char *rel,struct InstantDEX_quote *iQ,char *extra,char *secret,char *activenxt,cJSON *origjson)
 {
-    extern queue_t InstantDEXQ;
-    char walletstr[256],*retstr = 0; int32_t inverted,dir; struct prices777 *prices; double price,volume; struct exchange_info *exchange;
+    extern queue_t InstantDEXQ; struct exchange_info *exchange; cJSON *obj;
+    char walletstr[256],*str,*retstr = 0; int32_t inverted,dir; struct prices777 *prices; double price,volume;
     if ( secret == 0 || activenxt == 0 )
     {
         secret = SUPERNET.NXTACCTSECRET;
         activenxt = SUPERNET.NXTADDR;
     }
+    if ( (obj= jobj(origjson,"wallet")) != 0 )
+    {
+        str = jprint(obj,1);
+        //printf("str.(%s)\n",str);
+        safecopy(walletstr,str,sizeof(walletstr));
+        free(str), str = 0;
+    }
+    else walletstr[0] = 0;
     if ( exchangestr != 0 && (exchange= exchange_find(exchangestr)) != 0 )
         iQ->exchangeid = exchange->exchangeid;
     if ( iQ->exchangeid < 0 || (exchangestr= exchange_str(iQ->exchangeid)) == 0 )
@@ -571,14 +579,14 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
         }
         else
         {
+            iQ = create_iQ(iQ,walletstr);
             if ( (retstr= autofill(remoteaddr,iQ,activenxt,secret)) == 0 )
             {
                 //printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
                 if ( strcmp(SUPERNET.NXTACCTSECRET,secret) != 0 )
                     return(clonestr("{\"error\":\"cant do queued requests with non-default accounts\"}"));
-                iQ = create_iQ(iQ,jstr(origjson,"wallet"));
                 prices777_InstantDEX(prices,MAX_DEPTH);
-                printf("got create_iQ.(%llu) quoteid.%llu wallet.%d\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,iQ->s.wallet);
+                printf("got create_iQ.(%llu) quoteid.%llu wallet.(%s)\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,walletstr);
             }
             return(retstr);
         }

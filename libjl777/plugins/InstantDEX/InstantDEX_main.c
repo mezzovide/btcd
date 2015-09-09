@@ -511,7 +511,7 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
 {
     struct destbuf gui,exchangestr,name,base,rel,offerNXT; struct InstantDEX_quote iQ;
     copy_cJSON(&offerNXT,jobj(json,"offerNXT"));
-//printf("got (%s)\n",origargstr);
+printf("got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT.buf) != 0 )
     {
         if ( bidask_parse(&exchangestr,&name,&base,&rel,&gui,&iQ,json) == 0 )
