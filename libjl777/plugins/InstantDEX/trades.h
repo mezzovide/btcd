@@ -904,7 +904,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
         triggerhash = jstr(origjson,"trigger");
     myoffer = strcmp(SUPERNET.NXTADDR,offerNXT.buf) == 0;
     myfill = (SUPERNET.my64bits == fillNXT);
-    //printf("swap_func got (%s)\n",origargstr);
+printf("swap_func got (%s)\n",origargstr);
     if ( myoffer+myfill != 0 )
     {
         orderid = j64bits(origjson,"orderid");
