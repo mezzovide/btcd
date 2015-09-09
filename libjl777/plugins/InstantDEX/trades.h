@@ -959,6 +959,7 @@ printf("swap_func got (%s)\n",origargstr);
             }
             else if ( recvstr != 0 )
             {
+                //swap_func got ({"orderid":"7966614949263893490","quoteid":"8428783437331999844","offerNXT":"12240549928875772593","fillNXT":"8279528579993996036","plugin":"InstantDEX","method":"swap","exchange":"wallet","recvamount":"20000","rtx":"010000000125dff63b455d4d53d57fba612c80c20ba02fd878c37fa3c693e0502b62b38a3700000000001f73f0550110270000000000001976a914e1de4fdbf74a8ce07aa46b564dc7123abeacb64f88acb0b40500","rs":"63522102d548e1f4d2f0c165993dfdf7e12fd2233f086b294b59106957556d68fb2d0bf221028040ac17bf9ae185a47949adaf66acb31be1f4244297ee5537e98e31ef35758352ae6776a914bd4faf911daa8da38bb881a5df51df6445e20dda88ac68","recvcoin":"BTC","BTCpubA":"02d548e1f4d2f0c165993dfdf7e12fd2233f086b294b59106957556d68fb2d0bf2","BTCpubB":"028040ac17bf9ae185a47949adaf66acb31be1f4244297ee5537e98e31ef357583","BTCpkhash":"bd4faf911daa8da38bb881a5df51df6445e20dda","trigger":"c38725fa66c8ccd6d20e75d58404f109e54289dbdf87892ebc5e394c15ec0c97","sendasset":"5527630","sendqty":"560000000","base":"BTC","rel":"NXT","tag":"17094255940496367243"})
                 sprintf(fieldA,"%spubA",recvcoin->name);
                 sprintf(fieldB,"%spubB",recvcoin->name);
                 sprintf(fieldpkhash,"%spkhash",recvcoin->name);
@@ -968,7 +969,7 @@ printf("swap_func got (%s)\n",origargstr);
                     {
                         subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
                         //strcmp(recvcoin->atomicrecvpubkey,rpubB) == 0 && strcmp(pkhash,rpkhash) == 0 &&
-                        //printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
+                        printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
                         if ( (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (sendasset= j64bits(origjson,"sendasset")) != 0 && (sendqty= j64bits(origjson,"sendqty")) != 0 )
                         {
                             if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,pubkeystr,recvamount,refundtx,redeemscript)) != 0 )
@@ -1012,6 +1013,8 @@ printf("swap_func got (%s)\n",origargstr);
                             } else printf("refund tx didnt verify\n");
                         } else printf("NXT tx didnt verify\n");
                     } else printf("myfill.%d myoffer.%d recv mismatch\n",myfill,myoffer);
+                    printf("recv failed\n");
+                    return(clonestr("{\"result\":\"recv failed\"}"));
                 }
             }
             else if ( sendstr != 0 )  // Alice sendcoin -> Bob, recvs NXT
