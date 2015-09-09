@@ -181,13 +181,26 @@ struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ)
 
 char *InstantDEX_str(char *buf,int32_t extraflag,struct InstantDEX_quote *iQ)
 {
-    char _buf[4096],extra[512],base[64],rel[64];
+    char _buf[4096],extra[512],base[64],rel[64],pubkeystr[128],pkhash[128],*exchange; struct coin777 *basecoin,*relcoin;
     if ( buf == 0 )
         buf = _buf;
     if ( extraflag != 0 )
         sprintf(extra,",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"",(iQ->s.isask != 0) ? "ask" : "bid");
     else extra[0] = 0;
     unstringbits(base,iQ->s.basebits), unstringbits(rel,iQ->s.relbits);
+    if ( (exchange= exchange_str(iQ->exchangeid)) != 0 && strcmp(exchange,"wallet") == 0 )
+    {
+        if ( (basecoin= coin777_find(base,0)) != 0 && (relcoin= coin777_find(rel,0)) != 0 )
+        {
+            if ( iQ->s.isask == 0 )
+                sprintf(extra+strlen(extra),",\"pubA\":\"%s\"",basecoin->atomicsendpubkey);
+            else
+            {
+                subatomic_pubkeyhash(pubkeystr,pkhash,relcoin,iQ->s.quoteid);
+                sprintf(extra+strlen(extra),",\"pubB\":\"%s\",\"pkhash\":\"%s\"",relcoin->atomicrecvpubkey,pkhash);
+            }
+        }
+    }
     sprintf(buf,"{\"quoteid\":\"%llu\",\"base\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"rel\":\"%s\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\"%s}",(long long)iQ->s.quoteid,base,(long long)iQ->s.baseid,(long long)iQ->s.baseamount,rel,(long long)iQ->s.relid,(long long)iQ->s.relamount,iQ->s.price,iQ->s.vol,(long long)iQ->s.offerNXT,iQ->s.timestamp,iQ->s.isask,exchange_str(iQ->exchangeid),iQ->gui,extra);
     if ( buf == _buf )
         return(clonestr(buf));

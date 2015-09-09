@@ -334,11 +334,11 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
     jaddnum(item,"group",group);
     jaddstr(item,"exchange",prices->exchange);
     jaddstr(item,"base",prices->base), jaddstr(item,"rel",prices->rel);
+    if ( (iQ= find_iQ(quoteid)) != 0 )
+        jadd64bits(item,"offerNXT",iQ->s.offerNXT);
     if ( strcmp(prices->exchange,"nxtae") == 0 || strcmp(prices->exchange,"unconf") == 0 || strcmp(prices->exchange,"InstantDEX") == 0 || strcmp(prices->exchange,"wallet") == 0 )
     {
         jadd64bits(item,prices->type == 5 ? "currency" : "asset",prices->baseid);
-        if ( (iQ= find_iQ(quoteid)) != 0 )
-            jadd64bits(item,"offerNXT",iQ->s.offerNXT);
         //else if ( quoteid != 0 ) printf("cant find offerNXT.%llu\n",(long long)quoteid);
         jadd64bits(item,"baseid",prices->baseid), jadd64bits(item,"relid",prices->relid);
         iswallet = (strcmp(prices->exchange,"wallet") == 0);
