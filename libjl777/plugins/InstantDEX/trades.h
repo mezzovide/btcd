@@ -605,7 +605,7 @@ int32_t complete_swap(struct InstantDEX_quote *iQ,uint64_t orderid,uint64_t quot
 
 char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 *prices,int32_t dir,double price,double volume,struct InstantDEX_quote *iQ,struct prices777_order *order,uint64_t orderid,char *extra)
 {
-    struct InstantDEX_quote _iQ; char *retstr; struct exchange_info *exchange; struct pending_trade *pend;
+    struct InstantDEX_quote _iQ; char *retstr; struct exchange_info *exchange; struct pending_trade *pend; uint32_t nonce;
     char swapbuf[8192],triggertx[4096],txbytes[4096],buf[1024]; uint64_t txid,sendasset,recvasset; int32_t deadline;
     if ( (exchange= find_exchange(0,prices->exchange)) == 0 && exchange->trade != 0 )
     {
@@ -643,7 +643,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
     {
         cJSON *walletitem; struct coin777 *recvcoin,*sendcoin; 
         char pkhash[128],pubkeystr[128],fieldA[64],fieldB[64],fieldpkhash[64],refredeemscript[2048],scriptPubKey[128],p2shaddr[64];
-        char *rpubA=0,*rpubB=0,*rpkhash=0,*spubA=0,*spubB=0,*spkhash=0,*recvstr=0,*sendstr=0,*refundtx,*redeemscript;
+        char *rpubA=0,*rpubB=0,*rpkhash=0,*spubA=0,*spubB=0,*spkhash=0,*recvstr=0,*sendstr=0,*refundtx,*redeemscript,*str;
         int32_t finishin; uint64_t sendamount,recvamount; struct destbuf base,rel;
         if ( item != 0 && (item= jitem(item,0)) != 0 && (walletitem= jobj(item,"wallet")) != 0 )
         {
@@ -674,6 +674,11 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                         gen_NXTtx(&recvcoin->trigger,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,iQ->s.quoteid,deadline,0,0,0,0);
                         sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"trigger\":\"%s\",\"sendasset\":\"%llu\",\"sendqty\":\"%llu\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)orderid,(long long)order->s.quoteid,(long long)iQ->s.offerNXT,SUPERNET.NXTADDR,(long long)recvamount,refundtx,refredeemscript,recvstr,fieldA,rpubA,fieldB,rpubB,fieldpkhash,rpkhash,recvcoin->trigger.fullhash,(long long)sendasset,(long long)sendamount,prices->base,prices->rel);
                         recvcoin->refundtx = refundtx;
+                        iQ->s.swap = 1;
+                        printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
+                        if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+                            free(str);
+                        return(clonestr(swapbuf));
                     } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
                 }
                 else
@@ -698,6 +703,11 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                         sprintf(fieldpkhash,"%spkhash",sendstr);
                         sprintf(swapbuf+strlen(swapbuf)-1,",\"sendcoin\":\"%s\",\"sendamount\":\"%llu\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"recvasset\":\"%llu\",\"recvqty\":\"%llu\"}",sendstr,(long long)sendamount,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,(long long)recvasset,(long long)recvamount);
                         free(redeemscript);
+                        iQ->s.swap = 1;
+                        printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
+                        if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+                            free(str);
+                        return(clonestr(swapbuf));
                     }
                 }
                 else
@@ -716,6 +726,12 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                         sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\",\"exchange\":\"wallet\",\"sendcoin\":\"%s\",\"recvcoin\":\"%s\",\"sendamount\":\"%lld\",\"recvamount\":\"%lld\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)orderid,(long long)order->s.quoteid,(long long)iQ->s.offerNXT,SUPERNET.NXTADDR,"swap",sendstr,recvstr,(long long)sendamount,(long long)recvamount,prices->base,prices->rel);
                         sprintf(swapbuf+strlen(swapbuf)-1,",\"rtx\":\"%s\",\"rs\":\"%s\",\"rpubA\":\"%s\",\"rpubB\":\"%s\",\"rpkhash\":\"%s\",\"pubA\":\"%s\",\"pubB\":\"%s\",\"pkhash\":\"%s\"}",refundtx,refredeemscript,rpubA,rpubB,rpkhash,spubA,spubB,spkhash);
                         free(redeemscript);
+                        free(refundtx);
+                        iQ->s.swap = 1;
+                        printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
+                        if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+                            free(str);
+                        return(clonestr(swapbuf));
                     }
                     free(refundtx);
                 } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
@@ -1017,6 +1033,7 @@ printf("swap_func got (%s)\n",origargstr);
                             sendcoin->refundtx = refundtx;
                             if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
                                 free(str);
+                            return(clonestr(swapbuf));
                             //printf("BUSDATA.(%s)\n",swapbuf);
                         } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
                     } else printf("mismatched send (%s vs %s) or (%s vs %s)\n",sendcoin->atomicrecvpubkey,spubB,spkhash,pkhash);
