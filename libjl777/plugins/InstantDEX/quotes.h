@@ -204,9 +204,9 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
             if ( walletstr == 0 )
                 walletstr = _walletstr;
             if ( strcmp(base,"NXT") != 0 )
-                coin = coin777_find(rel,1);
-            else if ( strcmp(rel,"NXT") != 0 )
                 coin = coin777_find(base,1);
+            else if ( strcmp(rel,"NXT") != 0 )
+                coin = coin777_find(rel,1);
             else coin = 0;
             if ( coin != 0 )
             {
