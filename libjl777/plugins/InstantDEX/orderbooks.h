@@ -316,17 +316,13 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
                 {
                     get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,addr);
                     if ( jstr(item,buf) == 0 )
-                    {
-                        printf("additem.%s <- %s\n",buf,pubkey.buf);
                         jaddstr(item,buf,pubkey.buf);
-                    }
                     if ( iter == 0 )
                     {
                         sprintf(buf,"%spkhash",str);
                         if ( jstr(item,buf) == 0 )
                         {
                             subatomic_pubkeyhash(pubkey.buf,pkhash,coin,quoteid);
-                            printf("additem.%s <- %s\n",buf,pkhash);
                             jaddstr(item,buf,pkhash);
                         }
                     }
