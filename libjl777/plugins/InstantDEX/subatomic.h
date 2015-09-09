@@ -862,6 +862,7 @@ char *subatomic_spendtx(struct destbuf *spendtxid,char *vintxid,char *refundsig,
         //printf("mypubkey.(%s) -> (%s)\n",mypubkey,msigcoinaddr);
         calc_OP_HASH160(rmdstr,rmd160,onetimepubkey);
         amount -= coin->mgw.txfee;
+        coin->ramchain.RTblocknum = _get_RTheight(&coin->ramchain.lastgetinfo,coin->name,coin->serverport,coin->userpass,coin->ramchain.RTblocknum);
         if ( (refundT= _decode_rawtransaction(refundtx,coin->mgw.oldtx_format)) != 0 && refundT->inputs[0].sequence != 0xffffffff && refundT->nlocktime != 0 && (diff= ((long)refundT->nlocktime - coin->ramchain.RTblocknum)) > 1 && diff < 1000 )
         {
             strcpy(vintxid,refundT->inputs[0].tx.txidstr);
