@@ -917,7 +917,7 @@ int32_t _set_assetname(uint64_t *multp,char *buf,char *jsonstr,uint64_t assetid)
     if ( jsonstr == 0 )
     {
         if ( assetid == 0 )
-            printf("_set_assetname null assetid\n");//, getchar();
+            printf("_set_assetname null assetid\n"), getchar();
         expand_nxt64bits(assetidstr,assetid);
         type = 2;
         if ( (jsonstr= _issue_getAsset(assetidstr)) != 0 )

@@ -255,12 +255,14 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         conf = cJSON_str(cJSON_GetObjectItem(argjson,"conf"));
 
         copy_cJSON(&tmp,cJSON_GetObjectItem(argjson,"assetid")), safecopy(coin->mgw.assetidstr,tmp.buf,sizeof(coin->mgw.assetidstr));
-        coin->mgw.assetidbits = calc_nxt64bits(coin->mgw.assetidstr);
+        if ( (coin->mgw.assetidbits= calc_nxt64bits(coin->mgw.assetidstr)) == 0 )
+            coin->mgw.assetidbits = is_MGWcoin(coinstr);
         copy_cJSON(&tmp,cJSON_GetObjectItem(argjson,"issuer")), safecopy(coin->mgw.issuer,tmp.buf,sizeof(coin->mgw.issuer));;
         coin->mgw.issuerbits = conv_acctstr(coin->mgw.issuer);
         printf(">>>>>>>>>>>> a issuer.%s %llu assetid.%llu minoutput.%llu\n",coin->mgw.issuer,(long long)coin->mgw.issuerbits,(long long)coin->mgw.assetidbits,(long long)coin->minoutput);
         //uint32_t set_assetname(uint64_t *multp,char *name,uint64_t assetbits);
-        _set_assetname(&coin->mgw.ap_mult,coin->mgw.assetname,0,coin->mgw.assetidbits);
+        if ( coin->mgw.assetidbits != 0 )
+            _set_assetname(&coin->mgw.ap_mult,coin->mgw.assetname,0,coin->mgw.assetidbits);
         printf("assetname.(%s) mult.%llu\n",coin->mgw.assetname,coin->mgw.ap_mult);
         strcpy(coin->mgw.coinstr,coinstr);
         if ( (coin->mgw.special= cJSON_GetObjectItem(argjson,"special")) == 0 )

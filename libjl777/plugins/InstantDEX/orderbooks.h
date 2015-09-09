@@ -34,7 +34,7 @@ struct prices777 *prices777_find(int32_t *invertedp,uint64_t baseid,uint64_t rel
                 return(prices);
             }
             //else printf("(%llu/%llu) != (%llu/%llu)\n",(long long)baseid,(long long)relid,(long long)prices->baseid,(long long)prices->relid);
-        } else fprintf(stderr,"(%s).%d ",prices->exchange,i);
+        } //else fprintf(stderr,"(%s).%d ",prices->exchange,i);
     }
     printf("CANTFIND.(%s) %llu/%llu\n",exchange,(long long)baseid,(long long)relid);
     return(0);
