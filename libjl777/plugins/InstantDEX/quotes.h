@@ -205,7 +205,7 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
                 walletstr = _walletstr;
             if ( (basecoin= coin777_find(base,1)) != 0 && (relcoin= coin777_find(rel,1)) != 0 )
             {
-                if ( iQ->s.isask == 0 )
+                if ( iQ->s.isask != 0 )
                     sprintf(walletstr,"{\"%spubA\":\"%s\"}",basecoin->name,basecoin->atomicsendpubkey);
                 else
                 {
