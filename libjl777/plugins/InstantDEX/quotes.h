@@ -390,6 +390,7 @@ char *autofill(char *remoteaddr,struct InstantDEX_quote *refiQ,char *NXTaddr,cha
 {
     double price,volume,revprice,revvol,metric,bestmetric = 0.; int32_t dir,inverted; uint64_t nxt64bits; char *retstr=0;
     struct InstantDEX_quote *iQ,*tmp,*bestiQ; struct prices777 *prices; uint32_t now = (uint32_t)time(NULL);
+return(0);
     nxt64bits = calc_nxt64bits(NXTaddr);
     memset(&bestiQ,0,sizeof(bestiQ));
     dir = (refiQ->s.isask != 0) ? -1 : 1;
@@ -439,6 +440,7 @@ char *autofill(char *remoteaddr,struct InstantDEX_quote *refiQ,char *NXTaddr,cha
 char *automatch(struct prices777 *prices,int32_t dir,double refprice,double refvol,char *NXTaddr,char *NXTACCTSECRET)
 {
     int32_t i,n=0; struct prices777_order order,bestorder; char *retstr = 0; double metric,bestmetric = 0.;
+return(0);
     memset(&bestorder,0,sizeof(bestorder));
     if ( dir > 0 )
         n = prices->O.numasks;
