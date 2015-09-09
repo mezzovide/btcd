@@ -525,11 +525,14 @@ uint64_t InstantDEX_swapstr(char *sendphased,char *phasesecret,uint64_t *txidp,c
 
 uint64_t prices777_swapbuf(char *sendphased,char *phasesecret,uint64_t *txidp,char *triggertx,char *txbytes,char *swapbuf,char *exchangestr,char *base,char *rel,struct prices777_order *order,uint64_t orderid,int32_t finishoffset,char *triggerhash)
 {
-    char swapstr[4096]; uint64_t txid = 0;
+    char swapstr[4096],*str; uint64_t txid = 0;
     *txidp = 0;
+    if ( strcmp(exchangestr,"wallet") == 0 )
+        str = "swap";
+    else str = order->wt > 0. ? "buy" : (order->wt < 0. ? "sell" : "swap");
     if ( finishoffset == 0 )
         finishoffset = FINISH_HEIGHT;
-    sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"baseqty\":\"%lld\",\"relqty\":\"%lld\"}",(long long)orderid,(long long)order->s.quoteid,(long long)order->s.offerNXT,SUPERNET.NXTADDR,order->wt > 0. ? "buy" : (order->wt < 0. ? "sell" : "swap"),exchangestr,base,rel,(long long)order->s.baseid,(long long)order->s.relid,(long long)order->s.baseamount,(long long)order->s.relamount);
+    sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"baseqty\":\"%lld\",\"relqty\":\"%lld\"}",(long long)orderid,(long long)order->s.quoteid,(long long)order->s.offerNXT,SUPERNET.NXTADDR,str,exchangestr,base,rel,(long long)order->s.baseid,(long long)order->s.relid,(long long)order->s.baseamount,(long long)order->s.relamount);
     if ( order->s.price > SMALLVAL )
         sprintf(swapbuf + strlen(swapbuf) - 1,",\"price\":%.8f,\"volume\":%.8f}",order->s.price,order->s.vol);
     txid = InstantDEX_swapstr(sendphased,phasesecret,txidp,triggertx,txbytes,swapstr,orderid,order,triggerhash,0,finishoffset);
