@@ -610,10 +610,10 @@ int SuperNET_start(char *fname,char *myip)
             printf("ERROR >>>>>>>>>>> SuperNET.conf file couldnt be parsed\n");
             exit(-666);
         }
-#ifdef __APPLE__
-        //void test_subatomic();
-        //test_subatomic();
-#endif
+//#ifdef __APPLE__
+        void test_subatomic();
+        test_subatomic();
+//#endif
     }
     strcpy(SUPERNET.myipaddr,ipaddr);
     init_SUPERNET_pullsock(10,SUPERNET.recvtimeout);

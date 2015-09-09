@@ -932,7 +932,7 @@ void test_subatomic()
     char pkhash[8192],pubA[67],pubB[67],pubP[67]; uint8_t tmpbuf[512]; struct coin777 *coin;
     struct subatomic_rawtransaction funding; char refredeemscript[4096],vintxid[128],swapacct[64],othercoinaddr[64],mycoinaddr[64],onetimeaddr[64],refundsig[512],*signedrefund,*refundtx=0,*spendtx=0;
     uint64_t amount; struct destbuf pubkey; struct destbuf spendtxid;
-    coin = coin777_find("BTCD",1);
+    coin = coin777_find("BTC",1);
     if ( strcmp(coin->name,"BTC") == 0 )
         coin->mgw.oldtx_format = 1;
     //coin->usep2sh = 0;
