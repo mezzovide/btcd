@@ -900,7 +900,7 @@ char *subatomic_spendtx(struct destbuf *spendtxid,char *vintxid,char *refundsig,
                 free(redeemscript);
             } else printf("error creating redeemscript\n");
             free(refundT);
-        } else printf("error decoding refundT.%p or diff %ld too big\n",refundT,diff);
+        } else printf("error decoding refundT.%p or diff %ld too big (%u %u)\n",refundT,diff,refundT->nlocktime,coin->ramchain.RTblocknum);
     } else printf("error getting addresses (%s) (%s)\n",msigcoinaddr,onetimecoinaddr);
     return(spendtx);
 }
