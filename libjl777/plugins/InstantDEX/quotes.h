@@ -205,12 +205,12 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
                 walletstr = _walletstr;
             if ( (basecoin= coin777_find(base,1)) != 0 && (relcoin= coin777_find(rel,1)) != 0 )
             {
-                if ( iQ->s.isask != 0 )
-                    sprintf(walletstr,"{\"%spubA\":\"%s\"}",basecoin->name,basecoin->atomicsendpubkey);
+                if ( iQ->s.isask == 0 )
+                    sprintf(walletstr,"{\"%spubA\":\"%s\"}",relcoin->name,relcoin->atomicsendpubkey);
                 else
                 {
-                    subatomic_pubkeyhash(pubkeystr,pkhash,relcoin,iQ->s.quoteid);
-                    sprintf(walletstr,"{\"%spubB\":\"%s\",\"%spkhash\":\"%s\"}",relcoin->name,relcoin->atomicrecvpubkey,relcoin->name,pkhash);
+                    subatomic_pubkeyhash(pubkeystr,pkhash,basecoin,iQ->s.quoteid);
+                    sprintf(walletstr,"{\"%spubB\":\"%s\",\"%spkhash\":\"%s\"}",basecoin->name,basecoin->atomicrecvpubkey,basecoin->name,pkhash);
                 }
                 sprintf(extra+strlen(extra),",\"wallet\":%s",walletstr);
             }
