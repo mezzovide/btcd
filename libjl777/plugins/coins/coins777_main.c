@@ -316,9 +316,12 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     else if ( strcmp(coin->name,"BITS") == 0 )
         coin->addrtype = 25, coin->p2shtype = 8;
     printf("coin777_create %s: (%s) %llu mult.%llu NXTconvrate %.8f minconfirms.%d issuer.(%s) %llu opreturn.%d oldformat.%d\n",coin->mgw.coinstr,coin->mgw.assetidstr,(long long)coin->mgw.assetidbits,(long long)coin->mgw.ap_mult,coin->mgw.NXTconvrate,coin->minconfirms,coin->mgw.issuer,(long long)coin->mgw.issuerbits,coin->mgw.do_opreturn,coin->mgw.oldtx_format);
-    extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
-    set_atomickeys(coin);
-    printf("COIN.%s serverport.(%s) userpass.(%s) %s/%s %s/%s\n",coin->name,coin->serverport,coin->userpass,coin->atomicrecv,coin->atomicrecvpubkey,coin->atomicsend,coin->atomicsendpubkey);
+    if ( strcmp(coin->name,"NXT") != 0 )
+    {
+        extract_userpass(coin->serverport,coin->userpass,coinstr,SUPERNET.userhome,path,conf);
+        set_atomickeys(coin);
+        printf("COIN.%s serverport.(%s) userpass.(%s) %s/%s %s/%s\n",coin->name,coin->serverport,coin->userpass,coin->atomicrecv,coin->atomicrecvpubkey,coin->atomicsend,coin->atomicsendpubkey);
+    }
     COINS.LIST = realloc(COINS.LIST,(COINS.num+1) * sizeof(*coin));
     COINS.LIST[COINS.num] = coin, COINS.num++;
     //ensure_packedptrs(coin);
