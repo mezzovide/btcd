@@ -794,7 +794,15 @@ int32_t swap_verifyNXT(uint32_t *finishp,uint32_t *deadlinep,cJSON *origjson,cha
                 }
         }
         sighash = jstr(origjson,"S");
+        if ( iQ->s.isask == 0 )
+            recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount / get_assetmult(recvasset);
+        else recvasset = iQ->s.relid, recvqty = iQ->s.relamount / get_assetmult(recvasset);
         printf("utx.(%s) -> UTX.(%s) sighash.(%s)\n",utx,UTX,sighash);
+    }
+    else
+    {
+        recvqty = otherqty;
+        recvasset = 0;
     }
     if ( phasedtx != 0 || (jsonstr= issue_calculateFullHash(UTX,sighash)) != 0 )
     {
@@ -818,9 +826,6 @@ int32_t swap_verifyNXT(uint32_t *finishp,uint32_t *deadlinep,cJSON *origjson,cha
                         if ( *deadlinep >= INSTANTDEX_TRIGGERDEADLINE/2 && ((long)now - timestamp) < 60 && (cmpstr == 0 || triggerhash == 0 || (cmpstr != 0 && triggerhash != 0 && strcmp(cmpstr,triggerhash) == 0)) )
                         {
                             // https://nxtforum.org/nrs-releases/nrs-v1-5-15/msg191715/#msg191715
-                            if ( iQ->s.isask == 0 )
-                                recvasset = iQ->s.baseid, recvqty = iQ->s.baseamount / get_assetmult(recvasset);
-                            else recvasset = iQ->s.relid, recvqty = iQ->s.relamount / get_assetmult(recvasset);
                             printf("GEN RESPONDTX lag.%d deadline.%d (other.%llu %lld) recv.(%llu %lld) orderid.%llu/%llx quoteid.%llu/%llx\n",now-timestamp,*deadlinep,(long long)otherbits,(long long)otherqty,(long long)recvasset,(long long)recvqty,(long long)orderid,(long long)orderid,(long long)quoteid,(long long)quoteid);
                             if ( InstantDEX_verify(SUPERNET.my64bits,otherbits,otherqty,txobj,recvasset,recvqty) == 0 )
                                 retval = 0;
