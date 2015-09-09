@@ -44,7 +44,12 @@ int32_t make_jumpiQ(uint64_t refbaseid,uint64_t refrelid,int32_t flip,struct Ins
 
 struct InstantDEX_quote *AllQuotes;
 
-void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ) { iQ->s.closed = iQ->s.pending = iQ->s.responded = iQ->s.matched = 0; }
+void clear_InstantDEX_quoteflags(struct InstantDEX_quote *iQ)
+{
+    //duration:14,wallet:1,a:1,isask:1,expired:1,closed:1,swap:1,responded:1,matched:1,feepaid:1,automatch:1,pending:1,minperc:7;
+    iQ->s.a = iQ->s.expired = iQ->s.swap = iQ->s.feepaid = 0;
+    iQ->s.closed = iQ->s.pending = iQ->s.responded = iQ->s.matched = 0;
+}
 void cancel_InstantDEX_quote(struct InstantDEX_quote *iQ) { iQ->s.closed = 1; }
 
 int32_t InstantDEX_uncalcsize() { struct InstantDEX_quote iQ; return(sizeof(iQ.hh) + sizeof(iQ.s.quoteid) + sizeof(iQ.s.price) + sizeof(iQ.s.vol)); }
@@ -150,15 +155,19 @@ char *InstantDEX_cancelorder(char *activenxt,char *secret,uint64_t orderid,uint6
     return(jprint(json,1));
 }
 
-struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ)
+struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ,char *walletstr)
 {
-    struct InstantDEX_quote *newiQ; struct prices777 *prices; int32_t inverted;
+    struct InstantDEX_quote *newiQ; struct prices777 *prices; int32_t inverted; long len = 0;
+    if ( walletstr != 0 && (len= strlen(walletstr)) > 0 )
+        iQ->s.wallet = 1, len++;
     calc_quoteid(iQ);
     printf("createiQ %llu/%llu %f %f quoteid.%llu offerNXT.%llu\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,iQ->s.price,iQ->s.vol,(long long)iQ->s.quoteid,(long long)iQ->s.offerNXT);
     if ( (newiQ= find_iQ(iQ->s.quoteid)) != 0 )
         return(newiQ);
-    newiQ = calloc(1,sizeof(*newiQ));
+    newiQ = calloc(1,sizeof(*newiQ) + len);
     *newiQ = *iQ;
+    if ( len != 0 )
+        memcpy(newiQ->walletstr,walletstr,len);
     HASH_ADD(hh,AllQuotes,s.quoteid,sizeof(newiQ->s.quoteid),newiQ);
     if ( (prices= prices777_find(&inverted,iQ->s.baseid,iQ->s.relid,INSTANTDEX_NAME)) != 0 )
         prices->dirty++;
@@ -179,28 +188,35 @@ struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ)
     return(newiQ);
 }
 
-char *InstantDEX_str(char *buf,int32_t extraflag,struct InstantDEX_quote *iQ)
+char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantDEX_quote *iQ)
 {
-    char _buf[4096],extra[512],base[64],rel[64],pubkeystr[128],pkhash[128],*exchange; struct coin777 *basecoin,*relcoin;
+    char _buf[4096],_walletstr[256],extra[512],base[64],rel[64],pubkeystr[128],pkhash[128],*exchange; struct coin777 *basecoin,*relcoin;
     if ( buf == 0 )
         buf = _buf;
-    if ( extraflag != 0 )
-        sprintf(extra,",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"",(iQ->s.isask != 0) ? "ask" : "bid");
-    else extra[0] = 0;
+    if ( walletstr != 0 )
+        walletstr[0] = 0;
     unstringbits(base,iQ->s.basebits), unstringbits(rel,iQ->s.relbits);
-    if ( (exchange= exchange_str(iQ->exchangeid)) != 0 && strcmp(exchange,"wallet") == 0 )
+    if ( extraflag != 0 )
     {
-        if ( (basecoin= coin777_find(base,1)) != 0 && (relcoin= coin777_find(rel,1)) != 0 )
+        sprintf(extra,",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"",(iQ->s.isask != 0) ? "ask" : "bid");
+        if ( (exchange= exchange_str(iQ->exchangeid)) != 0 && strcmp(exchange,"wallet") == 0 )
         {
-            if ( iQ->s.isask != 0 )
-                sprintf(extra+strlen(extra),",\"pubA\":\"%s\"",basecoin->atomicsendpubkey);
-            else
+            if ( walletstr == 0 )
+                walletstr = _walletstr;
+            if ( (basecoin= coin777_find(base,1)) != 0 && (relcoin= coin777_find(rel,1)) != 0 )
             {
-                subatomic_pubkeyhash(pubkeystr,pkhash,relcoin,iQ->s.quoteid);
-                sprintf(extra+strlen(extra),",\"pubB\":\"%s\",\"pkhash\":\"%s\"",relcoin->atomicrecvpubkey,pkhash);
+                if ( iQ->s.isask != 0 )
+                    sprintf(walletstr,"[{\"pubA\":\"%s\"}]",basecoin->atomicsendpubkey);
+                else
+                {
+                    subatomic_pubkeyhash(pubkeystr,pkhash,relcoin,iQ->s.quoteid);
+                    sprintf(walletstr,"[{\"pubB\":\"%s\",\"pkhash\":\"%s\"}]",relcoin->atomicrecvpubkey,pkhash);
+                }
+                sprintf(extra+strlen(extra),",\"wallet\":%s",walletstr);
             }
         }
     }
+    else extra[0] = 0;
     sprintf(buf,"{\"quoteid\":\"%llu\",\"base\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"rel\":\"%s\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\"%s}",(long long)iQ->s.quoteid,base,(long long)iQ->s.baseid,(long long)iQ->s.baseamount,rel,(long long)iQ->s.relid,(long long)iQ->s.relamount,iQ->s.price,iQ->s.vol,(long long)iQ->s.offerNXT,iQ->s.timestamp,iQ->s.isask,exchange_str(iQ->exchangeid),iQ->gui,extra);
     if ( buf == _buf )
         return(clonestr(buf));
@@ -211,7 +227,7 @@ char *InstantDEX_orderstatus(uint64_t orderid,uint64_t quoteid)
 {
     struct InstantDEX_quote *iQ = 0;
     if ( (iQ= find_iQ(orderid)) != 0 || (iQ= find_iQ(quoteid)) != 0 )
-        return(InstantDEX_str(0,0,iQ));
+        return(InstantDEX_str(0,0,0,iQ));
     return(clonestr("{\"error\":\"couldnt find orderid\"}"));
 }
 
@@ -226,7 +242,7 @@ char *InstantDEX_openorders(char *NXTaddr,int32_t allorders)
             iQ->s.expired = iQ->s.closed = 1;
         if ( iQ->s.offerNXT == nxt64bits && (allorders != 0 || iQ->s.closed == 0) )
         {
-            if ( (jsonstr= InstantDEX_str(buf,0,iQ)) != 0 && (item= cJSON_Parse(jsonstr)) != 0 )
+            if ( (jsonstr= InstantDEX_str(0,buf,0,iQ)) != 0 && (item= cJSON_Parse(jsonstr)) != 0 )
                 jaddi(array,item);
         }
     }
@@ -504,10 +520,10 @@ int32_t is_specialexchange(char *exchangestr)
     return(0);
 }
 
-char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr,char *name,char *base,char *rel,struct InstantDEX_quote *iQ,char *extra,char *secret,char *activenxt)
+char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr,char *name,char *base,char *rel,struct InstantDEX_quote *iQ,char *extra,char *secret,char *activenxt,cJSON *origjson)
 {
     extern queue_t InstantDEXQ;
-    char *retstr = 0; int32_t inverted,dir; struct prices777 *prices; double price,volume; struct exchange_info *exchange;
+    char walletstr[256],*retstr = 0; int32_t inverted,dir; struct prices777 *prices; double price,volume; struct exchange_info *exchange;
     if ( secret == 0 || activenxt == 0 )
     {
         secret = SUPERNET.NXTACCTSECRET;
@@ -546,10 +562,10 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
                 return(retstr);
             if ( strcmp(SUPERNET.NXTACCTSECRET,secret) != 0 )
                 return(clonestr("{\"error\":\"cant do queued requests with non-default accounts\"}"));
-            retstr = InstantDEX_str(0,1,iQ);
+            retstr = InstantDEX_str(walletstr,0,1,iQ);
             //printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
-            iQ = create_iQ(iQ);
-            printf("got create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
+            iQ = create_iQ(iQ,walletstr);
+            printf("got create_iQ.(%llu) quoteid.%llu wallet.(%s)\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,walletstr);
             prices777_InstantDEX(prices,MAX_DEPTH);
             queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(retstr));
         }
@@ -560,7 +576,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
                 //printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
                 if ( strcmp(SUPERNET.NXTACCTSECRET,secret) != 0 )
                     return(clonestr("{\"error\":\"cant do queued requests with non-default accounts\"}"));
-                iQ = create_iQ(iQ);
+                iQ = create_iQ(iQ,jstr(origjson,"wallet"));
                 prices777_InstantDEX(prices,MAX_DEPTH);
                 printf("got create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
             }

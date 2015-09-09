@@ -446,7 +446,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = clonestr(retbuf);
         }
         else if ( strcmp(method.buf,"placebid") == 0 || strcmp(method.buf,"placeask") == 0 )
-            return(InstantDEX_placebidask(0,sequenceid,exchangestr.buf,name.buf,base.buf,rel.buf,&iQ,jstr(json,"extra"),secret,activenxt));
+            return(InstantDEX_placebidask(0,sequenceid,exchangestr.buf,name.buf,base.buf,rel.buf,&iQ,jstr(json,"extra"),secret,activenxt,json));
         else if ( strcmp(exchangestr.buf,"active") == 0 && strcmp(method.buf,"orderbook") == 0 )
             retstr = prices777_activebooks(name.buf,base.buf,rel.buf,iQ.s.baseid,iQ.s.relid,maxdepth,allfields,strcmp(exchangestr.buf,"active") == 0 || juint(json,"tradeable"));
         else if ( (prices= prices777_find(&invert,iQ.s.baseid,iQ.s.relid,exchangestr.buf)) == 0 )
@@ -515,7 +515,7 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
     if ( strcmp(SUPERNET.NXTADDR,offerNXT.buf) != 0 )
     {
         if ( bidask_parse(&exchangestr,&name,&base,&rel,&gui,&iQ,json) == 0 )
-            return(InstantDEX_placebidask(sender,j64bits(json,"orderid"),exchangestr.buf,name.buf,base.buf,rel.buf,&iQ,jstr(json,"extra"),jstr(json,"secret"),jstr(json,"activenxt")));
+            return(InstantDEX_placebidask(sender,j64bits(json,"orderid"),exchangestr.buf,name.buf,base.buf,rel.buf,&iQ,jstr(json,"extra"),jstr(json,"secret"),jstr(json,"activenxt"),json));
         else printf("error with incoming bidask\n");
     } else fprintf(stderr,"got my bidask from network (%s)\n",origargstr);
     return(clonestr("{\"result\":\"got loopback bidask\"}"));

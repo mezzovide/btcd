@@ -626,10 +626,10 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
         iQ->exchangeid = prices->exchangeid;
         if ( iQ->s.timestamp == 0 )
             iQ->s.timestamp = (uint32_t)time(NULL);
-        iQ = create_iQ(iQ);
+        iQ = create_iQ(iQ,0);
         //printf("prices777_trade: need to have iQ \n");
         //return(clonestr("{\"error\":\"need to have iQ\"}\n"));
-    } else iQ = create_iQ(iQ);
+    } else iQ = create_iQ(iQ,0);
     iQ->s.pending = 1;
     pend->quoteid = iQ->s.quoteid;
     if ( order != 0 )

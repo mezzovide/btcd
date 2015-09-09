@@ -234,6 +234,12 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
 {
     char *serverport,*path=0,*conf=0; struct destbuf tmp;
     struct coin777 *coin = calloc(1,sizeof(*coin));
+    if ( coinstr == 0 || coinstr[0] == 0 )
+    {
+        printf("null coinstr?\n");
+        //getchar();
+        return(0);
+    }
     safecopy(coin->name,coinstr,sizeof(coin->name));
     if ( argjson == 0 || strcmp(coinstr,"NXT") == 0 )
     {
@@ -268,8 +274,10 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
         if ( (coin->mgw.special= cJSON_GetObjectItem(argjson,"special")) == 0 )
             coin->mgw.special = cJSON_GetObjectItem(COINS.argjson,"special");
         if ( coin->mgw.special != 0 )
+        {
             coin->mgw.special = NXT_convjson(coin->mgw.special);
-        printf("CONVERTED.(%s)\n",cJSON_Print(coin->mgw.special));
+            printf("CONVERTED.(%s)\n",cJSON_Print(coin->mgw.special));
+        }
         coin->mgw.limbo = cJSON_GetObjectItem(argjson,"limbo");
         coin->mgw.dust = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"dust"));
         coin->mgw.txfee = get_API_nxt64bits(cJSON_GetObjectItem(argjson,"txfee_satoshis"));

@@ -278,7 +278,10 @@ int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendq
 
 cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendasset,uint64_t orderid,uint64_t quoteid)
 {
-    int32_t iter; uint64_t assetid; struct coin777 *coin; struct destbuf pubkey; char buf[128],pkhash[128],account[128],*addr,*str; cJSON *item = 0;
+    int32_t iter; uint64_t assetid; struct coin777 *coin; struct destbuf pubkey; struct InstantDEX_quote *iQ;
+    char buf[128],pkhash[128],account[128],*addr,*str; cJSON *item = 0;
+    if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.wallet != 0 )
+        item = cJSON_Parse(iQ->walletstr);
     for (iter=0; iter<2; iter++)
     {
         addr = 0;

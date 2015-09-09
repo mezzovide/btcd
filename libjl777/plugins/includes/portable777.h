@@ -194,12 +194,13 @@ extern uint32_t MAX_DEPTH;
 
 struct NXTtx { uint64_t txid; char fullhash[MAX_JSON_FIELD],utxbytes[MAX_JSON_FIELD],utxbytes2[MAX_JSON_FIELD],txbytes[MAX_JSON_FIELD],sighash[MAX_JSON_FIELD]; };
 
-struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits,baseid,relid; int64_t baseamount,relamount; uint32_t timestamp; uint16_t duration,isask:1,expired:1,closed:1,swap:1,responded:1,matched:1,feepaid:1,automatch:1,pending:1,minperc:7; };
+struct InstantDEX_shared { double price,vol; uint64_t quoteid,offerNXT,basebits,relbits,baseid,relid; int64_t baseamount,relamount; uint32_t timestamp; uint16_t duration:14,wallet:1,a:1,isask:1,expired:1,closed:1,swap:1,responded:1,matched:1,feepaid:1,automatch:1,pending:1,minperc:7; };
 struct InstantDEX_quote
 {
     UT_hash_handle hh;
     struct InstantDEX_shared s; // must be here
     char exchangeid,gui[9];
+    char walletstr[];
 };
 
 struct prices777_order { struct InstantDEX_shared s; struct prices777 *source; uint64_t id; double wt,ratio; uint16_t slot_ba; };
@@ -259,7 +260,7 @@ char *prices777_orderbook_jsonstr(int32_t invert,uint64_t nxt64bits,struct price
 int32_t prices777_getmatrix(double *basevals,double *btcusdp,double *btcdbtcp,double Hmatrix[32][32],double *RTprices,char *contracts[],int32_t num,uint32_t timestamp);
 struct InstantDEX_quote *find_iQ(uint64_t quoteid);
 int32_t bidask_parse(struct destbuf *exchangestr,struct destbuf *name,struct destbuf *base,struct destbuf *rel,struct destbuf *gui,struct InstantDEX_quote *iQ,cJSON *json);
-struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ);
+struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ,char *walletstr);
 double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth);
 char *hmac_sha1_str(char *dest,char *key,int32_t key_size,char *message);
 char *hmac_md2_str(char *dest,char *key,int32_t key_size,char *message);
