@@ -661,9 +661,8 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             // placeask -> recvbase/sendrel, placebid -> sendbase/recvrel, it is relative to the one that placed quote
             if ( strcmp(sendstr,"NXT") == 0 ) // placeask COIN/NXT or placebid NXT/COIN
             {
-                sprintf(fieldA,"%spubA",recvstr);
-                if ( (rpubA= jstr(item,fieldA)) == 0 )
-                    rpubA = recvcoin->atomicsendpubkey;
+                sprintf(fieldA,"%spubA",recvstr), rpubA = jstr(walletitem,fieldA);
+                // rpubA = recvcoin->atomicsendpubkey;
                 sprintf(fieldB,"%spubB",recvstr), rpubB = jstr(walletitem,fieldB);
                 sprintf(fieldpkhash,"%spkhash",recvstr), rpkhash = jstr(walletitem,fieldpkhash);
                 if ( rpubA[0] != 0 && rpubB != 0 && rpkhash != 0 ) // Alice for recvcoin -> Bob, Bob sends NXT -> Alice
@@ -685,7 +684,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             else if ( strcmp(recvstr,"NXT") == 0 )
             {
                 sprintf(fieldA,"%spubA",sendstr);
-                if ( (spubA= jstr(item,fieldA)) == 0 )
+                if ( (spubA= jstr(walletitem,fieldA)) == 0 )
                     spubA = recvcoin->atomicrecvpubkey;
                 sprintf(fieldB,"%spubB",sendstr), spubB = jstr(walletitem,fieldB);
                 sprintf(fieldpkhash,"%spkhash",sendstr), spkhash = jstr(walletitem,fieldpkhash);
