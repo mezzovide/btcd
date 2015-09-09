@@ -105,7 +105,7 @@ cJSON *tabulate_trade_history(uint64_t mynxt64bits,cJSON *array)
             jump64bits = get_API_nxt64bits(cJSON_GetObjectItem(item,"jumper"));
             jumpamount = get_API_nxt64bits(cJSON_GetObjectItem(item,"jumpasset"));
             jumpasset = get_API_nxt64bits(cJSON_GetObjectItem(item,"jumpamount"));
-            balancing = (long)get_API_int(cJSON_GetObjectItem(item,"balancing"),0);
+            balancing = (long)get_API_nxt64bits(cJSON_GetObjectItem(item,"balancing"));
             if ( src64bits != 0 && srcamount != 0 && srcasset != 0 && dest64bits != 0 && destamount != 0 && destasset != 0 )
             {
                 if ( src64bits == mynxt64bits )
@@ -930,7 +930,6 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 {
                 }
             }
-            //swap_func got ({"orderid":"7574525609025000117","quoteid":"6916198476704376158","offerNXT":"423766016895692955","plugin":"InstantDEX","method":"swap","exchange":"wallet","recvcoin":"BTCD","recvamount":"100000000","rtx":"01000000b90def5501cefaa2b5787518ed60366ffbf75a9026244c79d4fa7947b8ff869d0cbcd862ea0000000000b90def5501f0b9f505000000001976a914e2652bfb359151c30fd14cd373b4cccb0488fcac88aca0d90a00","rs":"63522100000000000000000000000000000000000000000000000000000000000000000021032e45e119dff9a390958e8652fa37f957774287b385f1f128c0f05a8913b1dcba52ae6776a914617767a754461b4fe0b5e489ad7142841885c89c88ac68","recvcoin":"BTCD","BTCDpubA":"RAHBQA3d2MqDsb9iivdwaUZJB3jN8FUv4U","BTCDpubB":"032e45e119dff9a390958e8652fa37f957774287b385f1f128c0f05a8913b1dcba","BTCDpkhash":"617767a754461b4fe0b5e489ad7142841885c89c","trigger":"a50b2f969e21ae24be4e854d44b3edba95fa1ade7db62172a993e522f92fc1a8","sendasset":"5527630","sendqty":"20000000000","tag":"13130119256962308949"})
             else if ( recvstr != 0 )
             {
                 sprintf(fieldA,"%spubA",recvcoin->name);
@@ -946,7 +945,6 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                         {
                             if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,pubkeystr,recvamount,refundtx,redeemscript)) != 0 )
                             {
-                                //sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"%s\",\"recvcoin\":\"%s\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"amount\":\"%llu\",\"pubA\":\"%s\",\"pubB\":\"%s\",\"pkhash\":\"%s\",\"trigger\":\"%s\"}",(long long)orderid,(long long)order->s.quoteid,SUPERNET.NXTADDR,prices->exchange,recvstr,(long long)recvamount,refundtx,refredeemscript,recvstr,(long long)recvamount,rpubA,rpubB,rpkhash,recvcoin->trigger.fullhash);
                                 finishheight = 60; deadline = 3600*4;
                                 if ( (pend= pending_swap(&str,'A',orderid,quoteid,0,0,0,0)) != 0 && str != 0 )
                                 {
@@ -1024,66 +1022,6 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
         }
     }
     return(clonestr("{\"result\":\"processed swap\"}"));
-}
-
-char *funding_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
-{
-    struct destbuf offerNXT,exchange; char *spendtx,*pubA,*str,*refredeemscript,*refundtx; struct destbuf spendtxid;
-    char pubkeystr[128],hexstr[128],swapbuf[4096],vintxid[128],refundsig[512]; uint64_t amount,quoteid; uint32_t nonce; struct coin777 *coin;
-    copy_cJSON(&offerNXT,jobj(origjson,"offerNXT"));
-    copy_cJSON(&exchange,jobj(origjson,"exchange"));
-    //printf("funding_func got (%s)\n",origargstr);
-    if ( 1 || strcmp(SUPERNET.NXTADDR,offerNXT.buf) != 0 ) // Bob
-    {
-        coin = coin777_find(jstr(origjson,"coin"),1);
-        pubA = jstr(origjson,"pubA");
-        refundtx = jstr(origjson,"refundtx");
-        refredeemscript = jstr(origjson,"rs");
-        quoteid = j64bits(origjson,"quoteid");
-        amount = j64bits(origjson,"amount");
-        if ( coin != 0 && pubA != 0 && refundtx != 0 && refredeemscript != 0 && subatomic_pubkeyhash(pubkeystr,hexstr,coin,quoteid) == 0 &&(spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,coin,pubA,coin->atomicsendpubkey,pubkeystr,amount,refundtx,refredeemscript)) != 0 )
-        {
-            printf("SPENDTX.(%s) refundsig.(%s)\n",spendtx,refundsig);
-            sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"refund\",\"exchange\":\"wallet\",\"coin\":\"%s\",\"amount\":\"%lld\",\"rsig\":\"%s\",\"refundtx\":\"%s\",\"pubB\":\"%s\",\"refundtx\":\"%s\"}",(long long)j64bits(origjson,"orderid"),(long long)j64bits(origjson,"quoteid"),SUPERNET.NXTADDR,coin->name,(long long)amount,refundsig,refundtx,coin->atomicsendpubkey,refundtx);
-            if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
-                free(str);
-            free(spendtx);
-            return(clonestr(swapbuf));
-        }
-    }
-    return(clonestr("{\"result\":\"error processing funding\"}"));
-}
-
-char *refund_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
-{
-    char *subatomic_validate(struct coin777 *coin,char *pubA,char *pubB,char *pkhash,char *refundtx,char *refundsig);
-    struct destbuf offerNXT,exchange; char *refundtx,*refundsig,*signedrefund,*pubB,*pkhash; uint64_t orderid,amount,quoteid;
-    struct coin777 *coin; struct InstantDEX_quote *iQ;
-    copy_cJSON(&offerNXT,jobj(origjson,"offerNXT"));
-    copy_cJSON(&exchange,jobj(origjson,"exchange"));
-    //printf("refund_func got (%s)\n",origargstr);
-    if ( 1 || strcmp(SUPERNET.NXTADDR,offerNXT.buf) != 0 ) // Alice
-    {
-        coin = coin777_find(jstr(origjson,"coin"),1);
-        pubB = jstr(origjson,"pubB");
-        refundtx = jstr(origjson,"refundtx");
-        refundsig = jstr(origjson,"rsig");
-        pkhash = jstr(origjson,"pkhash");
-        quoteid = j64bits(origjson,"quoteid");
-        orderid = j64bits(origjson,"orderid");
-        amount = j64bits(origjson,"amount");
-        if ( coin != 0 && pubB != 0 && refundtx != 0 && refundsig != 0 && amount != 0 )
-        {
-            if ( (signedrefund= subatomic_validate(coin,coin->atomicrecvpubkey,pubB,pkhash,refundtx,refundsig)) != 0 )
-            {
-                printf("got signed refund.(%s) broadcast funding.() and trigger\n",signedrefund);
-                free(signedrefund);
-                if ( (iQ= find_iQ(quoteid)) != 0 )
-                    complete_swap(iQ,orderid,quoteid,iQ->s.offerNXT == SUPERNET.my64bits);
-            }
-        }
-    }
-    return(clonestr("{\"result\":\"error processing funding\"}"));
 }
 
 int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,char *account,uint64_t amount,uint64_t qty,uint64_t assetid,char *recipient)

@@ -226,8 +226,9 @@ int32_t validate_token(struct destbuf *forwarder,struct destbuf *pubkey,struct d
                 {
                     if ( NXTaddr->buf[0] == 0 )
                         strcpy(NXTaddr->buf,sender.buf);
-                    nonce = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"nonce"),0);
-                    leverage = (uint32_t)get_API_int(cJSON_GetObjectItem(tokenobj,"leverage"),0);
+                    if ( (nonce= juint(tokenobj,"nonce")) == 0 )
+                        printf("null nonce.%u in (%s)\n",nonce,jprint(tokenobj,0));
+                    leverage = juint(tokenobj,"leverage");
                     copy_cJSON(&broadcaststr,cJSON_GetObjectItem(tokenobj,"broadcast"));
                     broadcastmode = get_broadcastmode(firstitem,broadcaststr.buf);
                     retcode = valid;
@@ -686,11 +687,11 @@ int32_t busdata_validate(struct destbuf *forwarder,struct destbuf *sender,uint32
 {
     struct destbuf pubkey,hexstr,sha,datastr,fforwarder,fsender; int32_t valid,fvalid; cJSON *argjson; bits256 hash;
     *timestamp = *datalenp = 0; forwarder->buf[0] = sender->buf[0] = 0;
-    //printf("busdata_validate.(%s)\n",msg);
+//printf("busdata_validate.(%s)\n",msg);
     if ( is_cJSON_Array(json) != 0 && cJSON_GetArraySize(json) == 2 )
     {
         argjson = cJSON_GetArrayItem(json,0);
-        *timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"time"),0);
+        *timestamp = juint(argjson,"time");
         if ( (valid= validate_token(forwarder,&pubkey,sender,msg,(*timestamp != 0) * MAXTIMEDIFF)) <= 0 )
         {
             fprintf(stderr,"error valid.%d sender.(%s) forwarder.(%s)\n",valid,sender->buf,forwarder->buf);
@@ -708,7 +709,7 @@ int32_t busdata_validate(struct destbuf *forwarder,struct destbuf *sender,uint32
             if ( datastr.buf[0] != 0 )
                 decode_hex(databuf,(int32_t)(strlen(datastr.buf)+1)>>1,datastr.buf);
             else databuf[0] = 0;
-            *datalenp = (uint32_t)get_API_int(cJSON_GetObjectItem(argjson,"n"),0);
+            *datalenp = juint(argjson,"n");
             calc_sha256(hexstr.buf,hash.bytes,databuf,*datalenp<1000?*datalenp:1000);
             if ( strcmp(hexstr.buf,sha.buf) == 0 )
             {

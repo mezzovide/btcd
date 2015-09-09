@@ -211,7 +211,7 @@ char *parse_expandedline(char *plugin,int32_t max,char *method,int32_t *timeoutp
             randombytes((void *)&tag,sizeof(tag)), sprintf(numstr,"%llu",(long long)tag), cJSON_AddItemToObject(json,"tag",cJSON_CreateString(numstr));
         //if ( cJSON_GetObjectItem(json,"NXT") == 0 )
         //    cJSON_AddItemToObject(json,"NXT",cJSON_CreateString(SUPERNET.NXTADDR));
-        *timeoutp = get_API_int(cJSON_GetObjectItem(json,"timeout"),0);
+        *timeoutp = juint(json,"timeout");
         if ( plugin[0] == 0 )
             strcpy(plugin,"relay");
         if ( cJSON_GetObjectItem(json,"plugin") == 0 )

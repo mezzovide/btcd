@@ -412,7 +412,7 @@ uint32_t get_blockutime(uint32_t blocknum)
         //printf("(%s) -> (%s)\n",cmd,jsonstr);
         if ( (json= cJSON_Parse(jsonstr)) != 0 )
         {
-            if ( (timestamp= (uint32_t)get_API_int(cJSON_GetObjectItem(json,"timestamp"),0)) != 0 )
+            if ( (timestamp= juint(json,"timestamp")) != 0 )
                 timestamp += NXT_GENESISTIME;
             free_json(json);
         }
@@ -1263,7 +1263,7 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
         *heightp = height = (uint32_t)get_cJSON_int(txobj,"height");
         if ( confirmed != 0 )
         {
-            if ( (numconfs= (int32_t)get_API_int(cJSON_GetObjectItem(txobj,"confirmations"),0)) == 0 )
+            if ( (numconfs= juint(txobj,"confirmations")) == 0 )
                 numconfs = (_get_NXTheight(0) - height);
         } else numconfs = 0;
         copy_cJSON(&txid,cJSON_GetObjectItem(txobj,"transaction"));
@@ -1347,7 +1347,7 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
                 if ( type == 5 && subtype == 3 )
                 {
                     copy_cJSON(&assetidstr,cJSON_GetObjectItem(attachment,"currency"));
-                    units = get_API_int(cJSON_GetObjectItem(attachment,"units"),0);
+                    units = juint(attachment,"units");
                     if ( commentobj != 0 )
                     {
                         funcid = (int32_t)get_API_int(cJSON_GetObjectItem(commentobj,"funcid"),-1);
@@ -1359,7 +1359,7 @@ int32_t process_assettransfer(uint32_t *heightp,uint64_t *senderbitsp,uint64_t *
                 {
                     if ( _in_specialNXTaddrs(mgw,sender.buf) != 0 )
                     {
-                        buyNXT = get_API_int(cJSON_GetObjectItem(commentobj,"buyNXT"),0);
+                        buyNXT = juint(commentobj,"buyNXT");
                         satoshis = get_API_nxt64bits(cJSON_GetObjectItem(txobj,"amountNQT"));
                         if ( buyNXT*SATOSHIDEN == satoshis )
                         {

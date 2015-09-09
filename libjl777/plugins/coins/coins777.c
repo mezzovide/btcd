@@ -305,7 +305,7 @@ int32_t parse_block(void *state,uint64_t *creditsp,uint64_t *debitsp,uint32_t *t
     minted = total = 0;
     if ( (json= _get_blockjson(0,coinstr,serverport,userpass,0,blocknum)) != 0 )
     {
-        if ( get_API_int(cJSON_GetObjectItem(json,"height"),0) == blocknum )
+        if ( juint(json,"height") == blocknum )
         {
             copy_cJSON(&blockhash,cJSON_GetObjectItem(json,"hash"));
             copy_cJSON(&merkleroot,cJSON_GetObjectItem(json,"merkleroot"));
@@ -342,7 +342,7 @@ int32_t parse_block(void *state,uint64_t *creditsp,uint64_t *debitsp,uint32_t *t
                 if ( (*blockfuncp)(state,blocknum+1,0,0,0,0,(*txidindp),(*numrawvoutsp),(*numrawvinsp),(*addrindp),(*scriptindp),(*totaladdrtxp),(*creditsp),(*debitsp)) != 0 )
                     printf("error finishing blocknum.%u\n",blocknum);
             } else printf("error _get_blocktxarray for block.%d got %d n.%d\n",blocknum,checkblocknum,numtx);
-        } else printf("blocknum.%u mismatched with %u\n",blocknum,get_API_int(cJSON_GetObjectItem(json,"height"),0));
+        } else printf("blocknum.%u mismatched with %u\n",blocknum,juint(json,"height"));
         free_json(json);
     } else printf("get_blockjson error parsing.(%s)\n",txidstr.buf);
     if ( Debuglevel > 2 )

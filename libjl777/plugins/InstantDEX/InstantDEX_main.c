@@ -46,7 +46,7 @@ char *Supported_exchanges[] = { INSTANTDEX_NAME, INSTANTDEX_NXTAEUNCONF, INSTANT
 
 #define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory", "balance", "allexchanges"
 
-#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "swap", "funding", "refund"
+#define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "swap" //, "funding", "refund"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
 char *PLUGNAME(_pubmethods)[] = { INSTANTDEX_REMOTEAPI }; // list of supported methods approved for public (Internet) access
 char *PLUGNAME(_authmethods)[] = { "echo" }; // list of supported methods that require authentication
@@ -627,10 +627,10 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 retstr = bidask_func(0,1,sender,json,jsonstr);
             else if ( strcmp(methodstr,"swap") == 0 )
                 retstr = swap_func(0,1,sender,json,jsonstr);
-            else if ( strcmp(methodstr,"funding") == 0 )
-                retstr = funding_func(0,1,sender,json,jsonstr);
-            else if ( strcmp(methodstr,"refund") == 0 )
-                retstr = refund_func(0,1,sender,json,jsonstr);
+            //else if ( strcmp(methodstr,"funding") == 0 )
+            //    retstr = funding_func(0,1,sender,json,jsonstr);
+            //else if ( strcmp(methodstr,"refund") == 0 )
+            //    retstr = refund_func(0,1,sender,json,jsonstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));

@@ -204,9 +204,9 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
     if ( (json= cJSON_Parse(str)) != 0 )
     {
         //printf("READY.(%s) >>>>>>>>>>>>>> READY.(%s)\n",dp->name,dp->name);
-        if ( get_API_int(cJSON_GetObjectItem(json,"allowremote"),0) > 0 )
+        if ( juint(json,"allowremote") > 0 )
             dp->allowremote = 1;
-        permflag = get_API_int(cJSON_GetObjectItem(json,"permanentflag"),0);
+        permflag = juint(json,"permanentflag");
         instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"myid"));
         tag = get_API_nxt64bits(cJSON_GetObjectItem(json,"tag"));
         if ( dp->readyflag == 0 || Debuglevel > 2 )
@@ -230,7 +230,7 @@ void process_plugin_message(struct daemon_info *dp,char *str,int32_t len)
                 free(str), str = retstr, retstr = 0;
             }
         }
-        else if ( instanceid != 0 && (broadcastflag= get_API_int(cJSON_GetObjectItem(json,"broadcast"),0)) > 0 )
+        else if ( instanceid != 0 && (broadcastflag= juint(json,"broadcast")) > 0 )
         {
             fprintf(stderr,"send to other <<<<<<<<<<<<<<<<<<<<< \n");
             nn_local_broadcast(dp->pushsock,instanceid,broadcastflag,(uint8_t *)str,(int32_t)strlen(str)+1), dp->numsent++;

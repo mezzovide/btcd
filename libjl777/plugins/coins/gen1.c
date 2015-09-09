@@ -723,7 +723,7 @@ uint32_t _get_RTheight(double *lastmillip,char *coinstr,char *serverport,char *u
         {
             if ( (json= cJSON_Parse(retstr)) != 0 )
             {
-                height = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocks"),0);
+                height = juint(json,"blocks");
                 //printf("get_RTheight %u\n",height);
                 free_json(json);
                 *lastmillip = milliseconds();
@@ -790,7 +790,8 @@ cJSON *_get_blockjson(uint32_t *heightp,char *coinstr,char *serverport,char *use
         //printf("get_blockjson.(%d %s)\n",blocknum,blockhashstr);
         blocktxt = bitcoind_passthru(coinstr,serverport,userpass,"getblock",buf);
         if ( blocktxt != 0 && blocktxt[0] != 0 && (json= cJSON_Parse(blocktxt)) != 0 && heightp != 0 )
-            *heightp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"height"),0xffffffff);
+            if ( (*heightp= juint(json,"height")) == 0 )
+                *heightp = 0xffffffff;
         if ( flag != 0 && blockhashstr != 0 )
             free(blockhashstr);
         if ( blocktxt != 0 )
@@ -935,7 +936,7 @@ cJSON *_rawblock_txarray(uint32_t *blockidp,int32_t *numtxp,cJSON *blockjson)
     cJSON *txarray = 0;
     if ( blockjson != 0 )
     {
-        *blockidp = (uint32_t)get_API_int(cJSON_GetObjectItem(blockjson,"height"),0);
+        *blockidp = juint(blockjson,"height");
         txarray = cJSON_GetObjectItem(blockjson,"tx");
         *numtxp = cJSON_GetArraySize(txarray);
     }
@@ -973,7 +974,7 @@ int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *
     raw->minted = raw->numtx = raw->numrawvins = raw->numrawvouts = 0;
     if ( (json= _get_blockjson(0,coinstr,serverport,userpass,0,blocknum)) != 0 )
     {
-        raw->blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"height"),0);
+        raw->blocknum = juint(json,"height");
         copy_cJSON(&tmp,cJSON_GetObjectItem(json,"hash")), safecopy(raw->blockhash,tmp.buf,sizeof(raw->blockhash));
         //fprintf(stderr,"%u: blockhash.[%s] ",blocknum,raw->blockhash);
         copy_cJSON(&tmp,cJSON_GetObjectItem(json,"merkleroot")), safecopy(raw->merkleroot,tmp.buf,sizeof(raw->merkleroot));
