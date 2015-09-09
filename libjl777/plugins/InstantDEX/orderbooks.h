@@ -329,8 +329,8 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
                             jaddstr(item,buf,pkhash);
                         }
                     }
-                }
-            }
+                } else printf("%s is NXT\n",coin->name);
+            } else printf("%s no addr\n",coin->name);
         } else printf("cant find coin.(%s)\n",iter == 0 ? recv : send);
     }
     if ( item == 0 )
