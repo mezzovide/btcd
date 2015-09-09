@@ -192,7 +192,7 @@ char *InstantDEX_str(char *buf,int32_t extraflag,struct InstantDEX_quote *iQ)
     {
         if ( (basecoin= coin777_find(base,1)) != 0 && (relcoin= coin777_find(rel,1)) != 0 )
         {
-            if ( iQ->s.isask == 0 )
+            if ( iQ->s.isask != 0 )
                 sprintf(extra+strlen(extra),",\"pubA\":\"%s\"",basecoin->atomicsendpubkey);
             else
             {
