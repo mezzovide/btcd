@@ -976,7 +976,7 @@ printf("swap_func got (%s)\n",origargstr);
                             if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,pubkeystr,recvamount,refundtx,redeemscript)) != 0 )
                             {
                                 finishheight = 60; deadline = 3600*4;
-                                if ( (pend= pending_swap(&str,'A',orderid,quoteid,0,0,0,0)) != 0 && str != 0 )
+                                if ( (pend= pending_swap(&str,'A',orderid,quoteid,0,0,0,0)) != 0 )
                                 {
                                     gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,triggerhash,0,0,0);
                                     //issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET);
@@ -988,7 +988,7 @@ printf("swap_func got (%s)\n",origargstr);
                                         free(str);
                                     // poll for vin then broadcast spendtx
                                     printf(">>>>>>>>>>>>>>>>>>>> SPENDTX.(%s) AFTER funded -> (%s)\n",spendtx,swapbuf);
-                                } else printf("cant get pending_swap\n");
+                                } else printf("cant get pending_swap pend.%p\n",pend);
                                 free(spendtx);
                                 return(clonestr(swapbuf));
                             } else printf("error generating spendtx\n");
