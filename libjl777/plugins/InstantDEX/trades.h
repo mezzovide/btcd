@@ -972,6 +972,7 @@ printf("swap_func got (%s)\n",origargstr);
                         printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
                         if ( (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (sendasset= j64bits(origjson,"sendasset")) != 0 && (sendqty= j64bits(origjson,"sendqty")) != 0 )
                         {
+                            printf("inside (%s/%s) sendasset.%llu sendqty.%llu\n",base,rel,(long long)sendasset,(long long)sendqty);
                             if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,pubkeystr,recvamount,refundtx,redeemscript)) != 0 )
                             {
                                 finishheight = 60; deadline = 3600*4;
@@ -987,7 +988,7 @@ printf("swap_func got (%s)\n",origargstr);
                                         free(str);
                                     // poll for vin then broadcast spendtx
                                     printf(">>>>>>>>>>>>>>>>>>>> SPENDTX.(%s) AFTER funded -> (%s)\n",spendtx,swapbuf);
-                                }
+                                } else printf("cant get pending_swap\n");
                                 free(spendtx);
                                 return(clonestr(swapbuf));
                             } else printf("error generating spendtx\n");
