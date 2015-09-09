@@ -949,9 +949,10 @@ printf("swap_func got (%s)\n",origargstr);
                 {
                     if ( myoffer != 0 && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
                     {
-                        subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
-                        printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
-                        if ( strcmp(recvcoin->atomicrecvpubkey,rpubB) == 0 && strcmp(pkhash,rpkhash) == 0 && (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (sendasset= j64bits(origjson,"sendasset")) != 0 && (sendqty= j64bits(origjson,"sendqty")) != 0 )
+                        //subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
+                        //strcmp(recvcoin->atomicrecvpubkey,rpubB) == 0 && strcmp(pkhash,rpkhash) == 0 &&
+                        //printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
+                        if ( (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (sendasset= j64bits(origjson,"sendasset")) != 0 && (sendqty= j64bits(origjson,"sendqty")) != 0 )
                         {
                             if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,pubkeystr,recvamount,refundtx,redeemscript)) != 0 )
                             {
