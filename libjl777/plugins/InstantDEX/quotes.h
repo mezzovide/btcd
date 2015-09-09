@@ -190,7 +190,7 @@ struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ,char *walletstr)
 
 char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantDEX_quote *iQ)
 {
-    char _buf[4096],_walletstr[256],extra[512],base[64],rel[64],pubkeystr[128],pkhash[128],*exchange; struct coin777 *basecoin,*relcoin;
+    char _buf[4096],_walletstr[256],extra[512],base[64],rel[64],pubkeystr[128],pkhash[128],*exchange; struct coin777 *coin;
     if ( buf == 0 )
         buf = _buf;
     if ( walletstr != 0 )
@@ -203,14 +203,19 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
         {
             if ( walletstr == 0 )
                 walletstr = _walletstr;
-            if ( (basecoin= coin777_find(base,1)) != 0 && (relcoin= coin777_find(rel,1)) != 0 )
+            if ( strcmp(base,"NXT") != 0 )
+                coin = coin777_find(rel,1);
+            else if ( strcmp(rel,"NXT") != 0 )
+                coin = coin777_find(base,1);
+            else coin = 0;
+            if ( coin != 0 )
             {
                 if ( iQ->s.isask == 0 )
-                    sprintf(walletstr,"{\"%spubA\":\"%s\"}",basecoin->name,basecoin->atomicsendpubkey);
+                    sprintf(walletstr,"{\"%spubA\":\"%s\"}",coin->name,coin->atomicsendpubkey);
                 else
                 {
-                    subatomic_pubkeyhash(pubkeystr,pkhash,basecoin,iQ->s.quoteid);
-                    sprintf(walletstr,"{\"%spubB\":\"%s\",\"%spkhash\":\"%s\"}",basecoin->name,basecoin->atomicrecvpubkey,basecoin->name,pkhash);
+                    subatomic_pubkeyhash(pubkeystr,pkhash,coin,iQ->s.quoteid);
+                    sprintf(walletstr,"{\"%spubB\":\"%s\",\"%spkhash\":\"%s\"}",coin->name,coin->atomicrecvpubkey,coin->name,pkhash);
                 }
                 sprintf(extra+strlen(extra),",\"wallet\":%s",walletstr);
             }

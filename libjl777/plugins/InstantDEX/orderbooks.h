@@ -317,7 +317,7 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
                     get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,addr);
                     if ( jstr(item,buf) == 0 )
                         jaddstr(item,buf,pubkey.buf);
-                    if ( iter == 0 )
+                    //if ( iter == 0 )
                     {
                         sprintf(buf,"%spkhash",str);
                         if ( jstr(item,buf) == 0 )
