@@ -322,7 +322,7 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
                     } else printf("already have (%s) %s\n",buf,jstr(item,buf));
                     //if ( iter == 0 )
                     {
-                        sprintf(buf,"%spkhash",str);
+                        sprintf(buf,"%spkhash222",str);
                         if ( jstr(item,buf) == 0 )
                         {
                             subatomic_pubkeyhash(pubkey.buf,pkhash,coin,quoteid);
