@@ -315,12 +315,16 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
                 if ( is_NXT_native(assetid) == 0 )
                 {
                     get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,addr);
-                    jaddstr(item,buf,pubkey.buf);
+                    if ( jstr(item,buf) == 0 )
+                        jaddstr(item,buf,pubkey.buf);
                     if ( iter == 0 )
                     {
-                        subatomic_pubkeyhash(pubkey.buf,pkhash,coin,quoteid);
                         sprintf(buf,"%spkhash",str);
-                        jaddstr(item,buf,pkhash);
+                        if ( jstr(item,buf) == 0 )
+                        {
+                            subatomic_pubkeyhash(pubkey.buf,pkhash,coin,quoteid);
+                            jaddstr(item,buf,pkhash);
+                        }
                     }
                 }
             }
