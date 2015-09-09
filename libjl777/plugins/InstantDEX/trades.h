@@ -912,9 +912,9 @@ char *swap_responseNXT(int32_t type,char *offerNXT,uint64_t otherbits,uint64_t o
 char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
 {
     char *str,*base,*rel,*txstr,*phasedtx; struct pending_trade *pend; struct prices777_order order; struct InstantDEX_quote *iQ,_iQ;
+    uint32_t deadline,finishheight,nonce; int32_t errcode,myoffer,myfill; struct NXTtx sendtx,fee; struct destbuf spendtxid;
     struct destbuf offerNXT,exchange; char swapbuf[4096],refredeemscript[1024],vintxid[128],*triggerhash,*fullhash;
     uint64_t otherbits,otherqty,quoteid,orderid,recvasset,recvqty,sendasset,sendqty,fillNXT;
-    uint32_t deadline,finishheight,nonce; int32_t errcode,myoffer,myfill; struct NXTtx sendtx,fee; struct destbuf spendtxid;
     copy_cJSON(&offerNXT,jobj(origjson,"offerNXT"));
     fillNXT = j64bits(origjson,"fillNXT");
     copy_cJSON(&exchange,jobj(origjson,"exchange"));
@@ -923,7 +923,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
         triggerhash = jstr(origjson,"trigger");
     myoffer = strcmp(SUPERNET.NXTADDR,offerNXT.buf) == 0;
     myfill = (SUPERNET.my64bits == fillNXT);
-printf("swap_func got (%s)\n",origargstr);
+//printf("swap_func got (%s)\n",origargstr);
     if ( myoffer+myfill != 0 )
     {
         orderid = j64bits(origjson,"orderid");
@@ -943,7 +943,8 @@ printf("swap_func got (%s)\n",origargstr);
         order.s = iQ->s;
         if ( strcmp("wallet",exchange.buf) == 0 )
         {
-            uint64_t sendamount,recvamount; struct coin777 *recvcoin,*sendcoin; char pubkeystr[128],pkhash[128],refundsig[512],fieldA[64],fieldB[64],fieldpkhash[64];
+            uint64_t sendamount,recvamount; struct coin777 *recvcoin,*sendcoin;
+            char pubkeystr[128],pkhash[128],refundsig[512],fieldA[64],fieldB[64],fieldpkhash[64];
             char *recvstr,*sendstr,*spendtx,*refundtx,*redeemscript,*rpubA,*rpubB,*rpkhash,*spubA,*spubB,*spkhash;
             recvcoin = sendcoin = 0; sendamount = recvamount = 0;
             if ( (recvstr= jstr(origjson,"recvcoin")) != 0 )
@@ -980,7 +981,7 @@ printf("swap_func got (%s)\n",origargstr);
                                 {
                                     gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,triggerhash,0,0,0);
                                     //issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET);
-                                    gen_NXTtx(&sendtx,calc_nxt64bits(offerNXT.buf),sendasset,sendqty,orderid,quoteid,deadline,triggerhash,0,_get_NXTheight(0)+finishheight,rpkhash);
+                                    gen_NXTtx(&sendtx,fillNXT,sendasset,sendqty,orderid,quoteid,deadline,triggerhash,0,_get_NXTheight(0)+finishheight,rpkhash);
                                     //issue_broadcastTransaction(&errcode,&txstr,sendtx.txbytes,SUPERNET.NXTACCTSECRET);
                                     printf(">>>>>>>>>>>> broadcast fee and phased.(%s) trigger.%s\n",sendtx.txbytes,triggerhash);
                                     sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"fillNXT\":\"%llu\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"recvcoin\":\"%s\",\"recvamount\":\"%lld\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"refundsig\":\"%s\",\"phasedtx\":\"%s\",\"spendtxid\":\"%s\",\"a\":\"%llu\",\"q\":\"%llu\",\"trigger\":\"%s\"}",(long long)orderid,(long long)quoteid,offerNXT.buf,(long long)fillNXT,recvcoin->name,(long long)recvamount,fieldA,rpubA,fieldB,rpubB,fieldpkhash,rpkhash,refundsig,sendtx.txbytes,spendtxid.buf,(long long)sendasset,(long long)sendqty,triggerhash);
