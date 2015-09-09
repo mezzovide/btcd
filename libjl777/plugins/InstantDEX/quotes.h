@@ -190,7 +190,7 @@ struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ,char *walletstr)
 
 char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantDEX_quote *iQ)
 {
-    char _buf[4096],_walletstr[256],extra[512],base[64],rel[64],pubkeystr[128],pkhash[128],*exchange; struct coin777 *coin;
+    char _buf[4096],_walletstr[256],extra[512],base[64],rel[64],pubkeystr[128],pkhash[128],*exchange,*str; struct coin777 *coin;
     if ( buf == 0 )
         buf = _buf;
     if ( walletstr != 0 )
@@ -198,8 +198,12 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
     unstringbits(base,iQ->s.basebits), unstringbits(rel,iQ->s.relbits);
     if ( extraflag != 0 )
     {
-        sprintf(extra,",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"",(iQ->s.isask != 0) ? "ask" : "bid");
-        if ( (exchange= exchange_str(iQ->exchangeid)) != 0 && strcmp(exchange,"wallet") == 0 )
+        exchange = exchange_str(iQ->exchangeid);
+        if ( exchange != 0 && strcmp(exchange,"wallet") == 0 )
+            str = "swap";
+        else str = (iQ->s.isask != 0) ? "ask" : "bid";
+        sprintf(extra,",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"",str);
+        if ( exchange != 0 && strcmp(exchange,"wallet") == 0 )
         {
             if ( walletstr == 0 )
                 walletstr = _walletstr;
