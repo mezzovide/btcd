@@ -161,7 +161,7 @@ struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ,char *walletstr)
     if ( walletstr != 0 && (len= strlen(walletstr)) > 0 )
         iQ->s.wallet = 1, len++;
     calc_quoteid(iQ);
-    printf("createiQ %llu/%llu %f %f quoteid.%llu offerNXT.%llu\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,iQ->s.price,iQ->s.vol,(long long)iQ->s.quoteid,(long long)iQ->s.offerNXT);
+    printf("createiQ %llu/%llu %f %f quoteid.%llu offerNXT.%llu wallet.%d (%s)\n",(long long)iQ->s.baseid,(long long)iQ->s.relid,iQ->s.price,iQ->s.vol,(long long)iQ->s.quoteid,(long long)iQ->s.offerNXT,iQ->s.wallet,walletstr!=0?walletstr:"");
     if ( (newiQ= find_iQ(iQ->s.quoteid)) != 0 )
         return(newiQ);
     newiQ = calloc(1,sizeof(*newiQ) + len);
@@ -578,7 +578,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
                     return(clonestr("{\"error\":\"cant do queued requests with non-default accounts\"}"));
                 iQ = create_iQ(iQ,jstr(origjson,"wallet"));
                 prices777_InstantDEX(prices,MAX_DEPTH);
-                printf("got create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
+                printf("got create_iQ.(%llu) quoteid.%llu wallet.%d\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,iQ->s.wallet);
             }
             return(retstr);
         }
