@@ -190,7 +190,7 @@ char *InstantDEX_str(char *buf,int32_t extraflag,struct InstantDEX_quote *iQ)
     unstringbits(base,iQ->s.basebits), unstringbits(rel,iQ->s.relbits);
     if ( (exchange= exchange_str(iQ->exchangeid)) != 0 && strcmp(exchange,"wallet") == 0 )
     {
-        if ( (basecoin= coin777_find(base,0)) != 0 && (relcoin= coin777_find(rel,0)) != 0 )
+        if ( (basecoin= coin777_find(base,1)) != 0 && (relcoin= coin777_find(rel,1)) != 0 )
         {
             if ( iQ->s.isask == 0 )
                 sprintf(extra+strlen(extra),",\"pubA\":\"%s\"",basecoin->atomicsendpubkey);
