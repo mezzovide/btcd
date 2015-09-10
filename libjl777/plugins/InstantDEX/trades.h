@@ -1036,7 +1036,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 {
                                     printf(">>>>>>>>>>>>> FUNDING BROADCAST.(%s) (%s)\n",recvcoin->funding.signedtransaction,cointxid);
                                     free(cointxid);
-                                }
+                                } else printf("error sendrawtransaction.(%s)\n",recvcoin->funding.signedtransaction);
                                 free(signedtx);
                                 if ( (value= wait_for_txid(script,recvcoin,spendtxid.buf,0,recvamount-recvcoin->mgw.txfee,0,0)) != 0 )
                                 {
@@ -1071,6 +1071,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                         } else printf("script.(%s) -> pkhash.(%s) vs rpkhash.(%s)\n",script,pkhash,rpkhash);
                                     } else printf("unexpected end of script.(%s)\n",script);
                                 }
+                                printf("FINISHED ATOMIC SWAP of quoteid.%llu\n",(long long)quoteid);
                                 iQ->s.closed = 1;
                                 memset(&recvcoin->trigger,0,sizeof(recvcoin->trigger));
                                 memset(&recvcoin->funding,0,sizeof(recvcoin->funding));
@@ -1135,7 +1136,8 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
         return(0);
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.closed == 0 && iQ->s.pending != 0 && (iQ->s.responded == 0 || iQ->s.feepaid == 0) )
     {
-        printf("match unconfirmed %llu/%llu %p swap.%d feepaid.%d responded.%d sender.(%s) -> recv.(%s) me.(%s) offer.(%llu)\n",(long long)orderid,(long long)quoteid,iQ,iQ->s.swap,iQ->s.feepaid,iQ->s.responded,sender,recipient,SUPERNET.NXTADDR,(long long)iQ->s.offerNXT);
+        if ( Debuglevel > 2 )
+            printf("match unconfirmed %llu/%llu %p swap.%d feepaid.%d responded.%d sender.(%s) -> recv.(%s) me.(%s) offer.(%llu)\n",(long long)orderid,(long long)quoteid,iQ,iQ->s.swap,iQ->s.feepaid,iQ->s.responded,sender,recipient,SUPERNET.NXTADDR,(long long)iQ->s.offerNXT);
         if ( iQ->s.swap != 0 && (strcmp(recipient,INSTANTDEX_ACCT) == 0 || strcmp(recipient,SUPERNET.NXTADDR) == 0) )
         {
             if ( iQ->s.feepaid == 0 )
@@ -1163,7 +1165,8 @@ int32_t match_unconfirmed(char *sender,char *hexstr,cJSON *txobj,char *txidstr,c
                 }
                 sendqty /= get_assetmult(sendasset);
                 recvqty /= get_assetmult(recvasset);
-                printf("sendasset.%llu sendqty.%llu mult.%llu, recvasset.%llu recvqty.%llu mult.%llu\n",(long long)sendasset,(long long)sendqty,(long long)get_assetmult(sendasset),(long long)recvasset,(long long)recvqty,(long long)get_assetmult(recvasset));
+                if ( Debuglevel > 2 )
+                    printf("sendasset.%llu sendqty.%llu mult.%llu, recvasset.%llu recvqty.%llu mult.%llu\n",(long long)sendasset,(long long)sendqty,(long long)get_assetmult(sendasset),(long long)recvasset,(long long)recvqty,(long long)get_assetmult(recvasset));
                 if ( InstantDEX_verify(SUPERNET.my64bits,sendasset,sendqty,txobj,recvasset,recvqty) == 0 )
                 {
                     iQ->s.responded = 1;

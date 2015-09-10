@@ -209,7 +209,8 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     if ( extract_cJSON_str(transaction,sizeof(transaction),json,"transaction") > 0 ) n++;
     if ( calc_nxt64bits(recipient) != destNXTbits )
     {
-        fprintf(stderr,"recipient.%s != %llu\n",recipient,(long long)destNXTbits);
+        if ( Debuglevel > 2 )
+            fprintf(stderr,"recipient.%s != %llu\n",recipient,(long long)destNXTbits);
         return(-2);
     }
     typeval = myatoi(type,256), subtypeval = myatoi(subtype,256);
@@ -270,7 +271,8 @@ int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendq
     // verify recipient, amounts in txobj
      if ( (err= verify_NXTtx(txobj,recvasset,recvqty,destNXTaddr)) != 0 )
     {
-        printf("InstantDEX_verify dest.(%llu) tx mismatch %d (%llu %lld) -> (%llu %lld)\n",(long long)destNXTaddr,err,(long long)sendasset,(long long)sendqty,(long long)recvasset,(long long)recvqty);
+        if ( Debuglevel > 2 )
+            printf("InstantDEX_verify dest.(%llu) tx mismatch %d (%llu %lld) -> (%llu %lld)\n",(long long)destNXTaddr,err,(long long)sendasset,(long long)sendqty,(long long)recvasset,(long long)recvqty);
         return(-1);
     }
     return(0);
