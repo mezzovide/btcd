@@ -909,7 +909,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
 {
     char *str,*base,*rel,*txstr,*phasedtx; struct pending_trade *pend; struct prices777_order order; struct InstantDEX_quote *iQ,_iQ;
     uint32_t deadline,finishheight,nonce; int32_t errcode,myoffer,myfill; struct NXTtx sendtx,fee; struct destbuf spendtxid;
-    struct destbuf offerNXT,exchange; char swapbuf[4096],refredeemscript[1024],vintxid[128],*triggerhash,*fullhash;
+    struct destbuf offerNXT,exchange; char pubkeystr[128],pkhash[64],swapbuf[4096],refredeemscript[1024],vintxid[128],*triggerhash,*fullhash;
     uint64_t otherbits,otherqty,quoteid,orderid,recvasset,recvqty,sendasset,sendqty,fillNXT;
     copy_cJSON(&offerNXT,jobj(origjson,"offerNXT"));
     fillNXT = j64bits(origjson,"fillNXT");
@@ -956,7 +956,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
             }
             else if ( recvstr != 0 )
             {
-                //printf("INCOMINGRECV.(%s)\n",origargstr);
+                printf("INCOMINGRECV.(%s)\n",origargstr);
                 sprintf(fieldA,"%spubA",recvcoin->name);
                 sprintf(fieldB,"%spubB",recvcoin->name);
                 sprintf(fieldpkhash,"%spkhash",recvcoin->name);
@@ -964,13 +964,12 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 {
                     if ( myoffer != 0 && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
                     {
-                        //subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
-                        //strcmp(recvcoin->atomicrecvpubkey,rpubB) == 0 && strcmp(pkhash,rpkhash) == 0 &&
-                        //printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
+                        subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
+                        printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
                         if ( (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (sendasset= j64bits(origjson,"sendasset")) != 0 && (sendqty= j64bits(origjson,"sendqty")) != 0 )
                         {
                             printf("inside (%s/%s) sendasset.%llu sendqty.%llu rpkhash.(%s)\n",base,rel,(long long)sendasset,(long long)sendqty,rpkhash);
-                            if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,recvcoin->atomicrecvpubkey,recvamount,refundtx,redeemscript)) != 0 )
+                            if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,pubkeystr,recvamount,refundtx,redeemscript)) != 0 )
                             {
                                 finishheight = 60; deadline = 3600*4;
                                 if ( (pend= pending_swap(&str,'A',orderid,quoteid,0,0,0,0)) != 0 )
@@ -1017,7 +1016,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
             }
             else if ( sendstr != 0 )  // Alice sendcoin -> Bob, recvs NXT
             {
-                //printf("INCOMINGSEND.(%s)\n",origargstr);
+                printf("INCOMINGSEND.(%s)\n",origargstr);
                 sprintf(fieldA,"%spubA",sendcoin->name);
                 sprintf(fieldB,"%spubB",sendcoin->name);
                 sprintf(fieldpkhash,"%spkhash",sendcoin->name);
