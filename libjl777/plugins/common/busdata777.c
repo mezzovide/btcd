@@ -1094,7 +1094,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
 char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr)
 {
     struct applicant_info apply,*ptr; int32_t sentflag,datalen,sendlen = 0; struct destbuf plugin,destplugin; char *data,*retstr,*submethod; cJSON *json;
-    printf("BUSDATA_SYNC.(%s)\n",jsonstr);
+    //printf("BUSDATA_SYNC.(%s)\n",jsonstr);
     json = cJSON_Parse(jsonstr);
     if ( json == 0 )
     {
