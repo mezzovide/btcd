@@ -278,10 +278,10 @@ int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendq
 
 cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendasset,uint64_t orderid,uint64_t quoteid)
 {
-    int32_t iter; uint64_t assetid; struct coin777 *coin; struct destbuf pubkey; struct InstantDEX_quote *iQ;
-    char buf[128],pkhash[128],account[128],*addr,*str; cJSON *item = 0;
+    int32_t iter; uint64_t assetid; struct coin777 *coin; struct InstantDEX_quote *iQ;
+    char buf[128],account[128],walletstr[512],*addr,*str; cJSON *walletitem = 0;
     if ( (iQ= find_iQ(quoteid)) != 0 && iQ->s.wallet != 0 )
-        item = cJSON_Parse(iQ->walletstr);
+        walletitem = cJSON_Parse(iQ->walletstr);
     for (iter=0; iter<2; iter++)
     {
         addr = 0;
@@ -289,18 +289,13 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
         assetid = (iter == 0) ? recvasset : sendasset;
         if ( (coin= coin777_find(str,1)) != 0 )
         {
-            if ( item == 0 )
-                item = cJSON_CreateObject();
-            if ( iter == 0 )
+            if ( is_NXT_native(assetid) == 0 )
             {
-                sprintf(account,"%srecv",str);
-                sprintf(buf,"%spubB",str);
-            }
-            else
-            {
-                sprintf(account,"%ssend",str);
-                sprintf(buf,"%spubA",str);
-            }
+                if ( (walletitem= set_walletstr(walletitem,walletstr,iQ)) != 0 )
+                {
+                    
+                }
+            } else printf("%s is NXT\n",coin->name);
             if ( is_NXT_native(assetid) != 0 )
                 addr = SUPERNET.NXTADDR;
             else
@@ -311,31 +306,12 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
             }
             if ( addr != 0 )
             {
-                jaddstr(item,account,addr);
-                if ( is_NXT_native(assetid) == 0 )
-                {
-                    get_pubkey(&pubkey,coin->name,coin->serverport,coin->userpass,addr);
-                    if ( jstr(item,buf) == 0 )
-                    {
-                        jaddstr(item,buf,pubkey.buf);
-                        printf("add.(%s) to %s\n",pubkey.buf,buf);
-                    } else printf("already have (%s) %s\n",buf,jstr(item,buf));
-                    //if ( iter == 0 )
-                    {
-                        sprintf(buf,"%spkhash",str);
-                        if ( jstr(item,buf) == 0 )
-                        {
-                            subatomic_pubkeyhash(pubkey.buf,pkhash,coin,quoteid);
-                            jaddstr(item,buf,pkhash);
-                        }
-                    }
-                } else printf("%s is NXT\n",coin->name);
             } else printf("%s no addr\n",coin->name);
         } else printf("cant find coin.(%s)\n",iter == 0 ? recv : send);
     }
-    if ( item == 0 )
-        item = cJSON_CreateObject(), jaddstr(item,"error","cant find local coin daemons");
-    return(item);
+    if ( walletitem == 0 )
+        walletitem = cJSON_CreateObject(), jaddstr(walletitem,"error","cant find local coin daemons");
+    return(walletitem);
 }
 
 void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t bidask,double price,double volume,uint64_t orderid,uint64_t quoteid)

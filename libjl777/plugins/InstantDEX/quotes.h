@@ -188,41 +188,72 @@ struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ,char *walletstr)
     return(newiQ);
 }
 
+cJSON *set_walletstr(cJSON *walletitem,char *walletstr,struct InstantDEX_quote *iQ)
+{
+    char pubkeystr[128],pkhash[128],base[64],rel[64],fieldA[64],fieldB[64],fieldpkhash[64],*pubA,*pubB,*pkhashstr,*str; struct coin777 *coin;
+   if ( walletstr != 0 )
+       walletitem = cJSON_Parse(walletstr);
+    if ( walletitem == 0 )
+       walletitem = cJSON_CreateObject();
+    unstringbits(base,iQ->s.basebits), unstringbits(rel,iQ->s.relbits);
+    if ( strcmp(base,"NXT") != 0 )
+        coin = coin777_find(base,1);
+    else if ( strcmp(rel,"NXT") != 0 )
+        coin = coin777_find(rel,1);
+    else coin = 0;
+    if ( coin != 0 )
+    {
+        sprintf(fieldA,"%spubA",coin->name);
+        if ( (pubA= jstr(walletitem,fieldA)) == 0 )
+        {
+            pubA = coin->atomicsendpubkey;
+            jaddstr(walletitem,fieldA,pubA);
+        }
+        sprintf(fieldB,"%spubB",coin->name);
+        if ( (pubB= jstr(walletitem,fieldB)) == 0 )
+        {
+            pubB = coin->atomicrecvpubkey;
+            jaddstr(walletitem,fieldB,pubB);
+        }
+        sprintf(fieldpkhash,"%spkhash",coin->name);
+        if ( (pkhashstr= jstr(walletitem,fieldpkhash)) == 0 )
+        {
+            subatomic_pubkeyhash(pubkeystr,pkhash,coin,iQ->s.quoteid);
+            jaddstr(walletitem,fieldpkhash,pkhash);
+        }
+        str = jprint(walletitem,0);
+        strcpy(walletstr,str);
+        free(str);
+        return(walletitem);
+    }
+    return(0);
+}
+
 char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantDEX_quote *iQ)
 {
-    char _buf[4096],_walletstr[256],extra[512],base[64],rel[64],pubkeystr[128],pkhash[128],*exchange; struct coin777 *coin;
+    char _buf[4096],_walletstr[256],base[64],rel[64],*exchange,*str; cJSON *walletitem,*json;
+    unstringbits(base,iQ->s.basebits), unstringbits(rel,iQ->s.relbits);
     if ( buf == 0 )
         buf = _buf;
-    if ( walletstr != 0 )
-        walletstr[0] = 0;
-    unstringbits(base,iQ->s.basebits), unstringbits(rel,iQ->s.relbits);
+    sprintf(buf,"{\"quoteid\":\"%llu\",\"base\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"rel\":\"%s\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\"}",(long long)iQ->s.quoteid,base,(long long)iQ->s.baseid,(long long)iQ->s.baseamount,rel,(long long)iQ->s.relid,(long long)iQ->s.relamount,iQ->s.price,iQ->s.vol,(long long)iQ->s.offerNXT,iQ->s.timestamp,iQ->s.isask,exchange_str(iQ->exchangeid),iQ->gui);
     if ( extraflag != 0 )
     {
-        sprintf(extra,",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"",(iQ->s.isask != 0) ? "ask" : "bid");
+        sprintf(buf + strlen(buf) - 1,",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\"}",(iQ->s.isask != 0) ? "ask" : "bid");
+    }
+    if ( (json= cJSON_Parse(buf)) != 0 )
+    {
+        if ( walletstr == 0 )
+            walletstr = _walletstr;
+        walletstr[0] = 0;
         if ( (exchange= exchange_str(iQ->exchangeid)) != 0 && strcmp(exchange,"wallet") == 0 )
         {
-            if ( walletstr == 0 )
-                walletstr = _walletstr;
-            if ( strcmp(base,"NXT") != 0 )
-                coin = coin777_find(base,1);
-            else if ( strcmp(rel,"NXT") != 0 )
-                coin = coin777_find(rel,1);
-            else coin = 0;
-            if ( coin != 0 )
-            {
-                if ( iQ->s.isask == 0 )
-                    sprintf(walletstr,"{\"%spubA\":\"%s\"}",coin->name,coin->atomicsendpubkey);
-                else
-                {
-                    subatomic_pubkeyhash(pubkeystr,pkhash,coin,iQ->s.quoteid);
-                    sprintf(walletstr,"{\"%spubB\":\"%s\",\"%spkhash\":\"%s\"}",coin->name,coin->atomicrecvpubkey,coin->name,pkhash);
-                }
-                sprintf(extra+strlen(extra),",\"wallet\":%s",walletstr);
-            }
+            if ( (walletitem= set_walletstr(0,walletstr,iQ)) != 0 )
+                jadd(json,"wallet",walletitem);
         }
+        str = jprint(json,1);
+        strcpy(buf,str);
+        free(str);
     }
-    else extra[0] = 0;
-    sprintf(buf,"{\"quoteid\":\"%llu\",\"base\":\"%s\",\"baseid\":\"%llu\",\"baseamount\":\"%llu\",\"rel\":\"%s\",\"relid\":\"%llu\",\"relamount\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"offerNXT\":\"%llu\",\"timestamp\":\"%u\",\"isask\":\"%u\",\"exchange\":\"%s\",\"gui\":\"%s\"%s}",(long long)iQ->s.quoteid,base,(long long)iQ->s.baseid,(long long)iQ->s.baseamount,rel,(long long)iQ->s.relid,(long long)iQ->s.relamount,iQ->s.price,iQ->s.vol,(long long)iQ->s.offerNXT,iQ->s.timestamp,iQ->s.isask,exchange_str(iQ->exchangeid),iQ->gui,extra);
     if ( buf == _buf )
         return(clonestr(buf));
     else return(buf);
