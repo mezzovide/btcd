@@ -246,8 +246,10 @@ char *InstantDEX_str(char *walletstr,char *buf,int32_t extraflag,struct InstantD
     if ( (json= cJSON_Parse(buf)) != 0 )
     {
         if ( walletstr == 0 )
+        {
             walletstr = _walletstr;
-        walletstr[0] = 0;
+            walletstr[0] = 0;
+        }
         if ( (exchange= exchange_str(iQ->exchangeid)) != 0 && strcmp(exchange,"wallet") == 0 )
         {
             if ( (walletitem= set_walletstr(0,walletstr,iQ)) != 0 )
@@ -574,7 +576,6 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
     if ( (obj= jobj(origjson,"wallet")) != 0 )
     {
         str = jprint(obj,1);
-        //printf("str.(%s)\n",str);
         safecopy(walletstr,str,sizeof(walletstr));
         free(str), str = 0;
     }

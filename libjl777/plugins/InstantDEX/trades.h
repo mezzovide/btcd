@@ -689,16 +689,14 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             else if ( strcmp(recvstr,"NXT") == 0 )
             {
                 walletitem = set_walletstr(walletitem,walletstr,iQ);
-                sprintf(fieldA,"%spubA",recvstr), spubA = jstr(walletitem,fieldA);
-                sprintf(fieldB,"%spubB",recvstr), spubB = jstr(walletitem,fieldB);
-                sprintf(fieldpkhash,"%spkhash",recvstr), spkhash = jstr(walletitem,fieldpkhash);
+                sprintf(fieldA,"%spubA",sendstr), spubA = jstr(walletitem,fieldA);
+                sprintf(fieldB,"%spubB",sendstr), spubB = jstr(walletitem,fieldB);
+                sprintf(fieldpkhash,"%spkhash",sendstr), spkhash = jstr(walletitem,fieldpkhash);
                 if ( spubA != 0 && spubB != 0 && spkhash[0] != 0 ) // Bob <- sendcoin from Alice, send NXT -> Alice
                 {
                     if ( (redeemscript= create_atomictx_scripts(sendcoin->p2shtype,scriptPubKey,p2shaddr,spubA,spubB,spkhash)) != 0 )
                     {
                         pend->triggertxid = prices777_swapbuf("yes",spkhash,&pend->txid,triggertx,txbytes,swapbuf,"wallet",prices->base,prices->rel,order,orderid,finishin,0);
-                        sprintf(fieldB,"%spubB",sendstr);
-                        sprintf(fieldpkhash,"%spkhash",sendstr);
                         sprintf(swapbuf+strlen(swapbuf)-1,",\"sendcoin\":\"%s\",\"sendamount\":\"%llu\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"recvasset\":\"%llu\",\"recvqty\":\"%llu\"}",sendstr,(long long)sendamount,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,(long long)recvasset,(long long)recvamount);
                         free(redeemscript);
                         iQ->s.swap = 1;
