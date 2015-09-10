@@ -909,9 +909,26 @@ char *swap_responseNXT(int32_t type,char *offerNXT,uint64_t otherbits,uint64_t o
     return(str);
 }
 
+int32_t extract_pkhash(char *pkhash,char *script)
+{
+    int32_t len; char hexstr[512]; uint8_t rmd160[20],data[4096],*ptr;
+    decode_hex(data,(int32_t)strlen(script)>>1,script);
+    len = data[0];
+    ptr = &data[len + 1];
+    len = *ptr++;
+    if ( len == 33 )
+    {
+        init_hexbytes_noT(hexstr,ptr,33);
+        calc_OP_HASH160(pkhash,rmd160,hexstr);
+        printf("pkhash.(%s)\n",pkhash);
+        return(0);
+    }
+    return(-1);
+}
+
 char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
 {
-    char script[4096],hexstr[128],*str,*base,*rel,*txstr,*phasedtx,*cointxid,*signedtx,*jsonstr; uint8_t rmd160[20],msgbuf[512];
+    char script[4096],hexstr[128],*str,*base,*rel,*txstr,*phasedtx,*cointxid,*signedtx,*jsonstr; uint8_t msgbuf[512];
     struct pending_trade *pend; struct prices777_order order; struct InstantDEX_quote *iQ,_iQ; cJSON *json;
     uint32_t deadline,finishheight,nonce,isask; int32_t errcode,myoffer,myfill,len; struct NXTtx sendtx,fee; struct destbuf spendtxid,reftx;
     struct destbuf offerNXT,exchange; uint64_t otherbits,otherqty,quoteid,orderid,recvasset,recvqty,sendasset,sendqty,fillNXT,destbits,value;
@@ -1044,11 +1061,8 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 if ( (value= wait_for_txid(script,recvcoin,spendtxid.buf,0,recvamount-recvcoin->mgw.txfee,0,0)) != 0 )
                                 {
                                     iQ->s.responded = 1;
-                                    len = (int32_t)strlen(script);
-                                    str = &script[len - 33*2 - 2];
-                                    if ( str[0] == '2' && str[1] == '1' )
+                                    if ( extract_pkhash(pkhash,script) == 0 )
                                     {
-                                        calc_OP_HASH160(pkhash,rmd160,str+2);
                                         if ( strcmp(pkhash,rpkhash) == 0 )
                                         {
                                             reftx.buf[0] = 0;
@@ -1072,7 +1086,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                             } else printf("error sending in approval\n");
       
                                         } else printf("script.(%s) -> pkhash.(%s) vs rpkhash.(%s)\n",script,pkhash,rpkhash);
-                                    } else printf("unexpected end of script.(%s)\n",script);
+                                    } else printf("unexpected end of script.(%s) (%s)\n",script,str);
                                 }
                                 printf("FINISHED ATOMIC SWAP of quoteid.%llu\n",(long long)quoteid);
                                 iQ->s.closed = 1;
