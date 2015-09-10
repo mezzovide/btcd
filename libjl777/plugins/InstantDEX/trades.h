@@ -1001,11 +1001,12 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                         sprintf(signedtx,"[\"%s\"]",spendtx);
                                         if ( (cointxid= bitcoind_passthru(recvcoin->name,recvcoin->serverport,recvcoin->userpass,"sendrawtransaction",signedtx)) != 0 )
                                         {
-                                            printf(">>>>>>>>>>>>> BROADCAST.(%s) (%s)\n",signedtx,cointxid);
+                                            printf(">>>>>>>>>>>>> BROADCAST SPENDTX.(%s) (%s)\n",signedtx,cointxid);
                                             free(cointxid);
                                         }
                                         free(signedtx);
                                     }
+                                    printf("ATOMIC SWAP.%llu finished\n",(long long)quoteid);
                                     iQ->s.closed = 1;
                                 } else printf("cant get pending_swap pend.%p\n",pend);
                                 free(spendtx);
@@ -1038,6 +1039,8 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                     free(cointxid);
                                 } else printf("error sendrawtransaction.(%s)\n",recvcoin->funding.signedtransaction);
                                 free(signedtx);
+                                copy_cJSON(&spendtxid,jobj(origjson,"spendtxid"));
+                                printf("wait for spendtx.(%s)\n",spendtxid.buf);
                                 if ( (value= wait_for_txid(script,recvcoin,spendtxid.buf,0,recvamount-recvcoin->mgw.txfee,0,0)) != 0 )
                                 {
                                     iQ->s.responded = 1;
