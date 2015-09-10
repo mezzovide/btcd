@@ -962,7 +962,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 sprintf(fieldpkhash,"%spkhash",recvcoin->name);
                 if ( (recvamount= j64bits(origjson,"recvamount")) != 0 && recvcoin != 0 && (rpubA= jstr(origjson,fieldA)) != 0 && (rpubB= jstr(origjson,fieldB)) != 0 && (rpkhash= jstr(origjson,fieldpkhash)) != 0 )
                 {
-                    if ( ((iQ->s.isask != 0 && myoffer != 0) || (iQ->s.isask == 0 && myfill != 0)) && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
+                    if ( ((iQ->s.isask != 0 && myoffer != 0) || (iQ->s.isask == 0 && myoffer != 0)) && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
                     {
                         subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
                         printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
@@ -1009,7 +1009,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 free(recvcoin->signedrefund), recvcoin->signedrefund = 0;
                             } else printf("refund tx didnt verify\n");
                         } else printf("NXT tx didnt verify\n");
-                    } else printf("myfill.%d myoffer.%d recv mismatch\n",myfill,myoffer);
+                    } else printf("myfill.%d myoffer.%d recv mismatch isask.%d\n",myfill,myoffer,iQ->s.isask);
                     //printf("recv failed\n");
                     return(clonestr("{\"result\":\"recv failed\"}"));
                 }
@@ -1036,7 +1036,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             //printf("BUSDATA.(%s)\n",swapbuf);
                         } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
                     } else printf("mismatched send (%s vs %s) or (%s)\n",sendcoin->atomicrecvpubkey,spubB,spkhash);
-                } else printf("myfill.%d myoffer.%d send mismatch\n",myfill,myoffer);
+                } else printf("myfill.%d myoffer.%d send mismatch isask.%d\n",myfill,myoffer,iQ->s.isask);
             }
             return(clonestr("{\"result\":\"processed wallet swap\"}"));
         }
