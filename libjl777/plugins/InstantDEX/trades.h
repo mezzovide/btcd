@@ -642,7 +642,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
     if ( strcmp(prices->exchange,"wallet") == 0 )
     {
         cJSON *walletitem; struct coin777 *recvcoin,*sendcoin; 
-        char fieldA[64],fieldB[64],fieldpkhash[64],refredeemscript[2048],scriptPubKey[128],p2shaddr[64],walletstr[512];
+        char fieldA[64],fieldB[64],fieldpkhash[64],refredeemscript[2048],scriptPubKey[128],p2shaddr[64];
         char *rpubA=0,*rpubB=0,*rpkhash=0,*spubA=0,*spubB=0,*spkhash=0,*recvstr=0,*sendstr=0,*refundtx,*redeemscript,*str;
         int32_t finishin; uint64_t sendamount,recvamount; struct destbuf base,rel;
         if ( item != 0 && (item= jitem(item,0)) != 0 && (walletitem= jobj(item,"wallet")) != 0 )
@@ -940,7 +940,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
         if ( strcmp("wallet",exchange.buf) == 0 )
         {
             uint64_t sendamount,recvamount; struct coin777 *recvcoin,*sendcoin;
-            char pubkeystr[128],pkhash[128],refundsig[512],fieldA[64],fieldB[64],fieldpkhash[64];
+            char refundsig[512],fieldA[64],fieldB[64],fieldpkhash[64];
             char *recvstr,*sendstr,*spendtx,*refundtx,*redeemscript,*rpubA,*rpubB,*rpkhash,*spubA,*spubB,*spkhash;
             recvcoin = sendcoin = 0; sendamount = recvamount = 0;
             if ( (recvstr= jstr(origjson,"recvcoin")) != 0 )
@@ -970,7 +970,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                         if ( (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (sendasset= j64bits(origjson,"sendasset")) != 0 && (sendqty= j64bits(origjson,"sendqty")) != 0 )
                         {
                             printf("inside (%s/%s) sendasset.%llu sendqty.%llu\n",base,rel,(long long)sendasset,(long long)sendqty);
-                            if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,pubkeystr,recvamount,refundtx,redeemscript)) != 0 )
+                            if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,rpkhash,recvamount,refundtx,redeemscript)) != 0 )
                             {
                                 finishheight = 60; deadline = 3600*4;
                                 if ( (pend= pending_swap(&str,'A',orderid,quoteid,0,0,0,0)) != 0 )
@@ -989,7 +989,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 free(spendtx);
                                 return(clonestr(swapbuf));
                             } else printf("error generating spendtx\n");
-                        } else printf("mismatched recv (%s vs %s) or (%s vs %s)\n",recvcoin->atomicrecvpubkey,rpubB,pkhash,rpkhash);
+                        } else printf("mismatched recv (%s vs %s) or (%s)\n",recvcoin->atomicrecvpubkey,rpubB,rpkhash);
                     }
                     else if ( myfill != 0 && (str= jstr(origjson,"refundsig")) != 0 && str[0] != 0 && (phasedtx= jstr(origjson,"phasedtx")) != 0 && phasedtx[0] != 0 ) // Alice to verify NXTtx and send recvcoin
                     {
@@ -1036,7 +1036,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             return(clonestr(swapbuf));
                             //printf("BUSDATA.(%s)\n",swapbuf);
                         } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
-                    } else printf("mismatched send (%s vs %s) or (%s vs %s)\n",sendcoin->atomicrecvpubkey,spubB,spkhash,pkhash);
+                    } else printf("mismatched send (%s vs %s) or (%s)\n",sendcoin->atomicrecvpubkey,spubB,spkhash);
                 } else printf("myfill.%d myoffer.%d send mismatch\n",myfill,myoffer);
             }
             return(clonestr("{\"result\":\"processed wallet swap\"}"));
