@@ -793,13 +793,10 @@ uint64_t wait_for_txid(char *script,struct coin777 *coin,char *txidstr,int32_t v
         }
         if ( value != 0 )
             break;
-        if ( maxseconds != 0 )
-        {
-            fprintf(stderr,".");
-            sleep(20);
-            if ( starttime+maxseconds < time(NULL) )
-                break;
-        }
+        fprintf(stderr,".");
+        if ( maxseconds != 0 && starttime+maxseconds < time(NULL) )
+            break;
+        sleep(20);
     }
     return(value);
 }

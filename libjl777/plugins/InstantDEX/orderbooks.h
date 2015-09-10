@@ -232,7 +232,8 @@ int32_t verify_NXTtx(cJSON *json,uint64_t refasset,uint64_t qty,uint64_t destNXT
     {
         if ( typeval != 2 || subtypeval != 1 )
         {
-            fprintf(stderr,"refasset.%llu qty %lld\n",(long long)refasset,(long long)qty);
+            if ( Debuglevel > 2 )
+                fprintf(stderr,"refasset.%llu qty %lld\n",(long long)refasset,(long long)qty);
             return(-11);
         }
         price = quantity = assetidbits = 0;
