@@ -398,8 +398,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     char *InstantDEX_openorders();
     char *InstantDEX_tradehistory(int32_t firsti,int32_t endi);
     char *InstantDEX_cancelorder(char *activenxt,char *secret,uint64_t sequenceid,uint64_t quoteid);
-    struct destbuf exchangestr,method,gui,name,base,rel;
-    char *retstr = 0,key[512],retbuf[1024],*activenxt,*secret; struct InstantDEX_quote iQ; struct exchange_info *exchange;
+    struct destbuf exchangestr,method,gui,name,base,rel; double balance;
+    char *retstr = 0,key[512],retbuf[1024],*activenxt,*secret,*coinstr; struct InstantDEX_quote iQ; struct exchange_info *exchange;
     cJSON *json; uint64_t assetbits,sequenceid; uint32_t maxdepth; int32_t invert=0,keysize,allfields; struct prices777 *prices;
     //printf("INSTANTDEX.(%s)\n",jsonstr);
     if ( INSTANTDEX.readyflag == 0 )
@@ -450,8 +450,26 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         else if ( strcmp(method.buf,"balance") == 0 )
         {
             if ( exchange != 0 && exchange->trade != 0 )
-                (*exchange->trade)(&retstr,exchange,0,0,0,0,0);
-            else retstr = clonestr("{\"error\":\"cant find exchange\"}");
+            {
+                if ( (coinstr= jstr(json,"base")) != 0 )
+                {
+                    if ( exchange->coinbalance != 0 )
+                    {
+                        if ( exchange->balancejson == 0 )
+                        {
+                            (*exchange->trade)(&retstr,exchange,0,0,0,0,0);
+                            if ( retstr != 0 )
+                            {
+                                exchange->balancejson = cJSON_Parse(retstr);
+                                free(retstr);
+                            }
+                        }
+                        return((*exchange->coinbalance)(exchange,&balance,coinstr));
+                    }
+                    else retstr = clonestr("{\"error\":\"coinbalance missing\"}");
+                }
+                else (*exchange->trade)(&retstr,exchange,0,0,0,0,0);
+            } else retstr = clonestr("{\"error\":\"cant find exchange\"}");
             printf("%s ptr%.p trade.%p\n",exchangestr.buf,exchange,exchange!=0?exchange->trade:0);
         }
         else if ( strcmp(method.buf,"tradesequence") == 0 )

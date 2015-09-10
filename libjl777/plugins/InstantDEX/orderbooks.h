@@ -1591,7 +1591,6 @@ cJSON *make_arrayNXT(cJSON *directarray,cJSON **arrayBTCp,char *base,char *rel,u
 
 int32_t centralexchange_items(int32_t group,double wt,cJSON *array,char *_base,char *_rel,int32_t tradeable,char *refbase,char *refrel)
 {
-    extern uint32_t FIRST_EXTERNAL;
     int32_t exchangeid,inverted,n = 0; char base[64],rel[64],name[64]; cJSON *item;
     for (exchangeid=FIRST_EXTERNAL; exchangeid<MAX_EXCHANGES; exchangeid++)
     {

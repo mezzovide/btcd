@@ -231,12 +231,14 @@ struct prices777
 struct exchange_info
 {
     double (*updatefunc)(struct prices777 *prices,int32_t maxdepth);
+    char *(*coinbalance)(struct exchange_info *exchange,double *balancep,char *coinstr);
     int32_t (*supports)(char *base,char *rel);
     uint64_t (*trade)(char **retstrp,struct exchange_info *exchange,char *base,char *rel,int32_t dir,double price,double volume);
-    char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD];
-    uint32_t num,exchangeid,pollgap,refcount,polling; uint64_t nxt64bits; double lastupdate,commission;
+    char name[16],apikey[MAX_JSON_FIELD],apisecret[MAX_JSON_FIELD],userid[MAX_JSON_FIELD]; cJSON *balancejson;
+    uint32_t num,exchangeid,pollgap,refcount,polling,lastbalancetime; uint64_t nxt64bits; double lastupdate,commission;
     portable_mutex_t mutex;
 };
+extern uint32_t FIRST_EXTERNAL;
 
 uint64_t gen_NXTtx(struct NXTtx *tx,uint64_t dest64bits,uint64_t assetidbits,uint64_t qty,uint64_t orderid,uint64_t quoteid,int32_t deadline,char *reftx,char *phaselink,uint32_t finishheight,char *phasesecret);
 int32_t InstantDEX_verify(uint64_t destNXTaddr,uint64_t sendasset,uint64_t sendqty,cJSON *txobj,uint64_t recvasset,uint64_t recvqty);
