@@ -962,7 +962,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 sprintf(fieldpkhash,"%spkhash",recvcoin->name);
                 if ( (recvamount= j64bits(origjson,"recvamount")) != 0 && recvcoin != 0 && (rpubA= jstr(origjson,fieldA)) != 0 && (rpubB= jstr(origjson,fieldB)) != 0 && (rpkhash= jstr(origjson,fieldpkhash)) != 0 )
                 {
-                    if ( ((iQ->s.isask != 0 && myoffer != 0) || (iQ->s.isask == 0 && myoffer != 0)) && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
+                    if ( ((iQ->s.isask != 0 && myoffer != 0) || (iQ->s.isask == 0 && myfill != 0) || juint(origjson,"fill") != 0) && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
                     {
                         subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
                         printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
@@ -1028,7 +1028,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                         {
                             deadline = 3600;
                             gen_NXTtx(&sendcoin->trigger,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,0,0,0,0);
-                            sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"fillNXT\":\"%llu\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"%s\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"trigger\":\"%s\",\"sendasset\":\"%llu\",\"sendqty\":\"%llu\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)orderid,(long long)quoteid,offerNXT.buf,(long long)fillNXT,exchange.buf,(long long)sendamount,refundtx,refredeemscript,sendstr,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,sendcoin->trigger.fullhash,(long long)recvasset,(long long)recvqty,base,rel);
+                            sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"fillNXT\":\"%llu\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"%s\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"trigger\":\"%s\",\"sendasset\":\"%llu\",\"sendqty\":\"%llu\",\"base\":\"%s\",\"rel\":\"%s\",\"fill\":1}",(long long)orderid,(long long)quoteid,offerNXT.buf,(long long)fillNXT,exchange.buf,(long long)sendamount,refundtx,refredeemscript,sendstr,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,sendcoin->trigger.fullhash,(long long)recvasset,(long long)recvqty,base,rel);
                             sendcoin->refundtx = refundtx;
                             if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
                                 free(str);
