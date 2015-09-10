@@ -777,7 +777,7 @@ uint64_t wait_for_txid(char *script,struct coin777 *coin,char *txidstr,int32_t v
             {
                 if ( (str= jstr(json,"hex")) != 0 )
                 {
-                    if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
+                    if ( (cointx= _decode_rawtransaction(str,coin->mgw.oldtx_format)) != 0 )
                     {
                         strcpy(script,cointx->inputs[0].sigs);
                         if ( (value= cointx->outputs[vout].value) != recvamount )
