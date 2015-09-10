@@ -763,7 +763,7 @@ struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struc
         return(0);
     }
     printf("init.(%s/%s) name.(%s) %llu %llu\n",base,rel,name,(long long)baseid,(long long)relid);
-    if ( strcmp(exchange,"nxtae") == 0 || strcmp(exchange,"unconf") == 0 || strcmp(exchange,"InstantDEX") == 0 )
+    if ( strcmp(exchange,"nxtae") == 0 || strcmp(exchange,"unconf") == 0 )//|| strcmp(exchange,"InstantDEX") == 0 )
     {
         if ( strcmp(base,"NXT") == 0 || baseid == NXT_ASSETID )
         {
