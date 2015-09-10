@@ -206,7 +206,7 @@ cJSON *set_walletstr(cJSON *walletitem,char *walletstr,struct InstantDEX_quote *
     if ( coin != 0 )
     {
         //printf("START.(%s)\n",jprint(walletitem,0));
-        if ( (iQ->s.isask ^ flip) != 0 )
+        if ( (iQ->s.isask ^ flip) == 0 )
         {
             sprintf(fieldA,"%spubA",coin->name);
             if ( (pubA= jstr(walletitem,fieldA)) != 0 )
