@@ -790,7 +790,7 @@ char *subatomic_fundingtx(char *refredeemscript,struct subatomic_rawtransaction 
         if ( btc_coinaddr(mycoinaddr,coin->addrtype,mypubkey) != 0 && (utx= gather_unspents(&total,&num,coin,0)) != 0 )
         {
             donation = subatomic_donation(coin,amount);
-            //printf("CREATE FUNDING TX.(%s) for %.8f -> %s locktime.%u donation %.8f\n",coin->name,dstr(amount),p2shaddr,lockblock,dstr(donation));
+            //printf("CREATE FUNDING TX.(%s) [%s %s %s] for %.8f -> %s locktime.%u donation %.8f\n",coin->name,mypubkey,otherpubkey,pkhash,dstr(amount),p2shaddr,lockblock,dstr(donation));
             if ( subatomic_calc_rawinputs(coin,funding,amount,utx,num,donation) >= amount )
             {
                 if ( funding->amount == amount && funding->change == (funding->inputsum - amount - coin->mgw.txfee - donation) )

@@ -947,7 +947,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 recvcoin = coin777_find(recvstr,0);
             if ( (sendstr= jstr(origjson,"sendcoin")) != 0 )
                 sendcoin = coin777_find(sendstr,0);
-            printf("recvstr.%p sendstr.%p\n",recvstr,sendstr);
+            //printf("recvstr.%p sendstr.%p\n",recvstr,sendstr);
             if ( recvstr != 0 && sendstr != 0 )
             {
                 if ( (sendamount= j64bits(origjson,"sendamount")) != 0 && (recvamount= j64bits(origjson,"recvamount")) != 0 && sendcoin != 0 && recvcoin != 0 && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 && (rpubA= jstr(origjson,"rpubA")) != 0  && (rpubB= jstr(origjson,"rpubB")) != 0  && (rpkhash= jstr(origjson,"rpkhash")) != 0 && triggerhash != 0 && (spubA= jstr(origjson,"spubA")) != 0  && (spubB= jstr(origjson,"spubB")) != 0  && (spkhash= jstr(origjson,"spkhash")) != 0 )
@@ -956,7 +956,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
             }
             else if ( recvstr != 0 )
             {
-                printf("INCOMINGRECV.(%s)\n",origargstr);
+                //printf("INCOMINGRECV.(%s)\n",origargstr);
                 sprintf(fieldA,"%spubA",recvcoin->name);
                 sprintf(fieldB,"%spubB",recvcoin->name);
                 sprintf(fieldpkhash,"%spkhash",recvcoin->name);
@@ -969,8 +969,8 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                         //printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
                         if ( (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (sendasset= j64bits(origjson,"sendasset")) != 0 && (sendqty= j64bits(origjson,"sendqty")) != 0 )
                         {
-                            printf("inside (%s/%s) sendasset.%llu sendqty.%llu\n",base,rel,(long long)sendasset,(long long)sendqty);
-                            if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,rpkhash,recvamount,refundtx,redeemscript)) != 0 )
+                            printf("inside (%s/%s) sendasset.%llu sendqty.%llu rpkhash.(%s)\n",base,rel,(long long)sendasset,(long long)sendqty,rpkhash);
+                            if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,recvcoin->atomicrecvpubkey,recvamount,refundtx,redeemscript)) != 0 )
                             {
                                 finishheight = 60; deadline = 3600*4;
                                 if ( (pend= pending_swap(&str,'A',orderid,quoteid,0,0,0,0)) != 0 )
@@ -1011,13 +1011,13 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             } else printf("refund tx didnt verify\n");
                         } else printf("NXT tx didnt verify\n");
                     } else printf("myfill.%d myoffer.%d recv mismatch\n",myfill,myoffer);
-                    printf("recv failed\n");
+                    //printf("recv failed\n");
                     return(clonestr("{\"result\":\"recv failed\"}"));
                 }
             }
             else if ( sendstr != 0 )  // Alice sendcoin -> Bob, recvs NXT
             {
-                printf("INCOMINGSEND.(%s)\n",origargstr);
+                //printf("INCOMINGSEND.(%s)\n",origargstr);
                 sprintf(fieldA,"%spubA",sendcoin->name);
                 sprintf(fieldB,"%spubB",sendcoin->name);
                 sprintf(fieldpkhash,"%spkhash",sendcoin->name);
