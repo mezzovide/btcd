@@ -642,7 +642,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
     if ( strcmp(prices->exchange,"wallet") == 0 )
     {
         cJSON *walletitem; struct coin777 *recvcoin,*sendcoin; 
-        char pkhash[128],pubkeystr[128],fieldA[64],fieldB[64],fieldpkhash[64],refredeemscript[2048],scriptPubKey[128],p2shaddr[64],walletstr[512];
+        char fieldA[64],fieldB[64],fieldpkhash[64],refredeemscript[2048],scriptPubKey[128],p2shaddr[64],walletstr[512];
         char *rpubA=0,*rpubB=0,*rpkhash=0,*spubA=0,*spubB=0,*spkhash=0,*recvstr=0,*sendstr=0,*refundtx,*redeemscript,*str;
         int32_t finishin; uint64_t sendamount,recvamount; struct destbuf base,rel;
         if ( item != 0 && (item= jitem(item,0)) != 0 && (walletitem= jobj(item,"wallet")) != 0 )

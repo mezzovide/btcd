@@ -192,7 +192,7 @@ cJSON *set_walletstr(cJSON *walletitem,char *walletstr,struct InstantDEX_quote *
 {
     char pubkeystr[128],pkhash[128],base[64],rel[64],fieldA[64],fieldB[64],fieldpkhash[64],*pubA,*pubB,*pkhashstr,*str;
     struct coin777 *coin; int32_t flip = 0;
-    if ( walletstr != 0 )
+    if ( walletstr != 0 && walletitem == 0 )
        walletitem = cJSON_Parse(walletstr);
     if ( walletitem == 0 )
        walletitem = cJSON_CreateObject();
@@ -205,12 +205,14 @@ cJSON *set_walletstr(cJSON *walletitem,char *walletstr,struct InstantDEX_quote *
     flip = (iQ->s.offerNXT != SUPERNET.my64bits);
     if ( coin != 0 )
     {
+        //printf("START.(%s)\n",jprint(walletitem,0));
         if ( (iQ->s.isask ^ flip) == 0 )
         {
             sprintf(fieldA,"%spubA",coin->name);
             if ( (pubA= jstr(walletitem,fieldA)) != 0 )
                 cJSON_DeleteItemFromObject(walletitem,fieldA);
             jaddstr(walletitem,fieldA,coin->atomicsendpubkey);
+            //printf("replaceA\n");
         }
         else
         {
@@ -223,6 +225,7 @@ cJSON *set_walletstr(cJSON *walletitem,char *walletstr,struct InstantDEX_quote *
                 cJSON_DeleteItemFromObject(walletitem,fieldpkhash);
             subatomic_pubkeyhash(pubkeystr,pkhash,coin,iQ->s.quoteid);
             jaddstr(walletitem,fieldpkhash,pkhash);
+            //printf("replaceB\n");
         }
         str = jprint(walletitem,0);
         strcpy(walletstr,str);
