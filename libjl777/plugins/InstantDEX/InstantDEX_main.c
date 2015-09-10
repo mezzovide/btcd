@@ -627,10 +627,6 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 retstr = bidask_func(0,1,sender,json,jsonstr);
             else if ( strcmp(methodstr,"swap") == 0 )
                 retstr = swap_func(0,1,sender,json,jsonstr);
-            //else if ( strcmp(methodstr,"funding") == 0 )
-            //    retstr = funding_func(0,1,sender,json,jsonstr);
-            //else if ( strcmp(methodstr,"refund") == 0 )
-            //    retstr = refund_func(0,1,sender,json,jsonstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));
