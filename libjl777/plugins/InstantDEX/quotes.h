@@ -190,8 +190,9 @@ struct InstantDEX_quote *create_iQ(struct InstantDEX_quote *iQ,char *walletstr)
 
 cJSON *set_walletstr(cJSON *walletitem,char *walletstr,struct InstantDEX_quote *iQ)
 {
-    char pubkeystr[128],pkhash[128],base[64],rel[64],fieldA[64],fieldB[64],fieldpkhash[64],*pubA,*pubB,*pkhashstr,*str; struct coin777 *coin;
-   if ( walletstr != 0 )
+    char pubkeystr[128],pkhash[128],base[64],rel[64],fieldA[64],fieldB[64],fieldpkhash[64],*pubA,*pubB,*pkhashstr,*str;
+    struct coin777 *coin; int32_t flip = 0;
+    if ( walletstr != 0 )
        walletitem = cJSON_Parse(walletstr);
     if ( walletitem == 0 )
        walletitem = cJSON_CreateObject();
@@ -201,23 +202,25 @@ cJSON *set_walletstr(cJSON *walletitem,char *walletstr,struct InstantDEX_quote *
     else if ( strcmp(rel,"NXT") != 0 )
         coin = coin777_find(rel,1);
     else coin = 0;
+    flip = (iQ->s.offerNXT != SUPERNET.my64bits);
     if ( coin != 0 )
     {
-        sprintf(fieldA,"%spubA",coin->name);
-        if ( (pubA= jstr(walletitem,fieldA)) == 0 )
+        if ( (iQ->s.isask ^ flip) == 0 )
         {
-            pubA = coin->atomicsendpubkey;
-            jaddstr(walletitem,fieldA,pubA);
+            sprintf(fieldA,"%spubA",coin->name);
+            if ( (pubA= jstr(walletitem,fieldA)) != 0 )
+                cJSON_DeleteItemFromObject(walletitem,fieldA);
+            jaddstr(walletitem,fieldA,coin->atomicsendpubkey);
         }
-        sprintf(fieldB,"%spubB",coin->name);
-        if ( (pubB= jstr(walletitem,fieldB)) == 0 )
+        else
         {
-            pubB = coin->atomicrecvpubkey;
-            jaddstr(walletitem,fieldB,pubB);
-        }
-        sprintf(fieldpkhash,"%spkhash",coin->name);
-        if ( (pkhashstr= jstr(walletitem,fieldpkhash)) == 0 )
-        {
+            sprintf(fieldB,"%spubB",coin->name);
+            if ( (pubB= jstr(walletitem,fieldB)) != 0 )
+                cJSON_DeleteItemFromObject(walletitem,fieldB);
+            jaddstr(walletitem,fieldB,coin->atomicrecvpubkey);
+            sprintf(fieldpkhash,"%spkhash",coin->name);
+            if ( (pkhashstr= jstr(walletitem,fieldpkhash)) != 0 )
+                cJSON_DeleteItemFromObject(walletitem,fieldpkhash);
             subatomic_pubkeyhash(pubkeystr,pkhash,coin,iQ->s.quoteid);
             jaddstr(walletitem,fieldpkhash,pkhash);
         }

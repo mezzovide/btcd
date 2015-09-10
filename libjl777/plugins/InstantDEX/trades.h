@@ -642,7 +642,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
     if ( strcmp(prices->exchange,"wallet") == 0 )
     {
         cJSON *walletitem; struct coin777 *recvcoin,*sendcoin; 
-        char pkhash[128],pubkeystr[128],fieldA[64],fieldB[64],fieldpkhash[64],refredeemscript[2048],scriptPubKey[128],p2shaddr[64];
+        char pkhash[128],pubkeystr[128],fieldA[64],fieldB[64],fieldpkhash[64],refredeemscript[2048],scriptPubKey[128],p2shaddr[64],walletstr[512];
         char *rpubA=0,*rpubB=0,*rpkhash=0,*spubA=0,*spubB=0,*spkhash=0,*recvstr=0,*sendstr=0,*refundtx,*redeemscript,*str;
         int32_t finishin; uint64_t sendamount,recvamount; struct destbuf base,rel;
         if ( item != 0 && (item= jitem(item,0)) != 0 && (walletitem= jobj(item,"wallet")) != 0 )
@@ -661,9 +661,8 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             // placeask -> recvbase/sendrel, placebid -> sendbase/recvrel, it is relative to the one that placed quote
             if ( strcmp(sendstr,"NXT") == 0 ) // placeask COIN/NXT or placebid NXT/COIN
             {
-                sprintf(fieldA,"%spubA",recvstr);
-                if ( (rpubA= jstr(walletitem,fieldA)) == 0 )
-                    rpubA = recvcoin->atomicsendpubkey;
+                walletitem = set_walletstr(walletitem,walletstr,iQ);
+                sprintf(fieldA,"%spubA",recvstr), rpubA = jstr(walletitem,fieldA);
                 sprintf(fieldB,"%spubB",recvstr), rpubB = jstr(walletitem,fieldB);
                 sprintf(fieldpkhash,"%spkhash",recvstr), rpkhash = jstr(walletitem,fieldpkhash);
                 if ( rpubA[0] != 0 && rpubB != 0 && rpkhash != 0 ) // Alice for recvcoin -> Bob, Bob sends NXT -> Alice
@@ -689,11 +688,10 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             }
             else if ( strcmp(recvstr,"NXT") == 0 )
             {
-                sprintf(fieldA,"%spubA",sendstr);
-                if ( (spubA= jstr(walletitem,fieldA)) == 0 )
-                    spubA = recvcoin->atomicrecvpubkey;
-                sprintf(fieldB,"%spubB",sendstr), spubB = jstr(walletitem,fieldB);
-                sprintf(fieldpkhash,"%spkhash",sendstr), spkhash = jstr(walletitem,fieldpkhash);
+                walletitem = set_walletstr(walletitem,walletstr,iQ);
+                sprintf(fieldA,"%spubA",recvstr), spubA = jstr(walletitem,fieldA);
+                sprintf(fieldB,"%spubB",recvstr), spubB = jstr(walletitem,fieldB);
+                sprintf(fieldpkhash,"%spkhash",recvstr), spkhash = jstr(walletitem,fieldpkhash);
                 if ( spubA != 0 && spubB != 0 && spkhash[0] != 0 ) // Bob <- sendcoin from Alice, send NXT -> Alice
                 {
                     if ( (redeemscript= create_atomictx_scripts(sendcoin->p2shtype,scriptPubKey,p2shaddr,spubA,spubB,spkhash)) != 0 )
