@@ -659,7 +659,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             else return(clonestr("{\"error\":\"need recvbase/sendrel or recvrel/sendbase\"}\n"));
             recvcoin = coin777_find(recvstr,1), sendcoin = coin777_find(sendstr,1);
             // placeask -> recvbase/sendrel, placebid -> sendbase/recvrel, it is relative to the one that placed quote
-            if ( strcmp(sendstr,"NXT") == 0 ) // placeask COIN/NXT or placebid NXT/COIN
+            if ( strcmp(recvstr,"NXT") != 0 ) // placeask COIN/NXT or placebid NXT/COIN
             {
                 //walletitem = set_walletstr(walletitem,walletstr,iQ);
                 sprintf(fieldA,"%spubA",recvstr), rpubA = jstr(walletitem,fieldA);
@@ -674,7 +674,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                         sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"trigger\":\"%s\",\"sendasset\":\"%llu\",\"sendqty\":\"%llu\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)orderid,(long long)order->s.quoteid,(long long)iQ->s.offerNXT,SUPERNET.NXTADDR,(long long)recvamount,refundtx,refredeemscript,recvstr,fieldA,rpubA,fieldB,rpubB,fieldpkhash,rpkhash,recvcoin->trigger.fullhash,(long long)sendasset,(long long)sendamount,prices->base,prices->rel);
                         recvcoin->refundtx = refundtx;
                         iQ->s.swap = 1;
-                        printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
+                        printf("sendstr quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
                         if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
                             free(str);
                         return(clonestr(swapbuf));
@@ -686,7 +686,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                     return(clonestr(buf));
                 }
             }
-            else if ( strcmp(recvstr,"NXT") == 0 )
+            else if ( strcmp(sendstr,"NXT") != 0 )
             {
                 //walletitem = set_walletstr(walletitem,walletstr,iQ);
                 sprintf(fieldA,"%spubA",sendstr), spubA = jstr(walletitem,fieldA);
@@ -700,7 +700,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                         sprintf(swapbuf+strlen(swapbuf)-1,",\"sendcoin\":\"%s\",\"sendamount\":\"%llu\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"recvasset\":\"%llu\",\"recvqty\":\"%llu\"}",sendstr,(long long)sendamount,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,(long long)recvasset,(long long)recvamount);
                         free(redeemscript);
                         iQ->s.swap = 1;
-                        printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
+                        printf("recvstr quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
                         if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
                             free(str);
                         return(clonestr(swapbuf));
@@ -962,7 +962,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 sprintf(fieldpkhash,"%spkhash",recvcoin->name);
                 if ( (recvamount= j64bits(origjson,"recvamount")) != 0 && recvcoin != 0 && (rpubA= jstr(origjson,fieldA)) != 0 && (rpubB= jstr(origjson,fieldB)) != 0 && (rpkhash= jstr(origjson,fieldpkhash)) != 0 )
                 {
-                    if ( myoffer != 0 && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
+                    if ( ((iQ->s.isask != 0 && myoffer != 0) || (iQ->s.isask == 0 && myfill != 0)) && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
                     {
                         subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
                         printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
