@@ -752,7 +752,7 @@ uint64_t wait_for_txid(char *script,struct coin777 *coin,char *txidstr,int32_t v
     {
         if ( unconf == 0 && (jsonstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"getrawmempool","")) != 0 )
         {
-            printf("rawmempool.(%s)\n",jsonstr);
+            //printf("rawmempool.(%s)\n",jsonstr);
             if ( (json= cJSON_Parse(jsonstr)) != 0 && is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
             {
                 for (i=0; i<n; i++)
@@ -769,7 +769,7 @@ uint64_t wait_for_txid(char *script,struct coin777 *coin,char *txidstr,int32_t v
             }
             free(jsonstr);
         }
-        printf("get.(%s)\n",txidstr);
+        printf("unconf.%d get.(%s)\n",unconf,txidstr);
         value = 0;
         if ( (rawtx= _get_transaction(coin->name,coin->serverport,coin->userpass,txidstr)) != 0 )
         {
