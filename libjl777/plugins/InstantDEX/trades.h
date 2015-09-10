@@ -962,7 +962,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 sprintf(fieldpkhash,"%spkhash",recvcoin->name);
                 if ( (recvamount= j64bits(origjson,"recvamount")) != 0 && recvcoin != 0 && (rpubA= jstr(origjson,fieldA)) != 0 && (rpubB= jstr(origjson,fieldB)) != 0 && (rpkhash= jstr(origjson,fieldpkhash)) != 0 )
                 {
-                    if ( ((iQ->s.isask != 0 && myoffer != 0) || (iQ->s.isask == 0 && myfill != 0) || (j64bits(origjson,"fill") != SUPERNET.my64bits)) && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
+                    if ( ((iQ->s.isask != 0 && myoffer != 0) || (iQ->s.isask == 0 && myfill != 0)) && j64bits(origjson,"fill") != SUPERNET.my64bits && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
                     {
                         subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
                         printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
