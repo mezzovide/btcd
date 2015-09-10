@@ -665,7 +665,11 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             // placeask -> recvbase/sendrel, placebid -> sendbase/recvrel, it is relative to the one that placed quote
             if ( strcmp(recvstr,"NXT") != 0 ) // placeask COIN/NXT or placebid NXT/COIN
             {
-                //walletitem = set_walletstr(walletitem,walletstr,iQ);
+                if ( recvamount < recvcoin->mgw.txfee )
+                {
+                    printf("recvamount %.8f < txfee %.8f\n",dstr(recvamount),dstr(recvcoin->mgw.txfee));
+                    return(clonestr("{\"error\":\"amount too small\"}\n"));
+                }
                 sprintf(fieldA,"%spubA",recvstr), rpubA = jstr(walletitem,fieldA);
                 sprintf(fieldB,"%spubB",recvstr), rpubB = jstr(walletitem,fieldB);
                 sprintf(fieldpkhash,"%spkhash",recvstr), rpkhash = jstr(walletitem,fieldpkhash);
@@ -692,7 +696,11 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
             }
             else if ( strcmp(sendstr,"NXT") != 0 )
             {
-                //walletitem = set_walletstr(walletitem,walletstr,iQ);
+                if ( sendamount < sendcoin->mgw.txfee )
+                {
+                    printf("sendamount %.8f < txfee %.8f\n",dstr(sendamount),dstr(sendcoin->mgw.txfee));
+                    return(clonestr("{\"error\":\"amount too small\"}\n"));
+                }
                 sprintf(fieldA,"%spubA",sendstr), spubA = jstr(walletitem,fieldA);
                 sprintf(fieldB,"%spubB",sendstr), spubB = jstr(walletitem,fieldB);
                 sprintf(fieldpkhash,"%spkhash",sendstr), spkhash = jstr(walletitem,fieldpkhash);
