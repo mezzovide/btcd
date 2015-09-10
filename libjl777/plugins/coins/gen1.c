@@ -743,6 +743,55 @@ char *_get_transaction(char *coinstr,char *serverport,char *userpass,char *txids
     return(rawtransaction);
 }
 
+uint64_t wait_for_txid(char *script,struct coin777 *coin,char *txidstr,int32_t vout,uint64_t recvamount,int32_t minconfirms,int32_t maxseconds)
+{
+    uint64_t value; char *rawtx,*jsonstr; struct cointx_info *cointx; struct destbuf buf; cJSON *json;
+    uint32_t unconf=0,i,n,starttime = (uint32_t)time(NULL);
+    script[0] = 0;
+    while ( 1 )
+    {
+        if ( unconf == 0 && (jsonstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"getrawmempool","")) != 0 )
+        {
+            if ( (json= cJSON_Parse(jsonstr)) != 0 && is_cJSON_Array(json) != 0 && (n= cJSON_GetArraySize(json)) > 0 )
+            {
+                for (i=0; i<n; i++)
+                {
+                    copy_cJSON(&buf,jitem(json,i));
+                    if ( strcmp(buf.buf,txidstr) == 0 )
+                    {
+                        unconf = 1;
+                        printf("FOUND %s in unconfirmed\n",txidstr);
+                        break;
+                    }
+                }
+                free_json(json);
+            }
+            free(jsonstr);
+        }
+        value = 0;
+        if ( (rawtx= _get_transaction(coin->name,coin->serverport,coin->userpass,txidstr)) != 0 )
+        {
+            if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
+            {
+                strcpy(script,cointx->inputs[0].sigs);
+                if ( (value= cointx->outputs[vout].value) != recvamount )
+                {
+                    printf("TXID amount mismatch (%s v%d) %.8f vs expected %.8f\n",txidstr,vout,dstr(cointx->outputs[vout].value),dstr(recvamount));
+                }
+                free(cointx);
+            }
+            free(rawtx);
+        }
+        if ( maxseconds == 0 || value != 0 )
+            break;
+        fprintf(stderr,".");
+        sleep(20);
+        if ( starttime+maxseconds < time(NULL) )
+            break;
+    }
+    return(value);
+}
+
 uint64_t ram_verify_txstillthere(char *coinstr,char *serverport,char *userpass,char *txidstr,int32_t vout)
 {
     char *retstr = 0;

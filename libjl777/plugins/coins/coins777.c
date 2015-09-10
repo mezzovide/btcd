@@ -187,6 +187,7 @@ char *subatomic_txid(char *txbytes,struct coin777 *coin,char *destaddr,uint64_t 
 
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
 void coin777_disprawblock(struct rawblock *raw);
+uint64_t wait_for_txid(char *script,struct coin777 *coin,char *txidstr,int32_t vout,uint64_t recvamount,int32_t minconfirms,int32_t maxseconds);
 
 int32_t coin777_parse(struct coin777 *coin,uint32_t RTblocknum,int32_t syncflag,int32_t minconfirms);
 void coin777_initDBenv(struct coin777 *coin);

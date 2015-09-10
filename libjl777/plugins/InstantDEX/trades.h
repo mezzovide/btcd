@@ -911,9 +911,10 @@ char *swap_responseNXT(int32_t type,char *offerNXT,uint64_t otherbits,uint64_t o
 
 char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
 {
-    char *str,*base,*rel,*txstr,*phasedtx; struct pending_trade *pend; struct prices777_order order; struct InstantDEX_quote *iQ,_iQ;
-    uint32_t deadline,finishheight,nonce,isask; int32_t errcode,myoffer,myfill; struct NXTtx sendtx,fee; struct destbuf spendtxid;
-    struct destbuf offerNXT,exchange; uint64_t otherbits,otherqty,quoteid,orderid,recvasset,recvqty,sendasset,sendqty,fillNXT,destbits;
+    char script[4096],hexstr[128],*str,*base,*rel,*txstr,*phasedtx,*cointxid,*signedtx,*jsonstr; uint8_t rmd160[20],msgbuf[512];
+    struct pending_trade *pend; struct prices777_order order; struct InstantDEX_quote *iQ,_iQ; cJSON *json;
+    uint32_t deadline,finishheight,nonce,isask; int32_t errcode,myoffer,myfill,len; struct NXTtx sendtx,fee; struct destbuf spendtxid,reftx;
+    struct destbuf offerNXT,exchange; uint64_t otherbits,otherqty,quoteid,orderid,recvasset,recvqty,sendasset,sendqty,fillNXT,destbits,value;
     char pubkeystr[128],pkhash[64],swapbuf[4096],refredeemscript[1024],vintxid[128],*triggerhash,*fullhash,*dest,deststr[64];
     copy_cJSON(&offerNXT,jobj(origjson,"offerNXT"));
     fillNXT = j64bits(origjson,"fillNXT");
@@ -985,7 +986,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                         destbits = calc_nxt64bits(offerNXT.buf);
                                     else destbits = fillNXT;
                                     gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,triggerhash,0,0,0);
-                                    //issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET);
+                                    issue_broadcastTransaction(&errcode,&txstr,fee.txbytes,SUPERNET.NXTACCTSECRET);
                                     gen_NXTtx(&sendtx,destbits,sendasset,sendqty,orderid,quoteid,deadline,triggerhash,0,_get_NXTheight(0)+finishheight,rpkhash);
                                     //issue_broadcastTransaction(&errcode,&txstr,sendtx.txbytes,SUPERNET.NXTACCTSECRET);
                                     printf(">>>>>>>>>>>> broadcast fee and phased.(%s) trigger.%s\n",sendtx.txbytes,triggerhash);
@@ -993,7 +994,18 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                     if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
                                         free(str);
                                     // poll for vin then broadcast spendtx
-                                    printf(">>>>>>>>>>>>>>>>>>>> SPENDTX.(%s) AFTER funded -> (%s)\n",spendtx,swapbuf);
+                                    printf(">>>>>>>>>>>>>>>>>>>> wait for (%s) then send SPENDTX.(%s)\n",vintxid,spendtx);
+                                    if ( (value= wait_for_txid(script,recvcoin,vintxid,0,recvamount,recvcoin->minconfirms,0)) != 0 )
+                                    {
+                                        signedtx = malloc(strlen(spendtx) + 16);
+                                        sprintf(signedtx,"[\"%s\"]",spendtx);
+                                        if ( (cointxid= bitcoind_passthru(recvcoin->name,recvcoin->serverport,recvcoin->userpass,"sendrawtransaction",signedtx)) != 0 )
+                                        {
+                                            printf(">>>>>>>>>>>>> BROADCAST.(%s) (%s)\n",signedtx,cointxid);
+                                            free(cointxid);
+                                        }
+                                        free(signedtx);
+                                    }
                                 } else printf("cant get pending_swap pend.%p\n",pend);
                                 free(spendtx);
                                 return(clonestr(swapbuf));
@@ -1014,12 +1026,48 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             if ( recvcoin->refundtx != 0 && (recvcoin->signedrefund= subatomic_validate(recvcoin,rpubA,rpubB,rpkhash,recvcoin->refundtx,str)) != 0 )
                             {
                                 free(recvcoin->refundtx), recvcoin->refundtx = 0;
-                                printf(">>>>>>>>>>>>>>>>>>>>>>>>>>> ISSUE TRIGGER.(%s) funding.(%s) phased.(%s) | signedrefund.(%s)\n",recvcoin->trigger.txbytes,recvcoin->funding.signedtransaction,phasedtx,recvcoin->signedrefund);
-                                if ( 0 )
+                                issue_broadcastTransaction(&errcode,&txstr,recvcoin->trigger.txbytes,SUPERNET.NXTACCTSECRET);
+                                issue_broadcastTransaction(&errcode,&txstr,phasedtx,SUPERNET.NXTACCTSECRET);
+                                printf(">>>>>>>>>>>>>>>>>>>>>>>>>>> ISSUE TRIGGER.(%s) phased.(%s).%d | signedrefund.(%s)\n",recvcoin->trigger.txbytes,txstr!=0?txstr:"phasedsubmit error",errcode,recvcoin->signedrefund);
+                                signedtx = malloc(strlen(recvcoin->funding.signedtransaction) + 16);
+                                sprintf(signedtx,"[\"%s\"]",recvcoin->funding.signedtransaction);
+                                if ( (cointxid= bitcoind_passthru(recvcoin->name,recvcoin->serverport,recvcoin->userpass,"sendrawtransaction",signedtx)) != 0 )
                                 {
-                                    issue_broadcastTransaction(&errcode,&txstr,recvcoin->trigger.txbytes,SUPERNET.NXTACCTSECRET);
-                                    // send funding
-                                    // poll for spendtxid
+                                    printf(">>>>>>>>>>>>> FUNDING BROADCAST.(%s) (%s)\n",recvcoin->funding.signedtransaction,cointxid);
+                                    free(cointxid);
+                                }
+                                free(signedtx);
+                                if ( (value= wait_for_txid(script,recvcoin,spendtxid.buf,0,recvamount-recvcoin->mgw.txfee,0,0)) != 0 )
+                                {
+                                    len = (int32_t)strlen(script);
+                                    str = &script[len - 33*2 - 2];
+                                    if ( str[0] == '2' && str[1] == '1' )
+                                    {
+                                        calc_OP_HASH160(pkhash,rmd160,str+2);
+                                        if ( strcmp(pkhash,rpkhash) == 0 )
+                                        {
+                                            reftx.buf[0] = 0;
+                                            if ( (jsonstr= issue_parseTransaction(phasedtx)) != 0 )
+                                            {
+                                                if ( (json= cJSON_Parse(jsonstr)) != 0 )
+                                                {
+                                                    copy_cJSON(&reftx,jobj(json,"fullHash"));
+                                                    free_json(json);
+                                                }
+                                                free(jsonstr);
+                                            }
+                                            len = 0;
+                                            len = txind777_txbuf(msgbuf,len,orderid,sizeof(orderid));
+                                            len = txind777_txbuf(msgbuf,len,quoteid,sizeof(quoteid));
+                                            init_hexbytes_noT(hexstr,msgbuf,len);
+                                            if ( (str= issue_approveTransaction(reftx.buf,str+2,hexstr,SUPERNET.NXTACCTSECRET)) != 0 )
+                                            {
+                                                printf("fullhash.(%s) APPROVED.(%s)\n",reftx.buf,str);
+                                                free(str);
+                                            } else printf("error sending in approval\n");
+      
+                                        } else printf("script.(%s) -> pkhash.(%s) vs rpkhash.(%s)\n",script,pkhash,rpkhash);
+                                    } else printf("unexpected end of script.(%s)\n",script);
                                 }
                                 memset(&recvcoin->trigger,0,sizeof(recvcoin->trigger));
                                 memset(&recvcoin->funding,0,sizeof(recvcoin->funding));

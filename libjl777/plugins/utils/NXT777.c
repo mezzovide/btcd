@@ -142,6 +142,7 @@ struct json_AM { struct NXT_AMhdr H; uint32_t funcid,gatewayid,timestamp,jsonfla
 
 struct assethash { UT_hash_handle hh; uint64_t assetid,minvol,mult; int32_t type,decimals; char name[16]; } *Allassets;
 struct assethash *find_asset(uint64_t assetid);
+char *issue_approveTransaction(char *fullhash,char *revealed,char *message,char *NXTACCTSECRET);
 
 uint64_t conv_rsacctstr(char *rsacctstr,uint64_t nxt64bits);
 uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_t *pass,int32_t passlen);
@@ -542,6 +543,14 @@ char *issue_signTransaction(char *txbytes,char *NXTACCTSECRET)
     char cmd[4096],secret[8192];
     escape_code(secret,NXTACCTSECRET);
     sprintf(cmd,"requestType=signTransaction&secretPhrase=%s&unsignedTransactionBytes=%s",secret,txbytes);
+    return(issue_NXTPOST(cmd));
+}
+
+char *issue_approveTransaction(char *fullhash,char *revealed,char *message,char *NXTACCTSECRET)
+{
+    char cmd[4096],secret[8192];
+    escape_code(secret,NXTACCTSECRET);
+    sprintf(cmd,"requestType=approveTransaction&secretPhrase=%s&transactionFullHash=%s&revealedSecret=%s&messageIsText=true&feeNQT=%lld&deadline=%d&message=%s",secret,fullhash,revealed,(long long)MIN_NQTFEE,DEFAULT_NXT_DEADLINE,message);
     return(issue_NXTPOST(cmd));
 }
 
