@@ -291,15 +291,15 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
         {
             if ( item == 0 )
                 item = cJSON_CreateObject();
-            if ( (iter ^ iQ->s.isask) == 0 )
+            if ( iter == 0 )
             {
                 sprintf(account,"%srecv",str);
-                sprintf(buf,"%spubB",str);
+                sprintf(buf,"%spub%c",str,'A' + iQ->s.isask != 0);
             }
             else
             {
                 sprintf(account,"%ssend",str);
-                sprintf(buf,"%spubA",str);
+                sprintf(buf,"%spub%c",str,'A' + iQ->s.isask == 0);
             }
             if ( is_NXT_native(assetid) != 0 )
                 addr = SUPERNET.NXTADDR;
