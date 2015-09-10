@@ -956,7 +956,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
             }
             else if ( recvstr != 0 )
             {
-                printf("INCOMINGRECV.(%s)\n",origargstr);
+                //printf("INCOMINGRECV.(%s)\n",origargstr);
                 sprintf(fieldA,"%spubA",recvcoin->name);
                 sprintf(fieldB,"%spubB",recvcoin->name);
                 sprintf(fieldpkhash,"%spkhash",recvcoin->name);
@@ -965,10 +965,10 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                     if ( ((iQ->s.isask != 0 && myoffer != 0) || (iQ->s.isask == 0 && myfill != 0)) && j64bits(origjson,"fill") != SUPERNET.my64bits && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
                     {
                         subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
-                        printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
+                        //printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
                         if ( (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (sendasset= j64bits(origjson,"sendasset")) != 0 && (sendqty= j64bits(origjson,"sendqty")) != 0 )
                         {
-                            printf("inside (%s/%s) sendasset.%llu sendqty.%llu rpkhash.(%s)\n",base,rel,(long long)sendasset,(long long)sendqty,rpkhash);
+                            //printf("inside (%s/%s) sendasset.%llu sendqty.%llu rpkhash.(%s)\n",base,rel,(long long)sendasset,(long long)sendqty,rpkhash);
                             if ( (spendtx= subatomic_spendtx(&spendtxid,vintxid,refundsig,recvcoin,rpubA,rpubB,pubkeystr,recvamount,refundtx,redeemscript)) != 0 )
                             {
                                 finishheight = 60; deadline = 3600*4;
@@ -1019,14 +1019,14 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 free(recvcoin->signedrefund), recvcoin->signedrefund = 0;
                             } else printf("refund tx didnt verify\n");
                         } else printf("NXT tx didnt verify\n");
-                    } else printf("myfill.%d myoffer.%d recv mismatch isask.%d\n",myfill,myoffer,iQ->s.isask);
+                    } //else printf("myfill.%d myoffer.%d recv mismatch isask.%d\n",myfill,myoffer,iQ->s.isask);
                     //printf("recv failed\n");
                     return(clonestr("{\"result\":\"recv failed\"}"));
                 }
             }
             else if ( sendstr != 0 )  // Alice sendcoin -> Bob, recvs NXT
             {
-                printf("INCOMINGSEND.(%s)\n",origargstr);
+                //printf("INCOMINGSEND.(%s)\n",origargstr);
                 sprintf(fieldA,"%spubA",sendcoin->name);
                 sprintf(fieldB,"%spubB",sendcoin->name);
                 sprintf(fieldpkhash,"%spkhash",sendcoin->name);
@@ -1045,7 +1045,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             return(clonestr(swapbuf));
                             //printf("BUSDATA.(%s)\n",swapbuf);
                         } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
-                    } else printf("mismatched send (%s vs %s) or (%s)\n",sendcoin->atomicrecvpubkey,spubB,spkhash);
+                    } //else printf("mismatched send (%s vs %s) or (%s)\n",sendcoin->atomicrecvpubkey,spubB,spkhash);
                 } else printf("myfill.%d myoffer.%d send mismatch isask.%d\n",myfill,myoffer,iQ->s.isask);
             }
             return(clonestr("{\"result\":\"processed wallet swap\"}"));

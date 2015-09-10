@@ -197,12 +197,12 @@ cJSON *set_walletstr(cJSON *walletitem,char *walletstr,struct InstantDEX_quote *
     if ( walletitem == 0 )
        walletitem = cJSON_CreateObject();
     unstringbits(base,iQ->s.basebits), unstringbits(rel,iQ->s.relbits);
+    flip = (iQ->s.offerNXT != SUPERNET.my64bits);
     if ( strcmp(base,"NXT") != 0 )
         coin = coin777_find(base,1);
     else if ( strcmp(rel,"NXT") != 0 )
-        coin = coin777_find(rel,1);
+        coin = coin777_find(rel,1), flip ^= 1;
     else coin = 0;
-    flip = (iQ->s.offerNXT != SUPERNET.my64bits);
     if ( coin != 0 )
     {
         //printf("START.(%s)\n",jprint(walletitem,0));
