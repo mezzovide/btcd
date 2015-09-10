@@ -386,7 +386,7 @@ char *poloniex_coinbalance(struct exchange_info *exchange,double *balancep,char 
         if ( (obj= cJSON_Parse(itemstr)) != 0 )
         {
             free(itemstr);
-            jaddstr(obj,"coin",coinstr);
+            jaddstr(obj,"base",coinstr);
             jaddnum(obj,"balance",*balancep);
             jaddnum(obj,"onOrders",onorders);
             jaddnum(obj,"btcvalue",btcvalue);
@@ -476,18 +476,52 @@ double prices777_kraken(struct prices777 *prices,int32_t maxdepth)
 
 char *bitfinex_coinbalance(struct exchange_info *exchange,double *balancep,char *coinstr)
 {
-    char field[128],*itemstr = 0; cJSON *obj,*item;
+    //[[{"type":"deposit","currency":"btc","amount":"0.0","available":"0.0"},{"type":"deposit","currency":"usd","amount":"0.0","available":"0.0"},{"type":"exchange","currency":"btc","amount":"0.01065851","available":"0.01065851"},{"type":"exchange","currency":"usd","amount":"23386.37278962","available":"0.00378962"},{"type":"trading","currency":"btc","amount":"0.0","available":"0.0"},{"type":"trading","currency":"usd","amount":"0.0","available":"0.0"}]]
+    int32_t i,n,ind; char field[64],*str,*typestr,*itemstr = 0; cJSON *item,*obj,*array; double amounts[3],avail[3],val0,val1;
     *balancep = 0.;
-    strcpy(field,coinstr);
-    tolowercase(field);
-    if ( exchange->balancejson != 0 && (obj= jobj(exchange->balancejson,"return")) != 0 && (item= jobj(obj,"funds")) != 0 )
+    strcpy(field,coinstr), tolowercase(field);
+    memset(amounts,0,sizeof(amounts));
+    memset(avail,0,sizeof(avail));
+    if ( exchange->balancejson != 0 && is_cJSON_Array(exchange->balancejson) != 0 && (n= cJSON_GetArraySize(exchange->balancejson)) > 0 )
     {
-        *balancep = jdouble(item,field);
-        obj = cJSON_CreateObject();
-        touppercase(field);
-        jaddstr(obj,"coin",field);
-        jaddnum(obj,"balance",*balancep);
-        itemstr = jprint(obj,1);
+        for (i=0; i<n; i++)
+        {
+            if ( (item= jitem(exchange->balancejson,i)) != 0 )
+            {
+                if ( (str= jstr(item,"currency")) != 0 && strcmp(field,str) == 0 )
+                {
+                    val0 = jdouble(item,"amount");
+                    val1 = jdouble(item,"available");
+                    if ( (typestr= jstr(item,"type")) != 0 )
+                    {
+                        if ( strcmp(typestr,"deposit") == 0 )
+                            ind = 0;
+                        else if ( strcmp(typestr,"exchange") == 0 )
+                            ind = 1;
+                        else if ( strcmp(typestr,"trading") == 0 )
+                            ind = 2;
+                        else ind = -1;
+                        if ( ind >= 0 )
+                        {
+                            amounts[ind] = val0;
+                            avail[ind] = val1;
+                        }
+                    }
+                }
+            }
+        }
+        if ( (obj= cJSON_CreateObject()) != 0 )
+        {
+            touppercase(field);
+            *balancep = avail[0] + avail[1] + avail[2];
+            jaddstr(obj,"base",field);
+            jaddnum(obj,"balance",*balancep);
+            jaddnum(obj,"total",amounts[0]+amounts[1]+amounts[2]);
+            array = cJSON_CreateArray(), jaddinum(array,avail[0]), jaddinum(array,amounts[0]), jadd(obj,"deposit",array);
+            array = cJSON_CreateArray(), jaddinum(array,avail[1]), jaddinum(array,amounts[1]), jadd(obj,"exchange",array);
+            array = cJSON_CreateArray(), jaddinum(array,avail[2]), jaddinum(array,amounts[2]), jadd(obj,"trading",array);
+            itemstr = jprint(obj,1);
+        }
     }
     if ( itemstr == 0 )
         return(clonestr("{\"error\":\"cant find coin balance\"}"));
@@ -524,7 +558,7 @@ char *btce_coinbalance(struct exchange_info *exchange,double *balancep,char *coi
         *balancep = jdouble(item,field);
         obj = cJSON_CreateObject();
         touppercase(field);
-        jaddstr(obj,"coin",field);
+        jaddstr(obj,"base",field);
         jaddnum(obj,"balance",*balancep);
         itemstr = jprint(obj,1);
     }
@@ -564,7 +598,7 @@ char *bitstamp_coinbalance(struct exchange_info *exchange,double *balancep,char 
         *balancep = jdouble(item,field);
         obj = cJSON_CreateObject();
         touppercase(field);
-        jaddstr(obj,"coin",field);
+        jaddstr(obj,"base",field);
         jaddnum(obj,"balance",*balancep);
         itemstr = jprint(obj,1);
     }
@@ -604,7 +638,7 @@ char *okcoin_coinbalance(struct exchange_info *exchange,double *balancep,char *c
             lockval = jdouble(locked,field);
         obj = cJSON_CreateObject();
         touppercase(field);
-        jaddstr(obj,"coin",field);
+        jaddstr(obj,"base",field);
         jaddnum(obj,"balance",*balancep);
         jaddnum(obj,"locked",lockval);
         itemstr = jprint(obj,1);
@@ -648,7 +682,7 @@ char *huobi_coinbalance(struct exchange_info *exchange,double *balancep,char *co
         *balancep = jdouble(item,field);
         obj = cJSON_CreateObject();
         touppercase(field);
-        jaddstr(obj,"coin",field);
+        jaddstr(obj,"base",field);
         jaddnum(obj,"balance",*balancep);
         itemstr = jprint(obj,1);
     }
@@ -702,7 +736,7 @@ char *coinbase_coinbalance(struct exchange_info *exchange,double *balancep,char 
         *balancep = jdouble(item,field);
         obj = cJSON_CreateObject();
         touppercase(field);
-        jaddstr(obj,"coin",field);
+        jaddstr(obj,"base",field);
         jaddnum(obj,"balance",*balancep);
         itemstr = jprint(obj,1);
     }
@@ -739,7 +773,7 @@ char *lakebtc_coinbalance(struct exchange_info *exchange,double *balancep,char *
         *balancep = jdouble(obj,field);
         locked = jdouble(item,field);
         obj = cJSON_CreateObject();
-        jaddstr(obj,"coin",field);
+        jaddstr(obj,"base",field);
         jaddnum(obj,"balance",*balancep);
         jaddnum(obj,"locked",locked);
         if ( (str= jstr(prof,"btc_deposit_addres")) != 0 )
