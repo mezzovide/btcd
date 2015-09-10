@@ -909,8 +909,8 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
 {
     char *str,*base,*rel,*txstr,*phasedtx; struct pending_trade *pend; struct prices777_order order; struct InstantDEX_quote *iQ,_iQ;
     uint32_t deadline,finishheight,nonce; int32_t errcode,myoffer,myfill; struct NXTtx sendtx,fee; struct destbuf spendtxid;
-    struct destbuf offerNXT,exchange; char pubkeystr[128],pkhash[64],swapbuf[4096],refredeemscript[1024],vintxid[128],*triggerhash,*fullhash;
-    uint64_t otherbits,otherqty,quoteid,orderid,recvasset,recvqty,sendasset,sendqty,fillNXT;
+    struct destbuf offerNXT,exchange; uint64_t otherbits,otherqty,quoteid,orderid,recvasset,recvqty,sendasset,sendqty,fillNXT;
+    char pubkeystr[128],pkhash[64],swapbuf[4096],refredeemscript[1024],vintxid[128],*triggerhash,*fullhash,*dest,deststr[64];
     copy_cJSON(&offerNXT,jobj(origjson,"offerNXT"));
     fillNXT = j64bits(origjson,"fillNXT");
     copy_cJSON(&exchange,jobj(origjson,"exchange"));
@@ -990,9 +990,16 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             } else printf("error generating spendtx\n");
                         } else printf("mismatched recv (%s vs %s) or (%s)\n",recvcoin->atomicrecvpubkey,rpubB,rpkhash);
                     }
-                    else if ( (str= jstr(origjson,"refundsig")) != 0 && str[0] != 0 && (phasedtx= jstr(origjson,"phasedtx")) != 0 && phasedtx[0] != 0 ) // Alice to verify NXTtx and send recvcoin
+                    else if ( j64bits(origjson,"fill") != SUPERNET.my64bits && (str= jstr(origjson,"refundsig")) != 0 && str[0] != 0 && (phasedtx= jstr(origjson,"phasedtx")) != 0 && phasedtx[0] != 0 ) // Alice to verify NXTtx and send recvcoin
                     {
-                        if ( swap_verifyNXT(&finishheight,&deadline,origjson,offerNXT.buf,exchange.buf,orderid,quoteid,iQ,phasedtx) == 0 )
+                        if ( iQ->s.isask != 0 )
+                            dest = offerNXT.buf;
+                        else
+                        {
+                            expand_nxt64bits(deststr,fillNXT);
+                            dest = deststr;
+                        }
+                        if ( swap_verifyNXT(&finishheight,&deadline,origjson,dest,exchange.buf,orderid,quoteid,iQ,phasedtx) == 0 )
                         {
                             if ( recvcoin->refundtx != 0 && (recvcoin->signedrefund= subatomic_validate(recvcoin,rpubA,rpubB,rpkhash,recvcoin->refundtx,str)) != 0 )
                             {
