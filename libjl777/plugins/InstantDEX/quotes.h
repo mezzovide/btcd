@@ -619,7 +619,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
             retstr = InstantDEX_str(walletstr,0,1,iQ);
             //printf("create_iQ.(%llu) quoteid.%llu\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid);
             iQ = create_iQ(iQ,walletstr);
-            printf("got create_iQ.(%llu) quoteid.%llu wallet.(%s)\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,walletstr);
+            printf("local got create_iQ.(%llu) quoteid.%llu wallet.(%s)\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,walletstr);
             prices777_InstantDEX(prices,MAX_DEPTH);
             queue_enqueue("InstantDEX",&InstantDEXQ,queueitem(retstr));
         }
@@ -632,7 +632,7 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
                 if ( strcmp(SUPERNET.NXTACCTSECRET,secret) != 0 )
                     return(clonestr("{\"error\":\"cant do queued requests with non-default accounts\"}"));
                 prices777_InstantDEX(prices,MAX_DEPTH);
-                printf("got create_iQ.(%llu) quoteid.%llu wallet.(%s)\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,walletstr);
+                printf("remote got create_iQ.(%llu) quoteid.%llu wallet.(%s)\n",(long long)iQ->s.offerNXT,(long long)iQ->s.quoteid,walletstr);
             }
             return(retstr);
         }

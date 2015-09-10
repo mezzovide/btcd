@@ -529,7 +529,11 @@ uint64_t prices777_swapbuf(char *sendphased,char *phasesecret,uint64_t *txidp,ch
     *txidp = 0;
     if ( strcmp(exchangestr,"wallet") == 0 )
         str = "swap";
-    else str = order->wt > 0. ? "buy" : (order->wt < 0. ? "sell" : "swap");
+    else
+    {
+        str = order->wt > 0. ? "buy" : (order->wt < 0. ? "sell" : "swap");
+        //printf("not wallet!\n"); getchar();
+    }
     if ( finishoffset == 0 )
         finishoffset = FINISH_HEIGHT;
     sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"baseqty\":\"%lld\",\"relqty\":\"%lld\"}",(long long)orderid,(long long)order->s.quoteid,(long long)order->s.offerNXT,SUPERNET.NXTADDR,str,exchangestr,base,rel,(long long)order->s.baseid,(long long)order->s.relid,(long long)order->s.baseamount,(long long)order->s.relamount);
@@ -718,7 +722,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                 {
                     if ( (redeemscript= create_atomictx_scripts(sendcoin->p2shtype,scriptPubKey,p2shaddr,spubA,spubB,spkhash)) != 0 )
                     {
-                        pend->triggertxid = prices777_swapbuf(0,0,&pend->txid,triggertx,txbytes,swapbuf,prices->exchange,prices->base,prices->rel,order,orderid,finishin,0);
+                        pend->triggertxid = prices777_swapbuf(0,0,&pend->txid,triggertx,txbytes,swapbuf,"wallet",prices->base,prices->rel,order,orderid,finishin,0);
                         sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%llu\",\"fillNXT\":\"%s\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"sendcoin\":\"%s\",\"recvcoin\":\"%s\",\"sendamount\":\"%lld\",\"recvamount\":\"%lld\",\"base\":\"%s\",\"rel\":\"%s\"}",(long long)orderid,(long long)order->s.quoteid,(long long)iQ->s.offerNXT,SUPERNET.NXTADDR,sendstr,recvstr,(long long)sendamount,(long long)recvamount,prices->base,prices->rel);
                         sprintf(swapbuf+strlen(swapbuf)-1,",\"rtx\":\"%s\",\"rs\":\"%s\",\"rpubA\":\"%s\",\"rpubB\":\"%s\",\"rpkhash\":\"%s\",\"pubA\":\"%s\",\"pubB\":\"%s\",\"pkhash\":\"%s\"}",refundtx,refredeemscript,rpubA,rpubB,rpkhash,spubA,spubB,spkhash);
                         free(redeemscript);
