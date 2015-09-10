@@ -264,7 +264,7 @@ void process_userinput(char *_line)
         retstr = SuperNET_JSON(_line);
         //retstr = process_nn_message(-1,line);
         //retstr = nn_loadbalanced((uint8_t *)line,(int32_t)strlen(line)+1);
-        fprintf(stderr,"console -> (%s)\n",retstr);
+        fprintf(stderr,"console.(%s) -> (%s)\n",_line,retstr);
         return;
     } else printf("cant parse.(%s)\n",line);
     printf("[%s]\n",_line);
