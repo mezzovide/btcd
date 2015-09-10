@@ -295,7 +295,7 @@ cJSON *wallet_swapjson(char *recv,uint64_t recvasset,char *send,uint64_t sendass
                 {
                     
                 }
-            } else printf("%s is NXT\n",coin->name);
+            } // else printf("%s is NXT\n",coin->name);
             if ( is_NXT_native(assetid) != 0 )
                 addr = SUPERNET.NXTADDR;
             else
@@ -354,11 +354,13 @@ void _prices777_item(cJSON *item,int32_t group,struct prices777 *prices,int32_t 
         }
         else
         {
+            printf("alternate path\n");
             jaddstr(item,"trade",bidask == 0 ? "sell" : "buy");
         }
     }
     else
     {
+        printf("alternate path\n");
         jaddstr(item,"trade",bidask == 0 ? "sell" : "buy");
         jaddstr(item,"name",prices->contract);
     }

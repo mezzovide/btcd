@@ -1080,7 +1080,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         //fprintf(stderr,"start tokenization\n");
         tlen = construct_tokenized_req(noncep,tokbuf,str2,secret,broadcastmode);
         //fprintf(stderr,"done tokenization\n");
-       // if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             printf("method.(%s) created busdata.(%s) -> (%s) tlen.%d\n",method.buf,str,tokbuf,tlen);
         free(tmp), free(str), free(str2), str = str2 = 0;
         *datalenp = tlen;
