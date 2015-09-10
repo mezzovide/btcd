@@ -1020,7 +1020,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 sprintf(fieldA,"%spubA",sendcoin->name);
                 sprintf(fieldB,"%spubB",sendcoin->name);
                 sprintf(fieldpkhash,"%spkhash",sendcoin->name);
-                if ( myoffer != 0 && (sendamount= j64bits(origjson,"sendamount")) != 0 && sendcoin != 0 && triggerhash != 0 && (spubA= jstr(origjson,fieldA)) != 0 && (spubB= jstr(origjson,fieldB)) != 0 && (spkhash= jstr(origjson,fieldpkhash)) != 0 )
+                if ( ((iQ->s.isask == 0 && myoffer != 0) || (iQ->s.isask != 0 && myfill != 0)) && (sendamount= j64bits(origjson,"sendamount")) != 0 && sendcoin != 0 && triggerhash != 0 && (spubA= jstr(origjson,fieldA)) != 0 && (spubB= jstr(origjson,fieldB)) != 0 && (spkhash= jstr(origjson,fieldpkhash)) != 0 )
                 {
                     if ( (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (recvasset= j64bits(origjson,"recvasset")) != 0 && (recvqty= j64bits(origjson,"recvqty")) != 0 )
                     {
