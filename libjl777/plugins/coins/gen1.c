@@ -745,7 +745,7 @@ char *_get_transaction(char *coinstr,char *serverport,char *userpass,char *txids
 
 uint64_t wait_for_txid(char *script,struct coin777 *coin,char *txidstr,int32_t vout,uint64_t recvamount,int32_t minconfirms,int32_t maxseconds)
 {
-    uint64_t value; char *rawtx,*jsonstr; struct cointx_info *cointx; struct destbuf buf; cJSON *json;
+    uint64_t value; char *rawtx,*jsonstr,*str; struct cointx_info *cointx; struct destbuf buf; cJSON *json;
     uint32_t unconf=0,i,n,starttime = (uint32_t)time(NULL);
     script[0] = 0;
     while ( 1 )
@@ -771,14 +771,21 @@ uint64_t wait_for_txid(char *script,struct coin777 *coin,char *txidstr,int32_t v
         value = 0;
         if ( (rawtx= _get_transaction(coin->name,coin->serverport,coin->userpass,txidstr)) != 0 )
         {
-            if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
+            if ( (json= cJSON_Parse(rawtx)) != 0 )
             {
-                strcpy(script,cointx->inputs[0].sigs);
-                if ( (value= cointx->outputs[vout].value) != recvamount )
+                if ( (str= jstr(json,"hex")) != 0 )
                 {
-                    printf("TXID amount mismatch (%s v%d) %.8f vs expected %.8f\n",txidstr,vout,dstr(cointx->outputs[vout].value),dstr(recvamount));
+                    if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
+                    {
+                        strcpy(script,cointx->inputs[0].sigs);
+                        if ( (value= cointx->outputs[vout].value) != recvamount )
+                        {
+                            printf("TXID amount mismatch (%s v%d) %.8f vs expected %.8f\n",txidstr,vout,dstr(cointx->outputs[vout].value),dstr(recvamount));
+                        }
+                        free(cointx);
+                    }
                 }
-                free(cointx);
+                free_json(json);
             }
             free(rawtx);
         }

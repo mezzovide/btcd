@@ -1006,6 +1006,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                         }
                                         free(signedtx);
                                     }
+                                    iQ->s.closed = 1;
                                 } else printf("cant get pending_swap pend.%p\n",pend);
                                 free(spendtx);
                                 return(clonestr(swapbuf));
@@ -1039,6 +1040,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 free(signedtx);
                                 if ( (value= wait_for_txid(script,recvcoin,spendtxid.buf,0,recvamount-recvcoin->mgw.txfee,0,0)) != 0 )
                                 {
+                                    iQ->s.responded = 1;
                                     len = (int32_t)strlen(script);
                                     str = &script[len - 33*2 - 2];
                                     if ( str[0] == '2' && str[1] == '1' )
@@ -1069,6 +1071,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                         } else printf("script.(%s) -> pkhash.(%s) vs rpkhash.(%s)\n",script,pkhash,rpkhash);
                                     } else printf("unexpected end of script.(%s)\n",script);
                                 }
+                                iQ->s.closed = 1;
                                 memset(&recvcoin->trigger,0,sizeof(recvcoin->trigger));
                                 memset(&recvcoin->funding,0,sizeof(recvcoin->funding));
                                 free(recvcoin->signedrefund), recvcoin->signedrefund = 0;
