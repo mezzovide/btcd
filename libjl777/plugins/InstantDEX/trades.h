@@ -908,7 +908,7 @@ char *swap_responseNXT(int32_t type,char *offerNXT,uint64_t otherbits,uint64_t o
 char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,char *origargstr)
 {
     char *str,*base,*rel,*txstr,*phasedtx; struct pending_trade *pend; struct prices777_order order; struct InstantDEX_quote *iQ,_iQ;
-    uint32_t deadline,finishheight,nonce; int32_t errcode,myoffer,myfill; struct NXTtx sendtx,fee; struct destbuf spendtxid;
+    uint32_t deadline,finishheight,nonce,isask; int32_t errcode,myoffer,myfill; struct NXTtx sendtx,fee; struct destbuf spendtxid;
     struct destbuf offerNXT,exchange; uint64_t otherbits,otherqty,quoteid,orderid,recvasset,recvqty,sendasset,sendqty,fillNXT,destbits;
     char pubkeystr[128],pkhash[64],swapbuf[4096],refredeemscript[1024],vintxid[128],*triggerhash,*fullhash,*dest,deststr[64];
     copy_cJSON(&offerNXT,jobj(origjson,"offerNXT"));
@@ -935,6 +935,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
             fprintf(stderr,"already responded quoteid.%llu\n",(long long)iQ->s.quoteid);
             return(0);
         }
+        isask = iQ->s.isask;
         memset(&order,0,sizeof(order));
         order.s = iQ->s;
         if ( strcmp("wallet",exchange.buf) == 0 )
@@ -947,6 +948,8 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 recvcoin = coin777_find(recvstr,0);
             if ( (sendstr= jstr(origjson,"sendcoin")) != 0 )
                 sendcoin = coin777_find(sendstr,0);
+            if ( iQ->s.baseid == NXT_ASSETID )
+                isask ^= 1;
             //printf("recvstr.%p sendstr.%p\n",recvstr,sendstr);
             if ( recvstr != 0 && sendstr != 0 )
             {
@@ -962,7 +965,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 sprintf(fieldpkhash,"%spkhash",recvcoin->name);
                 if ( (recvamount= j64bits(origjson,"recvamount")) != 0 && recvcoin != 0 && (rpubA= jstr(origjson,fieldA)) != 0 && (rpubB= jstr(origjson,fieldB)) != 0 && (rpkhash= jstr(origjson,fieldpkhash)) != 0 )
                 {
-                    if ( ((iQ->s.isask != 0 && myoffer != 0) || (iQ->s.isask == 0 && myfill != 0)) && j64bits(origjson,"fill") != SUPERNET.my64bits && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
+                    if ( ((isask != 0 && myoffer != 0) || (isask == 0 && myfill != 0)) && j64bits(origjson,"fill") != SUPERNET.my64bits && (refundtx= jstr(origjson,"rtx")) != 0 && (redeemscript= jstr(origjson,"rs")) != 0 ) // Bob: sends NXT to Alice, recvs recvcoin
                     {
                         subatomic_pubkeyhash(pubkeystr,pkhash,recvcoin,quoteid);
                         //printf("CALC >>>>>>>>>> (%s) vs (%s)\n",pkhash,rpkhash);
@@ -974,7 +977,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 finishheight = 60; deadline = 3600*4;
                                 if ( (pend= pending_swap(&str,'A',orderid,quoteid,0,0,0,0)) != 0 )
                                 {
-                                    if ( iQ->s.isask == 0 )
+                                    if ( isask == 0 )
                                         destbits = calc_nxt64bits(offerNXT.buf);
                                     else destbits = fillNXT;
                                     gen_NXTtx(&fee,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,triggerhash,0,0,0);
@@ -995,7 +998,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                     }
                     else if ( j64bits(origjson,"fill") != SUPERNET.my64bits && (str= jstr(origjson,"refundsig")) != 0 && str[0] != 0 && (phasedtx= jstr(origjson,"phasedtx")) != 0 && phasedtx[0] != 0 ) // Alice to verify NXTtx and send recvcoin
                     {
-                        if ( iQ->s.isask != 0 )
+                        if ( isask != 0 )
                             dest = offerNXT.buf;
                         else
                         {
@@ -1030,7 +1033,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                 sprintf(fieldA,"%spubA",sendcoin->name);
                 sprintf(fieldB,"%spubB",sendcoin->name);
                 sprintf(fieldpkhash,"%spkhash",sendcoin->name);
-                if ( ((iQ->s.isask == 0 && myoffer != 0) || (iQ->s.isask != 0 && myfill != 0)) && (sendamount= j64bits(origjson,"sendamount")) != 0 && sendcoin != 0 && triggerhash != 0 && (spubA= jstr(origjson,fieldA)) != 0 && (spubB= jstr(origjson,fieldB)) != 0 && (spkhash= jstr(origjson,fieldpkhash)) != 0 )
+                if ( ((isask == 0 && myoffer != 0) || (isask != 0 && myfill != 0)) && (sendamount= j64bits(origjson,"sendamount")) != 0 && sendcoin != 0 && triggerhash != 0 && (spubA= jstr(origjson,fieldA)) != 0 && (spubB= jstr(origjson,fieldB)) != 0 && (spkhash= jstr(origjson,fieldpkhash)) != 0 )
                 {
                     if ( (base= jstr(origjson,"base")) != 0 && (rel= jstr(origjson,"rel")) != 0 && (recvasset= j64bits(origjson,"recvasset")) != 0 && (recvqty= j64bits(origjson,"recvqty")) != 0 )
                     {
