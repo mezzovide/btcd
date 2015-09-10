@@ -551,6 +551,7 @@ char *issue_approveTransaction(char *fullhash,char *revealed,char *message,char 
     char cmd[4096],secret[8192];
     escape_code(secret,NXTACCTSECRET);
     sprintf(cmd,"requestType=approveTransaction&secretPhrase=%s&transactionFullHash=%s&revealedSecret=%s&messageIsText=true&feeNQT=%lld&deadline=%d&message=%s",secret,fullhash,revealed,(long long)MIN_NQTFEE,DEFAULT_NXT_DEADLINE,message);
+    printf("submit approve.(%s)\n",cmd);
     return(issue_NXTPOST(cmd));
 }
 

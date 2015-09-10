@@ -909,17 +909,17 @@ char *swap_responseNXT(int32_t type,char *offerNXT,uint64_t otherbits,uint64_t o
     return(str);
 }
 
-int32_t extract_pkhash(char *pkhash,char *script)
+int32_t extract_pkhash(char *pubkeystr,char *pkhash,char *script)
 {
-    int32_t len; char hexstr[512]; uint8_t rmd160[20],data[4096],*ptr;
+    int32_t len; uint8_t rmd160[20],data[4096],*ptr;
     decode_hex(data,(int32_t)strlen(script)>>1,script);
     len = data[0];
     ptr = &data[len + 1];
     len = *ptr++;
     if ( len == 33 )
     {
-        init_hexbytes_noT(hexstr,ptr,33);
-        calc_OP_HASH160(pkhash,rmd160,hexstr);
+        init_hexbytes_noT(pubkeystr,ptr,33);
+        calc_OP_HASH160(pkhash,rmd160,pubkeystr);
         printf("pkhash.(%s)\n",pkhash);
         return(0);
     }
@@ -1061,7 +1061,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 if ( (value= wait_for_txid(script,recvcoin,spendtxid.buf,0,recvamount-recvcoin->mgw.txfee,0,0)) != 0 )
                                 {
                                     iQ->s.responded = 1;
-                                    if ( extract_pkhash(pkhash,script) == 0 )
+                                    if ( extract_pkhash(pubkeystr,pkhash,script) == 0 )
                                     {
                                         if ( strcmp(pkhash,rpkhash) == 0 )
                                         {
@@ -1079,9 +1079,9 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                             len = txind777_txbuf(msgbuf,len,orderid,sizeof(orderid));
                                             len = txind777_txbuf(msgbuf,len,quoteid,sizeof(quoteid));
                                             init_hexbytes_noT(hexstr,msgbuf,len);
-                                            if ( (str= issue_approveTransaction(reftx.buf,str+2,hexstr,SUPERNET.NXTACCTSECRET)) != 0 )
+                                            if ( (str= issue_approveTransaction(reftx.buf,pubkeystr,hexstr,SUPERNET.NXTACCTSECRET)) != 0 )
                                             {
-                                                printf("fullhash.(%s) APPROVED.(%s)\n",reftx.buf,str);
+                                                printf("fullhash.(%s) pubkey.(%s) pkhash.(%s) APPROVED.(%s)\n",reftx.buf,pubkeystr,pkhash,str);
                                                 free(str);
                                             } else printf("error sending in approval\n");
       
