@@ -1213,7 +1213,7 @@ cJSON *InstantDEX_tradejson(cJSON *item,char *activenxt,char *secret,struct pric
         swapbuf[0] = 0;
         if ( dotrade == 0 )
         {
-            if ( strcmp(exchange,INSTANTDEX_NAME) != 0 )
+            if ( strcmp(exchange,INSTANTDEX_NAME) != 0 && strcmp(exchange,"wallet") != 0 )
             {
                 sprintf(buf,"{\"orderid\":\"%llu\",\"trade\":\"%s\",\"exchange\":\"%s\",\"base\":\"%s\",\"rel\":\"%s\",\"baseid\":\"%llu\",\"relid\":\"%llu\",\"price\":%.8f,\"volume\":%.8f,\"extra\":\"%s\"}",(long long)orderid,order->wt > 0. ? "buy" : "sell",exchange,prices->base,prices->rel,(long long)prices->baseid,(long long)prices->relid,order->s.price,order->s.vol,extra!=0?extra:"");
                 if ( strcmp(exchange,"nxtae") == 0 )
