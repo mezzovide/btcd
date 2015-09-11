@@ -425,7 +425,10 @@ struct shuffle_info *shuffle_find(uint64_t shuffleid)
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
     cJSON *array; struct InstantDEX_quote *iQ = 0; int32_t createdflag,i,n; uint32_t now; uint64_t _addrs[64],quoteid = 0;
-    struct shuffle_info *sp; struct coin777 *coin = coin777_find(base,0);
+    struct shuffle_info *sp; struct coin777 *coin;
+    if ( base == 0 || base[0] == 0 )
+        return(clonestr("{\"error\":\"no base defined\"}"));
+    coin = coin777_find(base,1);
     now = (uint32_t)time(NULL);
     if ( timestamp != 0 && now > timestamp+777 )
         return(clonestr("{\"error\":\"shuffle expired\"}"));
@@ -524,7 +527,7 @@ char *shuffle_incoming(char *jsonstr)
     return(clonestr("{\"success\":\"shuffled\"}"));
 }
 
-#define SHUFFLE_METHODS "validate", "signed"
+#define SHUFFLE_METHODS "validate", "signed", "start"
 char *PLUGNAME(_methods)[] = { SHUFFLE_METHODS };
 char *PLUGNAME(_pubmethods)[] = { SHUFFLE_METHODS };
 char *PLUGNAME(_authmethods)[] = { SHUFFLE_METHODS };
@@ -565,6 +568,10 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             printf("(%s) has not method\n",jsonstr);
             return(0);
+        }
+        else if ( strcmp(methodstr,"start") == 0 )
+        {
+            retstr = shuffle_start(jstr(json,"base"),0,0,0);
         }
         else if ( strcmp(methodstr,"validate") == 0 )
         {
