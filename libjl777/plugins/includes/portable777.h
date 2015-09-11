@@ -156,6 +156,7 @@ int32_t unstringbits(char *buf,uint64_t bits);
 int32_t get_assetname(char *name,uint64_t assetid);
 void calc_OP_HASH160(char hexstr[41],uint8_t hash160[20],char *pubkey);
 int32_t decode_hex(unsigned char *bytes,int32_t n,char *hex);
+int32_t decode_cipher(uint8_t *str,uint8_t *cipher,int32_t *lenp,uint8_t *myprivkey);
 
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 int32_t gen_randomacct(uint32_t randchars,char *NXTaddr,char *NXTsecret,char *randfilename);
@@ -166,6 +167,8 @@ uint64_t conv_NXTpassword(unsigned char *mysecret,unsigned char *mypublic,uint8_
 void set_best_amounts(int64_t *baseamountp,int64_t *relamountp,double price,double volume);
 int32_t is_mscoin(char *assetidstr);
 uint32_t issue_getTime();
+cJSON *privatemessage_encrypt(uint64_t destbits,void *pmstr,int32_t len);
+void telepathic_PM(char *destNXT,char *PM);
 
 #define SIGHASH_ALL 1
 #define SIGHASH_NONE 2
@@ -282,6 +285,8 @@ int nn_base64_encode(const uint8_t *in,size_t in_len,char *out,size_t out_len);
 int nn_base64_decode(const char *in,size_t in_len,uint8_t *out,size_t out_len);
 uint64_t is_NXT_native(uint64_t assetid);
 cJSON *set_walletstr(cJSON *walletitem,char *walletstr,struct InstantDEX_quote *iQ);
+cJSON *InstantDEX_shuffleorders(uint64_t *quoteidp,uint64_t nxt64bits,char *base);
+extern queue_t InstantDEXQ;
 
 struct prices777 *prices777_initpair(int32_t needfunc,double (*updatefunc)(struct prices777 *prices,int32_t maxdepth),char *exchange,char *base,char *rel,double decay,char *name,uint64_t baseid,uint64_t relid,int32_t basketsize);
 double prices777_price_volume(double *volumep,uint64_t baseamount,uint64_t relamount);

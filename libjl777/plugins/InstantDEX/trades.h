@@ -556,7 +556,7 @@ char *prices777_finishswap(int32_t type,struct pending_trade *pend,struct Instan
     pend->type = type;
     iQ->s.swap = 1;
     printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
-    if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+    if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
         free(str);
     queue_enqueue("PendingQ",&Pending_offersQ.pingpong[0],&pend->DL);
     InstantDEX_history(0,pend,swapbuf);
@@ -683,7 +683,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                         recvcoin->refundtx = refundtx;
                         iQ->s.swap = 1;
                         printf("sendstr quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
-                        if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+                        if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
                             free(str);
                         return(clonestr(swapbuf));
                     } else return(clonestr("{\"error\":\"cant create refundtx, maybe already pending\"}\n"));
@@ -713,7 +713,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                         free(redeemscript);
                         iQ->s.swap = 1;
                         printf("recvstr quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
-                        if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+                        if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
                             free(str);
                         return(clonestr(swapbuf));
                     }
@@ -737,7 +737,7 @@ char *prices777_trade(cJSON *item,char *activenxt,char *secret,struct prices777 
                         free(refundtx);
                         iQ->s.swap = 1;
                         printf("quoteid.%llu SWAP.%p and pending.%d\n",(long long)iQ->s.quoteid,iQ,iQ->s.pending);
-                        if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+                        if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
                             free(str);
                         return(clonestr(swapbuf));
                     }
@@ -1016,7 +1016,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                     //issue_broadcastTransaction(&errcode,&txstr,sendtx.txbytes,SUPERNET.NXTACCTSECRET);
                                     printf(">>>>>>>>>>>> broadcast fee and phased.(%s) trigger.%s\n",sendtx.txbytes,triggerhash);
                                     sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"fillNXT\":\"%llu\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"wallet\",\"recvcoin\":\"%s\",\"recvamount\":\"%lld\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"refundsig\":\"%s\",\"phasedtx\":\"%s\",\"spendtxid\":\"%s\",\"a\":\"%llu\",\"q\":\"%llu\",\"trigger\":\"%s\",\"fill\":\"%llu\"}",(long long)orderid,(long long)quoteid,offerNXT.buf,(long long)fillNXT,recvcoin->name,(long long)recvamount,fieldA,rpubA,fieldB,rpubB,fieldpkhash,rpkhash,refundsig,sendtx.txbytes,spendtxid.buf,(long long)sendasset,(long long)sendqty,triggerhash,(long long)SUPERNET.my64bits);
-                                    if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+                                    if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
                                         free(str);
                                     // poll for vin then broadcast spendtx
                                     printf(">>>>>>>>>>>>>>>>>>>> wait for (%s) then send SPENDTX.(%s)\n",vintxid,spendtx);
@@ -1033,6 +1033,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                     }
                                     printf("ATOMIC SWAP.%llu finished\n",(long long)quoteid);
                                     iQ->s.closed = 1;
+                                    delete_iQ(quoteid);
                                 } else printf("cant get pending_swap pend.%p\n",pend);
                                 free(spendtx);
                                 return(clonestr(swapbuf));
@@ -1101,6 +1102,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                                 memset(&recvcoin->trigger,0,sizeof(recvcoin->trigger));
                                 memset(&recvcoin->funding,0,sizeof(recvcoin->funding));
                                 free(recvcoin->signedrefund), recvcoin->signedrefund = 0;
+                                delete_iQ(quoteid);
                             } else printf("refund tx didnt verify\n");
                         } else printf("NXT tx didnt verify\n");
                     } //else printf("myfill.%d myoffer.%d recv mismatch isask.%d\n",myfill,myoffer,iQ->s.isask);
@@ -1124,7 +1126,7 @@ char *swap_func(int32_t localaccess,int32_t valid,char *sender,cJSON *origjson,c
                             gen_NXTtx(&sendcoin->trigger,calc_nxt64bits(INSTANTDEX_ACCT),NXT_ASSETID,INSTANTDEX_FEE,orderid,quoteid,deadline,0,0,0,0);
                             sprintf(swapbuf,"{\"orderid\":\"%llu\",\"quoteid\":\"%llu\",\"offerNXT\":\"%s\",\"fillNXT\":\"%llu\",\"plugin\":\"relay\",\"destplugin\":\"InstantDEX\",\"method\":\"busdata\",\"submethod\":\"swap\",\"exchange\":\"%s\",\"recvamount\":\"%lld\",\"rtx\":\"%s\",\"rs\":\"%s\",\"recvcoin\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\"%s\",\"trigger\":\"%s\",\"sendasset\":\"%llu\",\"sendqty\":\"%llu\",\"base\":\"%s\",\"rel\":\"%s\",\"fill\":\"%llu\"}",(long long)orderid,(long long)quoteid,offerNXT.buf,(long long)fillNXT,exchange.buf,(long long)sendamount,refundtx,refredeemscript,sendstr,fieldA,spubA,fieldB,spubB,fieldpkhash,spkhash,sendcoin->trigger.fullhash,(long long)recvasset,(long long)recvqty,base,rel,(long long)SUPERNET.my64bits);
                             sendcoin->refundtx = refundtx;
-                            if ( (str= busdata_sync(&nonce,clonestr(swapbuf),"allnodes",0)) != 0 )
+                            if ( (str= busdata_sync(&nonce,swapbuf,"allnodes",0)) != 0 )
                                 free(str);
                             return(clonestr(swapbuf));
                             //printf("BUSDATA.(%s)\n",swapbuf);

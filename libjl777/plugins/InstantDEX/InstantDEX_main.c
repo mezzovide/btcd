@@ -39,12 +39,12 @@
 #include "../common/txind777.c"
 #undef DEFINES_ONLY
 
-char *Supported_exchanges[] = { INSTANTDEX_NAME, INSTANTDEX_NXTAEUNCONF, INSTANTDEX_NXTAENAME, INSTANTDEX_BASKETNAME, "basketNXT", "basketUSD", "basketBTC", "basketCNY", INSTANTDEX_ACTIVENAME, "wallet", "peggy", // peggy MUST be last of special exchanges
+char *Supported_exchanges[] = { INSTANTDEX_NAME, INSTANTDEX_NXTAEUNCONF, INSTANTDEX_NXTAENAME, INSTANTDEX_BASKETNAME, "basketNXT", "basketUSD", "basketBTC", "basketCNY", INSTANTDEX_ACTIVENAME, "wallet", "shuffle", "peggy", // peggy MUST be last of special exchanges
     "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "quadriga",
     "kraken", "gatecoin", "quoine", "jubi", "hitbtc"  // no trading for these exchanges yet
 }; // "bter" <- orderbook is backwards and all entries are needed, later to support, "exmo" flakey apiservers
 
-#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory", "balance", "allexchanges"
+#define INSTANTDEX_LOCALAPI "allorderbooks", "orderbook", "lottostats", "LSUM", "makebasket", "disable", "enable", "peggyrates", "tradesequence", "placebid", "placeask", "orderstatus", "openorders", "cancelorder", "tradehistory", "balance", "allexchanges", "coinshuffle"
 
 #define INSTANTDEX_REMOTEAPI "msigaddr", "bid", "ask", "swap" //, "funding", "refund"
 char *PLUGNAME(_methods)[] = { INSTANTDEX_REMOTEAPI}; // list of supported methods approved for local access
@@ -357,11 +357,23 @@ int32_t bidask_parse(struct destbuf *exchangestr,struct destbuf *name,struct des
     iQ->s.relbits = stringbits(rel->buf);
     iQ->s.offerNXT = j64bits(json,"offerNXT");
     iQ->s.quoteid = j64bits(json,"quoteid");
-    if ( iQ->s.baseamount == 0 || iQ->s.relamount == 0 )
+    if ( strcmp(exchangestr->buf,"shuffle") == 0 )
     {
-        if ( iQ->s.price <= SMALLVAL || iQ->s.vol <= SMALLVAL )
-            return(-1);
-        set_best_amounts(&iQ->s.baseamount,&iQ->s.relamount,iQ->s.price,iQ->s.vol);
+        if ( iQ->s.price == 0. )
+            iQ->s.price = 1.;
+        if ( iQ->s.vol == 0. )
+            iQ->s.vol = 1.;
+        if ( iQ->s.baseamount == 0 )
+            iQ->s.baseamount = iQ->s.price * SATOSHIDEN;
+    }
+    else
+    {
+        if ( iQ->s.baseamount == 0 || iQ->s.relamount == 0 )
+        {
+            if ( iQ->s.price <= SMALLVAL || iQ->s.vol <= SMALLVAL )
+                return(-1);
+            set_best_amounts(&iQ->s.baseamount,&iQ->s.relamount,iQ->s.price,iQ->s.vol);
+        }
     }
     if ( iQ->s.quoteid == 0 )
         iQ->s.quoteid = calc_quoteid(iQ);
@@ -435,6 +447,12 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
         }
         if ( strcmp(method.buf,"allorderbooks") == 0 )
             retstr = prices777_allorderbooks();
+        /*else if ( strcmp(method.buf,"coinshuffle") == 0 )
+        {
+            if ( strcmp(exchangestr.buf,"shuffle") == 0 )
+                retstr = InstantDEX_coinshuffle(base.buf,&iQ,json);
+            else retstr = clonestr("{\"error\":\"coinshuffle must use shuffle exchange\"}");
+        }*/
         else if ( strcmp(method.buf,"openorders") == 0 )
             retstr = InstantDEX_openorders(SUPERNET.NXTADDR,juint(json,"allorders"));
         else if ( strcmp(method.buf,"allexchanges") == 0 )
@@ -676,6 +694,8 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 retstr = bidask_func(0,1,sender,json,jsonstr);
             else if ( strcmp(methodstr,"swap") == 0 )
                 retstr = swap_func(0,1,sender,json,jsonstr);
+            //else if ( strcmp(methodstr,"shuffle") == 0 )
+            //    retstr = shuffle_func(0,1,sender,json,jsonstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
     }
     return(plugin_copyretstr(retbuf,maxlen,retstr));
