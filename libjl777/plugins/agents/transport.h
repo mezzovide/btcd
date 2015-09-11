@@ -25,14 +25,14 @@
  *                                                                                *
  **********************************************************************************/
 
-#include "../nanomsg/src/nn.h"
-#include "../nanomsg/src/bus.h"
-#include "../nanomsg/src/pubsub.h"
-#include "../nanomsg/src/pipeline.h"
-#include "../nanomsg/src/reqrep.h"
-#include "../nanomsg/src/survey.h"
-#include "../nanomsg/src/pair.h"
-#include "../nanomsg/src/pubsub.h"
+#include "../../nanomsg/src/nn.h"
+#include "../../nanomsg/src/bus.h"
+#include "../../nanomsg/src/pubsub.h"
+#include "../../nanomsg/src/pipeline.h"
+#include "../../nanomsg/src/reqrep.h"
+#include "../../nanomsg/src/survey.h"
+#include "../../nanomsg/src/pair.h"
+#include "../../nanomsg/src/pubsub.h"
 
 #define LOCALCAST 1
 #define BROADCAST 2
