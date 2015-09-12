@@ -307,7 +307,7 @@ char *InstantDEX_openorders(char *NXTaddr,int32_t allorders)
 
 cJSON *InstantDEX_shuffleorders(uint64_t *quoteidp,uint64_t nxt64bits,char *base)
 {
-    struct InstantDEX_quote *iQ,*tmp; uint32_t i,n,now,duration,ismine = 0; uint64_t basebits; cJSON *array;
+    struct InstantDEX_quote *iQ,*tmp; uint32_t i,n,now,duration,ismine = 0; uint64_t basebits; cJSON *array = 0;
     now = (uint32_t)time(NULL);
     basebits = stringbits(base);
     n = 0;
