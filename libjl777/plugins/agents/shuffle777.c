@@ -288,20 +288,21 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
         printf("numoutputs.%d numvouts.%d total %.8f\n",T.numoutputs,numvouts,dstr(totaloutputs));
         if ( T.numoutputs == numvouts )
         {
-            fee = ((numvins >> 1) * coin->mgw.txfee) + (totalinputs >> 10);
+            fee = (numvouts * coin->mgw.txfee);
             if ( totalinputs < totaloutputs+fee )
             {
                 printf("not enough inputs %.8f for outputs %.8f + fee %.8f diff %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee),dstr(totaloutputs+fee-totalinputs));
                 return(0);
             }
-            fee = coin->mgw.txfee * numvouts;//shuffle_txfee(coin,numvins,numvouts);
+            /*fee = coin->mgw.txfee * numvouts;//shuffle_txfee(coin,numvins,numvouts);
             if ( totalinputs < totaloutputs+fee )
             {
                 printf("not enough inputs %.8f for outputs %.8f + fee %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee));
                 return(0);
-            }
+            }*/
             if ( (sharedfee= (totalinputs - totaloutputs) - fee) > numvouts )
             {
+                printf("sharedfee %.8f\n",dstr(sharedfee));
                 if ( coin->donationaddress[0] != 0 )
                 {
                     T.outputs[T.numoutputs].value = sharedfee;
@@ -471,7 +472,7 @@ struct shuffle_info *shuffle_find(uint64_t shuffleid)
 int32_t shuffle_next(struct shuffle_info *sp,struct coin777 *coin,uint64_t *addrs,int32_t num,int32_t i,uint64_t baseamount)
 {
     sp->amount = baseamount;
-    sp->fee = ((sp->amount>>10) < coin->mgw.txfee) ? coin->mgw.txfee : (sp->amount>>10);
+    sp->fee = (sp->amount >> 10);
     sp->vinstr = shuffle_vin(&sp->change,sp->inputtxid,&sp->vin,coin,sp->amount + sp->fee + 2*coin->mgw.txfee,&addrs[i+1],num-i-1);
     if ( sp->change != 0 )
         sp->changestr = shuffle_vout(sp->changeaddr,coin,"change",sp->change,&addrs[i+1],num-i-1);
