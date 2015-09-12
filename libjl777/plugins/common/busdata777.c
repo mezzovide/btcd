@@ -638,8 +638,18 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
                 decoded = calloc(1,len3);
                 if ( decode_cipher((void *)decoded,&databuf[n + sizeof(crc)],&len3,SUPERNET.myprivkey) == 0 )
                 {
-                    sprintf((char *)databuf,"{\"method\":\"telepathy\",\"PM\":\"%s\"}",decoded);
-                    //printf("decrypted PM.(%s)\n",databuf);
+                    int32_t shuffle_incoming(char *jsonstr);
+                    uint64_t shuffleid; cJSON *pmjson;
+                    if ( (pmjson= cJSON_Parse(decoded)) != 0 && (shuffleid= j64bits(pmjson,"shuffleid")) != 0 )
+                    {
+                        printf("got PM.(%s) shuffleid.%llu\n",decoded,(long long)shuffleid);
+                        shuffle_incoming(decoded);
+                    }
+                    else
+                    {
+                        sprintf((char *)databuf,"{\"method\":\"telepathy\",\"PM\":\"%s\"}",decoded);
+                        printf("decrypted PM.(%s)\n",databuf);
+                    }
                 }
                 else databuf[0] = 0;//, printf("decrypt error.(%s)\n",decoded);
                 free(decoded);
@@ -793,34 +803,24 @@ char *busdata_deref(char *tokenstr,struct destbuf *forwarder,struct destbuf *sen
     copy_cJSON(&method,cJSON_GetObjectItem(argjson,"method"));
     if ( strcmp(method.buf,"telepathy") == 0 )
     {
-        int32_t shuffle_incoming(char *jsonstr);
-        uint64_t shuffleid; cJSON *pmjson;
-        if ( (pmjson= jobj(argjson,"PM")) != 0 && (shuffleid= j64bits(pmjson,"shuffleid")) != 0 )
+        if ( SUPERNET.iamrelay != 0 )
         {
-            printf("got PM.(%s) shuffleid.%llu\n",databuf,(long long)shuffleid);
-            shuffle_incoming(cJSON_str(pmjson));
-        }
-        else
-        {
-            if ( SUPERNET.iamrelay != 0 )
+            if ( str == 0 )
             {
-                if ( str == 0 )
-                {
-                    dupjson = cJSON_Duplicate(json,1);
-                    str = busdata_duppacket(dupjson);
-                    free_json(dupjson);
-                }
-                if ( 0 && SUPERNET.rawPM != 0 )
-                {
-                    printf("RELAYSAVE2.(%s)\n",str);
-                    dKV777_write(SUPERNET.relays,SUPERNET.rawPM,calc_nxt64bits(sender->buf),&timestamp,sizeof(timestamp),str,(int32_t)strlen(str)+1);
-                    kv777_flush("*");
-                }
-                free(str);
-                return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage ignored\"}"));
+                dupjson = cJSON_Duplicate(json,1);
+                str = busdata_duppacket(dupjson);
+                free_json(dupjson);
             }
-            else return(privatemessage_recv(databuf));
+            if ( 0 && SUPERNET.rawPM != 0 )
+            {
+                printf("RELAYSAVE2.(%s)\n",str);
+                dKV777_write(SUPERNET.relays,SUPERNET.rawPM,calc_nxt64bits(sender->buf),&timestamp,sizeof(timestamp),str,(int32_t)strlen(str)+1);
+                kv777_flush("*");
+            }
+            free(str);
+            return(clonestr("{\"result\":\"success\",\"action\":\"privatemessage ignored\"}"));
         }
+        else return(privatemessage_recv(databuf));
     }
     if ( str != 0 )
         free(str);
@@ -1022,7 +1022,7 @@ char *create_busdata(int32_t *sentflagp,uint32_t *noncep,int32_t *datalenp,char 
         if ( destNXTaddr != 0 )
             strcpy(destNXT.buf,destNXTaddr);
         else destNXT.buf[0] = 0;
-        printf("dest.(%s) jsonstr.(%s)\n",destNXT.buf,jsonstr);
+        //printf("dest.(%s) jsonstr.(%s)\n",destNXT.buf,jsonstr);
         if ( (destbits= conv_acctstr(destNXTaddr)) != 0 && (pmstr= cJSON_str(cJSON_GetObjectItem(json,"PM"))) != 0 )
         {
             //printf("destbits.%llu (%s)\n",(long long)destbits,destNXT);
