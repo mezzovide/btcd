@@ -217,7 +217,7 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amoun
         for (j=0; j<8; j++,x>>=8)
         {
             val = (x & 0xff);
-            printf("[%02x] ",val);
+            //printf("[%02x] ",val);
             init_hexbytes_noT(&buf[j*2],&val,1);
         }
         buf[j*2] = 0;
@@ -281,7 +281,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                 safecopy(T.outputs[T.numoutputs].coinaddr,coinaddr,sizeof(T.outputs[T.numoutputs].coinaddr));
                 T.outputs[T.numoutputs].value = value;
                 totaloutputs += T.outputs[T.numoutputs].value;
-                printf("%d.(%s %.8f) ",i,coinaddr,dstr(value));
+                printf("%d.(%s %.8f) ",T.numoutputs,T.outputs[T.numoutputs].coinaddr,dstr(value));
             } else printf("error converting rmd160.(%s)\n",coinaddr);
             T.numoutputs++;
         }
@@ -317,6 +317,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                         T.outputs[i].value += sharedfee;
                 }
             }
+            disp_cointx(&T);
             _emit_cointx(txbytes,sizeof(txbytes),&T,coin->mgw.oldtx_format);
             return(clonestr(txbytes));
         }
