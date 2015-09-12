@@ -331,9 +331,9 @@ int32_t shuffle_strs(char *ptrs[],uint8_t num)
         tmp = ptrs[i];
         ptrs[i] = ptrs[r];
         ptrs[r] = tmp;
-        printf("%d<->%d ",i,r);
+        //printf("%d<->%d ",i,r);
     }
-    printf("shuffle\n");
+    //printf("shuffle\n");
     return(i);
 }
 
@@ -356,12 +356,11 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
     printf("validate.(%s) vin.%s vout.%s\n",rawtx,sp->inputtxid,sp->destaddr);
     if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
     {
-        disp_cointx(cointx);
         printf("validate.(%s) vin.%s vout.%s numoutputs.%d numinputs.%d\n",rawtx,sp->inputtxid,sp->destaddr,cointx->numoutputs,cointx->numinputs);
         sp->T = cointx;
         for (i=0; i<cointx->numoutputs; i++)
         {
-            printf("%s ",cointx->outputs[i].coinaddr);
+            printf("%d of %d: %s\n",i,cointx->numoutputs,cointx->outputs[i].coinaddr);
             if ( vout < 0 && strcmp(cointx->outputs[i].coinaddr,sp->destaddr) == 0 )
             {
                 printf("matched dest.(%s) %.8f\n",sp->destaddr,dstr(sp->amount));
