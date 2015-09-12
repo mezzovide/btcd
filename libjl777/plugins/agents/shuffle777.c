@@ -193,6 +193,7 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
     *changep = 0;
     if ( (utx= gather_unspents(&total,&n,coin,0)) != 0  )
     {
+        printf("shufflevin %.8f\n",dstr(amount));
         if ( (up= subatomic_bestfit(coin,utx,n,amount,1)) != 0 )
         {
             *changep = (up->amount - amount);
@@ -355,16 +356,16 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
         printf("cant find shuffleid.%llu\n",(long long)sp->shuffleid);
         return(clonestr("{\"error\":\"cant find shuffleid\"}"));
     }
-    printf("validate.(%s) vin.%s vout.%s\n",rawtx,sp->inputtxid,sp->destaddr);
+    //printf("validate.(%s) vin.%s vout.%s\n",rawtx,sp->inputtxid,sp->destaddr);
     if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
     {
-        printf("validate.(%s) vin.%s vout.%s numoutputs.%d numinputs.%d\n",rawtx,sp->inputtxid,sp->destaddr,cointx->numoutputs,cointx->numinputs);
+        //printf("validate.(%s) vin.%s vout.%s numoutputs.%d numinputs.%d\n",rawtx,sp->inputtxid,sp->destaddr,cointx->numoutputs,cointx->numinputs);
         sp->T = cointx;
         for (i=0; i<cointx->numoutputs; i++)
         {
             decode_hex(rmd160,20,&cointx->outputs[i].script[6]);
             btc_convrmd160(coinaddr,coin->addrtype,rmd160);
-            printf("%d of %d: %s -> %s\n",i,cointx->numoutputs,cointx->outputs[i].script,coinaddr);
+            //printf("%d of %d: %s -> %s\n",i,cointx->numoutputs,cointx->outputs[i].script,coinaddr);
             if ( vout < 0 && strcmp(coinaddr,sp->destaddr) == 0 )
             {
                 printf("matched dest.(%s) %.8f\n",sp->destaddr,dstr(sp->amount));
@@ -563,6 +564,7 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
             iQ->s.pending = 1;
+            printf("baseamount %llu\n",(long long)iQ->s.baseamount);
             if ( shuffle_next(sp,coin,addrs,num,i,iQ->s.baseamount) < 0 )
                 return(clonestr("{\"error\":\"this node not shuffling due to calc error\"}"));
             array = cJSON_CreateArray();
@@ -741,6 +743,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                                 break;
                         if ( i == sp->T->numinputs )
                         {
+                            strcpy(tx,"[\"");
                             _emit_cointx(tx+2,sizeof(tx)-2,sp->T,coin->mgw.oldtx_format);
                             strcat(tx,"\"]");
                             if ( (cointxid= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",tx)) != 0 )

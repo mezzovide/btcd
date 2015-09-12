@@ -265,6 +265,7 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
 {
     char *rawtransaction,*txidstr,*privkey=0,coinaddr[64]; uint64_t value = 0; int32_t n,reqSigs; cJSON *json,*scriptobj,*array,*item,*hexobj;
     *locktimep = -1;
+    scriptPubKey->buf[0] = 0;
     if ( (rawtransaction= _get_transaction(coin->name,coin->serverport,coin->userpass,txid)) == 0 )
     {
         printf("shuffle_getprivkey: error getting (%s)\n",txid);
@@ -280,7 +281,7 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
             free(rawtransaction);
             return(0);
         }
-        printf("txidstr.(%s) vout.%d\n",txidstr,vout);
+        //printf("txidstr.(%s) vout.%d\n",txidstr,vout);
         if ( (array= jarray(&n,json,"vout")) != 0 && (item= jitem(array,vout)) != 0 )
         {
             scriptobj = cJSON_GetObjectItem(item,"scriptPubKey");
@@ -293,7 +294,6 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
                     copy_cJSON(scriptPubKey,hexobj);
                 privkey = dumpprivkey(coin->name,coin->serverport,coin->userpass,coinaddr);
             } else printf("null scriptobj.%p (%s)\n",scriptobj,coinaddr);
-            printf("coinaddr.(%s) script.(%s)\n",coinaddr,scriptPubKey->buf);
         }
         free_json(json);
     }
@@ -623,7 +623,6 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
     printf("issue listunspent\n");
     if ( (retstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"listunspent",params)) != 0 )
     {
-        printf("got unspents\n");
         //printf("unspents (%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
@@ -674,6 +673,7 @@ struct subatomic_unspent_tx *subatomic_bestfit(struct coin777 *coin,struct subat
     {
         vin = &unspents[i];
         atx_value = vin->amount;
+        //printf("(%.8f vs %.8f)\n",dstr(atx_value),dstr(value));
         if ( atx_value == value )
             return(vin);
         else if ( atx_value > value )

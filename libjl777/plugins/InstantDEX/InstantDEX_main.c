@@ -364,7 +364,7 @@ int32_t bidask_parse(struct destbuf *exchangestr,struct destbuf *name,struct des
         if ( iQ->s.vol == 0. )
             iQ->s.vol = 1.;
         if ( iQ->s.baseamount == 0 )
-            iQ->s.baseamount = iQ->s.price * SATOSHIDEN;
+            iQ->s.baseamount = iQ->s.vol * SATOSHIDEN;
     }
     else
     {
