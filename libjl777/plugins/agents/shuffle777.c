@@ -372,8 +372,8 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     vout = i;
                 else
                 {
-                    printf("amount mismatch %.8f vs %.8f\n",dstr(cointx->outputs[i].value),dstr(sp->amount));
-                    break;
+                    printf("warning: amount mismatch %.8f vs %.8f\n",dstr(cointx->outputs[i].value),dstr(sp->amount));
+                    //break;
                 }
             }
             if ( sp->change != 0 && changeout < 0 && strcmp(coinaddr,sp->changeaddr) == 0 )
@@ -383,8 +383,8 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     changeout = i;
                 else
                 {
-                    printf("change mismatch %.8f vs %.8f\n",dstr(cointx->outputs[i].value),dstr(sp->change));
-                    break;
+                    printf("warning: change mismatch %.8f vs %.8f\n",dstr(cointx->outputs[i].value),dstr(sp->change));
+                    //break;
                 }
             }
             if ( (sp->change == 0 || changeout >= 0) && vout >= 0 )
@@ -406,8 +406,8 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     }
                     else
                     {
-                        printf("vout mismatch %d vs %d\n",cointx->inputs[i].tx.vout,sp->vin);
-                        break;
+                        printf("warning: vout mismatch %d vs %d\n",cointx->inputs[i].tx.vout,sp->vin);
+                        //break;
                     }
                 }
             }
