@@ -551,13 +551,13 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         {
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
                 SuperNET_initconf(json), free_json(json);
-            fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
             free(jsonstr);
         }
         strcpy(retbuf,"{\"result\":\"shuffle init\"}");
     }
     else
     {
+        fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
         methodstr = cJSON_str(cJSON_GetObjectItem(json,"method"));
         retbuf[0] = 0;
