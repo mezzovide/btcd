@@ -354,12 +354,14 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
         printf("cant find shuffleid.%llu\n",(long long)sp->shuffleid);
         return(clonestr("{\"error\":\"cant find shuffleid\"}"));
     }
+    printf("validate.(%s)\n",rawtx);
     if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
     {
         for (i=0; i<cointx->numoutputs; i++)
         {
             if ( vout < 0 && strcmp(cointx->outputs[i].coinaddr,sp->destaddr) == 0 )
             {
+                printf("matched dest.(%s) %.8f\n",sp->destaddr,dstr(sp->amount));
                 if ( cointx->outputs[i].value == sp->amount )
                     vout = i;
                 else
@@ -370,6 +372,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             }
             if ( sp->change != 0 && changeout < 0 && strcmp(cointx->outputs[i].coinaddr,sp->changeaddr) == 0 )
             {
+                printf("matched change.(%s) %.8f\n",sp->changeaddr,dstr(sp->change));
                 if ( cointx->outputs[i].value == sp->change )
                     changeout = i;
                 else
@@ -387,6 +390,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             {
                 if ( vin < 0 && strcmp(cointx->inputs[i].tx.txidstr,sp->inputtxid) == 0 )
                 {
+                    printf("matched input.(%s) vin.%d\n",sp->inputtxid,sp->vin);
                     if ( cointx->inputs[i].tx.vout == sp->vin )
                     {
                         vin = i;
@@ -406,12 +410,14 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"shuffle\",\"method\":\"busdata\",\"submethod\":\"signed\",\"sig\":\"%s\",\"vin\":%d}",(long long)sp->shuffleid,sp->timestamp,sigstr,vin);
                     if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                         free(str);
+                    printf("signed.(%s)\n",buf);
+                    sp->T = cointx;
                     return(clonestr(buf));
-                }
+                } else printf("signing error\n");
             }
         }
-        sp->T = cointx;
     }
+    printf("invalidtx\n");
     return(clonestr("{\"error\":\"shuffle tx invalid\"}"));
 }
 
@@ -598,7 +604,7 @@ int32_t shuffle_incoming(char *jsonstr)
         {
             if ( myind >= 0 && numvins < sizeof(newvins)/sizeof(*newvins)-2 && numvouts < sizeof(newvouts)/sizeof(*newvouts)-2 )
             {
-                printf("incoming numvins.%d numvouts.%d\n",numvins,numvouts);
+                //printf("incoming numvins.%d numvouts.%d\n",numvins,numvouts);
                 if ( (array= InstantDEX_shuffleorders(&quoteid,SUPERNET.my64bits,base)) != 0 )
                     free_json(array);
                 if ( (iQ= find_iQ(quoteid)) != 0 )
@@ -610,12 +616,12 @@ int32_t shuffle_incoming(char *jsonstr)
                     shuffle_peel(newvouts,vouts,numvouts), newvouts[numvouts++] = clonestr(sp->voutstr);
                     if ( sp->change != 0 )
                         newvouts[numvouts++] = clonestr(sp->changestr);
-                    printf("after adding incoming numvins.%d numvouts.%d\n",numvins,numvouts);
+                    //printf("after adding incoming numvins.%d numvouts.%d\n",numvins,numvouts);
                     for (j=0; j<13; j++)
                         shuffle_strs(newvins,numvins);
                     for (j=0; j<13; j++)
                         shuffle_strs(newvouts,numvouts);
-                    printf("myind.%d numaddrs.%d numvins.%d numvouts.%d\n",myind,sp->numaddrs,numvins,numvouts);
+                    //printf("myind.%d numaddrs.%d numvins.%d numvouts.%d\n",myind,sp->numaddrs,numvins,numvouts);
                     if ( myind == sp->numaddrs-1 )
                     {
                         if ( (txbytes= shuffle_cointx(coin,newvins,numvins,newvouts,numvouts)) != 0 )
@@ -623,6 +629,7 @@ int32_t shuffle_incoming(char *jsonstr)
                             sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"shuffle\",\"method\":\"busdata\",\"submethod\":\"validate\",\"rawtx\":\"%s\"}",(long long)sp->shuffleid,sp->timestamp,txbytes);
                             if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                                 free(str);
+                            printf("RAWTX.(%s)\n",txbytes);
                             free(txbytes);
                         } else printf("shuffle_cointx null return\n");
                     }

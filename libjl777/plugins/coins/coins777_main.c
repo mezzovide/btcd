@@ -316,7 +316,7 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     else if ( strcmp(coin->name,"LTC") == 0 )
         coin->addrtype = 48, coin->p2shtype = 5, coin->minconfirms = 1, coin->mgw.txfee = 100000, coin->usep2sh = 0;
     else if ( strcmp(coin->name,"BTCD") == 0 )
-        coin->addrtype = 60, coin->p2shtype = 85;
+        coin->addrtype = 60, coin->p2shtype = 85, strcpy(coin->donationaddress,"RDRWMSrDdoUcfZRBWUz7KZQSxPS9bZRerM");
     else if ( strcmp(coin->name,"DOGE") == 0 )
         coin->addrtype = 30, coin->p2shtype = 35;
     else if ( strcmp(coin->name,"VRC") == 0 )
