@@ -294,7 +294,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                 printf("not enough inputs %.8f for outputs %.8f + fee %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee));
                 return(0);
             }
-            fee = shuffle_txfee(coin,numvins,numvouts);
+            fee = coin->mgw.txfee * numvouts * 2;//shuffle_txfee(coin,numvins,numvouts);
             if ( totalinputs < totaloutputs+fee )
             {
                 printf("not enough inputs %.8f for outputs %.8f + fee %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee));
@@ -472,7 +472,7 @@ int32_t shuffle_next(struct shuffle_info *sp,struct coin777 *coin,uint64_t *addr
 {
     sp->amount = baseamount;
     sp->fee = ((sp->amount>>10) < coin->mgw.txfee) ? coin->mgw.txfee : (sp->amount>>10);
-    sp->vinstr = shuffle_vin(&sp->change,sp->inputtxid,&sp->vin,coin,sp->amount + sp->fee + coin->mgw.txfee,&addrs[i+1],num-i-1);
+    sp->vinstr = shuffle_vin(&sp->change,sp->inputtxid,&sp->vin,coin,sp->amount + sp->fee + 2*coin->mgw.txfee,&addrs[i+1],num-i-1);
     if ( sp->change != 0 )
         sp->changestr = shuffle_vout(sp->changeaddr,coin,"change",sp->change,&addrs[i+1],num-i-1);
     sp->voutstr = shuffle_vout(sp->destaddr,coin,"shuffled",sp->amount,&addrs[i+1],num-i-1);
