@@ -347,7 +347,7 @@ cJSON *shuffle_strarray(char *ptrs[],int32_t num)
 
 char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
 {
-    struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1; char buf[8192],sigstr[4096],*str;
+    struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1; char buf[8192],coinaddr[64],sigstr[4096],*str; uint8_t rmd160[20];
     if ( sp == 0 )
     {
         printf("cant find shuffleid.%llu\n",(long long)sp->shuffleid);
@@ -360,8 +360,10 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
         sp->T = cointx;
         for (i=0; i<cointx->numoutputs; i++)
         {
-            printf("%d of %d: %s\n",i,cointx->numoutputs,cointx->outputs[i].coinaddr);
-            if ( vout < 0 && strcmp(cointx->outputs[i].coinaddr,sp->destaddr) == 0 )
+            decode_hex(rmd160,20,&cointx->outputs[i].script[6]);
+            btc_convrmd160(coinaddr,coin->addrtype,rmd160);
+            printf("%d of %d: %s -> %s\n",i,cointx->numoutputs,cointx->outputs[i].script,coinaddr);
+            if ( vout < 0 && strcmp(coinaddr,sp->destaddr) == 0 )
             {
                 printf("matched dest.(%s) %.8f\n",sp->destaddr,dstr(sp->amount));
                 if ( cointx->outputs[i].value == sp->amount )
@@ -372,7 +374,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     break;
                 }
             }
-            if ( sp->change != 0 && changeout < 0 && strcmp(cointx->outputs[i].coinaddr,sp->changeaddr) == 0 )
+            if ( sp->change != 0 && changeout < 0 && strcmp(coinaddr,sp->changeaddr) == 0 )
             {
                 printf("matched change.(%s) %.8f\n",sp->changeaddr,dstr(sp->change));
                 if ( cointx->outputs[i].value == sp->change )
