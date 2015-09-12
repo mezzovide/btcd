@@ -59,6 +59,7 @@ uint64_t acct777_validate(struct acct777_sig *sig,uint32_t timestamp,uint8_t *da
 uint64_t acct777_signtx(struct acct777_sig *sig,bits256 privkey,uint32_t timestamp,uint8_t *data,int32_t datalen);
 uint64_t acct777_swaptx(bits256 privkey,struct acct777_sig *sig,uint32_t timestamp,uint8_t *data,int32_t datalen);
 uint64_t conv_acctstr(char *acctstr);
+bits256 curve25519(bits256 mysecret,bits256 theirpublic);
 
 #endif
 #else
@@ -228,7 +229,6 @@ uint32_t _crc32(uint32_t crc,const void *buf,size_t size)
 
 extern bits256 GENESIS_PUBKEY,GENESIS_PRIVKEY;
 int32_t curve25519_donna(uint8_t *mypublic,const uint8_t *secret,const uint8_t *basepoint);
-bits256 curve25519(bits256 mysecret,bits256 theirpublic);
 
 bits256 acct777_pubkey(bits256 privkey)
 {

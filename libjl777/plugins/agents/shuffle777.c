@@ -38,34 +38,9 @@ STRUCTNAME
 
 int32_t shuffle_idle(struct plugin_info *plugin) { return(0); }
 
-int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,uint8_t *src,int32_t len)
-{
-    uint32_t crc,checkcrc; int32_t len3;
-    memcpy(&crc,src,sizeof(uint32_t));
-    len3 = (int32_t)(len - (int32_t)sizeof(crc));
-    checkcrc = _crc32(0,&src[sizeof(crc)],len3);
-    if ( crc != checkcrc )
-    {
-        dest[0] = 0;
-        printf("shuffle_decrypt Error: crc.%x != checkcrc.%x len.%d\n",crc,checkcrc,len3);
-    }
-    else
-    {
-        if ( decode_cipher((void *)dest,&src[sizeof(crc)],&len,SUPERNET.myprivkey) == 0 )
-        {
-        }
-        else printf("shuffle_decrypt Error: decode_cipher error len.%d\n",len3);
-    }
-    return(len);
-}
-
-//uint8_t *encode_str(int32_t *cipherlenp,void *str,int32_t len,bits256 destpubkey,bits256 myprivkey,bits256 mypubkey)
-//int32_t decode_cipher(uint8_t *str,uint8_t *cipher,int32_t *lenp,uint8_t *myprivkey)
-
 int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len)
 {
-    uint8_t *cipher; bits256 destpubkey,onetime_pubkey,onetime_privkey;
-    char destNXT[64]; int32_t haspubkey,cipherlen;
+    uint8_t *cipher; bits256 destpubkey,onetime_pubkey,onetime_privkey,seed; HUFF H,*hp = &H; char destNXT[64]; int32_t haspubkey,cipherlen;
     expand_nxt64bits(destNXT,destbits);
     destpubkey = issue_getpubkey(&haspubkey,destNXT);
     if ( haspubkey == 0 )
@@ -74,18 +49,23 @@ int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len
         return(-1);
     }
     crypto_box_keypair(onetime_pubkey.bytes,onetime_privkey.bytes);
-    cipher = encode_str(&cipherlen,src,len,destpubkey,onetime_privkey,onetime_pubkey);
-    if ( 1 )
+    if ( (cipher= encode_str(&cipherlen,src,len,destpubkey,onetime_privkey,onetime_pubkey)) != 0 )
     {
-        uint8_t data[8192],check[8192]; void *code; bits256 seed; HUFF H,*hp = &H; int32_t newlen;
-        code = huff_hexcode(cipher,cipherlen);
-        free(code);
         memset(seed.bytes,0,sizeof(seed));
-        _init_HUFF(hp,sizeof(data),data);
-        ramcoder_encoder(0,1,cipher,cipherlen,0,&seed);
-        memset(seed.bytes,0,sizeof(seed));
-        hrewind(hp);
-        newlen = ramcoder_decoder(0,1,check,sizeof(check),0,&seed);
+        seed.bytes[0] = 1;
+        memset(dest,0,cipherlen*2);
+        _init_HUFF(hp,cipherlen*2,dest);
+        ramcoder_encoder(0,1,cipher,cipherlen,hp,&seed);
+        cipherlen = hconv_bitlen(hp->bitoffset);
+        free(cipher);
+    } else cipherlen = 0;
+    if ( 0 )
+    {
+        uint8_t check[8192]; int32_t newlen;
+        //seed = curve25519(onetime_privkey,destpubkey);
+        init_hexbytes_noT((void *)check,hp->buf,hconv_bitlen(hp->bitoffset));
+        printf("cipherlen.%d -> numbits.%d bytes.%d [(%s)]\n",cipherlen,hp->bitoffset,hp->bitoffset/8,(void *)check);
+        newlen = ramcoder_decoder(0,1,check,sizeof(check),hp,&seed);
         if ( newlen != cipherlen || memcmp(check,cipher,cipherlen) != 0 )
             printf("ramcoder error newlen.%d vs %d\n",newlen,cipherlen);
     }
@@ -100,20 +80,21 @@ int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len
         init_hexbytes_noT(hexstr,buf,cipherlen);
         printf("decrypted.(%s)\n",hexstr);
     }
-    memcpy(dest,cipher,cipherlen);
-    free(cipher);
     return(cipherlen);
-    /*cJSON *item; char *str; int32_t n = 0;
-    if ( (item= privatemessage_encrypt(nxt64bits,src,len)) != 0 )
+}
+
+int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,uint8_t *src,int32_t len)
+{
+    bits256 seed; uint8_t buf[32768]; int32_t newlen = -1; HUFF H,*hp = &H;
+    if ( nxt64bits == SUPERNET.my64bits )
     {
-        if ( (str= cJSON_str(item)) != 0 )
-        {
-            n = (int32_t)strlen(str) >> 1;
-            decode_hex(dest,n,str);
-        }
-        free_json(item);
-    }
-    return(n);*/
+        memset(seed.bytes,0,sizeof(seed)), seed.bytes[0] = 1;
+        _init_HUFF(hp,len*2,dest);
+        newlen = ramcoder_decoder(0,1,buf,sizeof(buf),hp,&seed);
+        if ( decode_cipher((void *)dest,buf,&newlen,SUPERNET.myprivkey) != 0 )
+            printf("shuffle_decrypt Error: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
+    } else printf("cant decrypt another accounts packet\n");
+    return(newlen);
 }
 
 uint64_t shuffle_txfee(struct coin777 *coin,int32_t numvins,int32_t numvouts)
@@ -473,8 +454,9 @@ struct shuffle_info *shuffle_find(uint64_t shuffleid)
 
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
-    cJSON *array; struct InstantDEX_quote *iQ = 0; int32_t createdflag,i,n; uint32_t now; uint64_t _addrs[64],quoteid = 0;
-    struct shuffle_info *sp; struct coin777 *coin;
+    cJSON *array; struct InstantDEX_quote *iQ = 0; char destNXT[64],buf[2048],hexstr[4096];
+    int32_t createdflag,i,n,haspubkey,myind = -1; uint32_t now;
+    uint64_t _addrs[64],quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
     coin = coin777_find(base,1);
@@ -489,13 +471,27 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
             if ( (n= cJSON_GetArraySize(array)) > 0 )
             {
                 for (i=0; i<n; i++)
+                {
                     if ( (addrs[num]= j64bits(jitem(array,i),0)) != 0 )
-                        num++;
+                    {
+                        if ( addrs[num] == SUPERNET.my64bits )
+                            myind = num;
+                        expand_nxt64bits(destNXT,addrs[num]);
+                        issue_getpubkey(&haspubkey,destNXT);
+                        num += haspubkey;
+                    }
+                }
             }
             free_json(array);
         }
     }
 printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
+    if ( (i= myind) > 0 )
+    {
+        addrs[i] = addrs[0];
+        addrs[0] = SUPERNET.my64bits;
+        i = 0;
+    }
     if ( (sp= shuffle_create(&createdflag,base,timestamp,addrs,num)) == 0 )
     {
         printf("cant create shuffle.(%s) numaddrs.%d\n",base,num);
@@ -510,7 +506,6 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
         }
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
-            i = sp->myind;
             sp->amount = iQ->s.baseamount;
             iQ->s.pending = 1;
             sp->fee = ((sp->amount>>10) < coin->mgw.txfee) ? coin->mgw.txfee : (sp->amount>>10);
@@ -523,7 +518,16 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
                 printf("num.%d amount %.8f (%s) vinstr.(%s) voutstr.(%s)\n",num,dstr(sp->amount),coin->name,sp->vinstr,sp->voutstr);
                 return(clonestr("{\"error\":\"this node not shuffling due to calc error\"}"));
             }
-            else return(clonestr("{\"success\":\"shuffle created\"}"));
+            else
+            {
+                sprintf(buf,"{\"shuffleid\":\"%llu\",\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"]}",(long long)sp->shuffleid,sp->base,sp->vinstr,sp->voutstr);
+                expand_nxt64bits(destNXT,addrs[i + 1]);
+                //if ( strlen(buf) >= sizeof(hexstr)>>1 )
+                //    return(clonestr("{\"error\":\"shuffle buffer overflow\"}"));
+                //init_hexbytes_noT(hexstr,(void *)buf,strlen(buf)>>1);
+                telepathic_PM(destNXT,buf);
+                return(clonestr("{\"success\":\"shuffle created\"}"));
+            }
         }
     }
     return(clonestr("{\"success\":\"shuffle already there\"}"));
@@ -537,7 +541,7 @@ char *shuffle_incoming(char *jsonstr)
     {
         coin = coin777_find(base,0);
         sp = shuffle_find(shuffleid);
-        if ( sp != 0 && coin != 0 && (vins= jarray(&numvins,json,"vins")) != 0 && (vouts= jarray(&numvouts,json,"vouts")) != 0 )
+        if ( sp != 0 && strcmp(sp->base,base) == 0 && coin != 0 && (vins= jarray(&numvins,json,"vins")) != 0 && (vouts= jarray(&numvouts,json,"vouts")) != 0 )
         {
             if ( numvins < sizeof(newvins)/sizeof(*newvins)-2 && numvouts < sizeof(newvouts)/sizeof(*newvouts)-2 )
             {
