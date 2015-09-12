@@ -90,9 +90,9 @@ int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,int32_t maxlen,uint8_t 
     {
         memset(seed.bytes,0,sizeof(seed)), seed.bytes[0] = 1;
         _init_HUFF(hp,len,src), hp->endpos = len << 3;
-        printf("src %llx len.%d\n",*(long long *)src,len);
+        // printf("src %llx len.%d\n",*(long long *)src,len);
         newlen = ramcoder_decoder(0,1,buf,sizeof(buf),hp,&seed);
-        printf("buf %llx len.%d\n",*(long long *)buf,newlen);
+        //printf("buf %llx len.%d\n",*(long long *)buf,newlen);
         if ( decode_cipher((void *)dest,buf,&newlen,SUPERNET.myprivkey) != 0 )
             printf("shuffle_decrypt Error: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
     } else printf("cant decrypt another accounts packet\n");
@@ -223,7 +223,7 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amoun
         buf[j*2] = 0;
         //sprintf(buf,"%016llx%s",(long long)amount,hexaddress);
         strcat(buf,hexaddress);
-        if ( 1 )
+        if ( 0 )
         {
             char testaddr[64]; uint8_t rmd160[21];
             decode_hex(rmd160,21,hexaddress);
@@ -272,14 +272,14 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
             for (value=j=0; j<8; j++,value<<=8)
             {
                 value |= data[7-j];
-                printf("{%02x} ",data[7-j]);
+                //printf("{%02x} ",data[7-j]);
             }
-            printf("decode.(%s %.8f)\n",vouts[i] + 16,dstr(value));
+            //printf("decode.(%s %.8f %llx)\n",vouts[i] + 16,dstr(value),(long long)value);
             decode_hex(rmd160,21,vouts[i] + 16);
             if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )
             {
                 safecopy(T.outputs[T.numoutputs].coinaddr,coinaddr,sizeof(T.outputs[T.numoutputs].coinaddr));
-                T.outputs[T.numoutputs].value = SATOSHIDEN * value;
+                T.outputs[T.numoutputs].value = value;
                 totaloutputs += T.outputs[T.numoutputs].value;
                 printf("(%s %.8f) ",coinaddr,dstr(value));
             } else printf("error converting rmd160.(%s)\n",coinaddr);
