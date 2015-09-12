@@ -296,12 +296,6 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                 printf("not enough inputs %.8f for outputs %.8f + fee %.8f diff %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee),dstr(totaloutputs+fee-totalinputs));
                 return(0);
             }
-            /*fee = coin->mgw.txfee * numvouts;//shuffle_txfee(coin,numvins,numvouts);
-            if ( totalinputs < totaloutputs+fee )
-            {
-                printf("not enough inputs %.8f for outputs %.8f + fee %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee));
-                return(0);
-            }*/
             if ( (sharedfee= (totalinputs - totaloutputs) - fee) > numvouts )
             {
                 printf("sharedfee %.8f\n",dstr(sharedfee));
@@ -337,7 +331,9 @@ int32_t shuffle_strs(char *ptrs[],uint8_t num)
         tmp = ptrs[i];
         ptrs[i] = ptrs[r];
         ptrs[r] = tmp;
+        printf("%d<->%d ",i,r);
     }
+    printf("shuffle\n");
     return(i);
 }
 
@@ -357,11 +353,13 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
         printf("cant find shuffleid.%llu\n",(long long)sp->shuffleid);
         return(clonestr("{\"error\":\"cant find shuffleid\"}"));
     }
-    printf("validate.(%s)\n",rawtx);
+    printf("validate.(%s) vin.%s vout.%s\n",rawtx,sp->inputtxid,sp->destaddr);
     if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
     {
+        sp->T = cointx;
         for (i=0; i<cointx->numoutputs; i++)
         {
+            printf("%s ",cointx->outputs[i].coinaddr);
             if ( vout < 0 && strcmp(cointx->outputs[i].coinaddr,sp->destaddr) == 0 )
             {
                 printf("matched dest.(%s) %.8f\n",sp->destaddr,dstr(sp->amount));
@@ -391,6 +389,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
         {
             for (i=0; i<cointx->numinputs; i++)
             {
+                printf("%s ",cointx->inputs[i].tx.txidstr);
                 if ( vin < 0 && strcmp(cointx->inputs[i].tx.txidstr,sp->inputtxid) == 0 )
                 {
                     printf("matched input.(%s) vin.%d\n",sp->inputtxid,sp->vin);
@@ -414,7 +413,6 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                         free(str);
                     printf("signed.(%s)\n",buf);
-                    sp->T = cointx;
                     return(clonestr(buf));
                 } else printf("signing error\n");
             }
@@ -620,9 +618,9 @@ int32_t shuffle_incoming(char *jsonstr)
                     if ( sp->change != 0 )
                         newvouts[numvouts++] = clonestr(sp->changestr);
                     //printf("after adding incoming numvins.%d numvouts.%d\n",numvins,numvouts);
-                    for (j=0; j<13; j++)
+                    for (j=0; j<3; j++)
                         shuffle_strs(newvins,numvins);
-                    for (j=0; j<13; j++)
+                    for (j=0; j<3; j++)
                         shuffle_strs(newvouts,numvouts);
                     //printf("myind.%d numaddrs.%d numvins.%d numvouts.%d\n",myind,sp->numaddrs,numvins,numvouts);
                     if ( myind == sp->numaddrs-1 )
