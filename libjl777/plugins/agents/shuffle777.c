@@ -247,6 +247,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
         }
         T.numinputs++;
     }
+    printf("numinputs.%d numvins.%d\n",T.numinputs,numvins);
     if ( T.numinputs == numvins )
     {
         for (i=0; i<numvouts; i++)
@@ -254,6 +255,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
             decode_hex(data,8,vouts[i]);
             for (value=j=0; j<8; j++,value<<=8)
                 value |= data[j];
+            printf("decode.(%s %.8f)\n",vouts[i] + 16,dstr(value));
             decode_hex(rmd160,21,vouts[i] + 16);
             if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )
             {
@@ -261,10 +263,11 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                 T.outputs[T.numoutputs].value = SATOSHIDEN * value;
                 totaloutputs += T.outputs[T.numoutputs].value;
                 printf("(%s %.8f) ",coinaddr,dstr(value));
-                T.numoutputs++;
-            }
+            } else printf("error converting rmd160\n");
+            T.numoutputs++;
         }
-        if ( T.numinputs == numvins )
+        printf("numoutputs.%d numvouts.%d\n",T.numoutputs,numvouts);
+        if ( T.numoutputs == numvouts )
         {
             fee = ((numvins >> 1) * coin->mgw.txfee) + (totalinputs >> 10);
             if ( totalinputs < totaloutputs+fee )
