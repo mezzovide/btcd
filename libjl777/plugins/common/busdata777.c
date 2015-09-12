@@ -640,6 +640,7 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
                 {
                     int32_t shuffle_incoming(char *jsonstr);
                     uint64_t shuffleid; cJSON *pmjson;
+                    decoded[len3] = 0;
                     if ( (pmjson= cJSON_Parse(decoded)) != 0 && (shuffleid= j64bits(pmjson,"shuffleid")) != 0 )
                     {
                         printf("got PM.(%s) shuffleid.%llu\n",decoded,(long long)shuffleid);

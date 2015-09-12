@@ -551,7 +551,7 @@ int32_t shuffle_incoming(char *jsonstr)
     uint64_t addrs[64];
     if ( (json= cJSON_Parse(jsonstr)) != 0 && (base= jstr(json,"base")) != 0 && (shuffleid= j64bits(json,"shuffleid")) != 0 )
     {
-        coin = coin777_find(base,0);
+        coin = coin777_find(base,1);
         if ( (sp= shuffle_find(shuffleid)) == 0 )
         {
             if ( (array= jarray(&num,json,"addrs")) != 0 )
