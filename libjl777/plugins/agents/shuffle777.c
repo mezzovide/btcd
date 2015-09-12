@@ -426,12 +426,14 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
     cJSON *array; struct InstantDEX_quote *iQ = 0; int32_t createdflag,i,n; uint32_t now; uint64_t _addrs[64],quoteid = 0;
     struct shuffle_info *sp; struct coin777 *coin;
+printf("shuffle_start(%s)\n",base);
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
     coin = coin777_find(base,1);
     now = (uint32_t)time(NULL);
     if ( timestamp != 0 && now > timestamp+777 )
         return(clonestr("{\"error\":\"shuffle expired\"}"));
+printf("shuffle_start(%s) addrs.%p\n",base,addrs);
     if ( addrs == 0 )
     {
         addrs = _addrs, num = 0;
@@ -460,6 +462,7 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
         }
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
+            printf("quoteid.%llu\n",(long long)quoteid);
             sp->amount = iQ->s.baseamount;
             iQ->s.pending = 1;
             sp->fee = ((sp->amount>>10) < coin->mgw.txfee) ? coin->mgw.txfee : (sp->amount>>10);
