@@ -209,12 +209,27 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
 
 char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amount,uint64_t *addrs,int32_t num)
 {
-    char buf[512],pubkey[128],hexaddress[64],*destaddress,*retstr = 0;
+    char buf[512],pubkey[128],hexaddress[64],*destaddress,*retstr = 0; uint64_t x; int32_t j; uint8_t val;
     if ( (destaddress= shuffle_onetimeaddress(pubkey,coin,type)) != 0 )
     {
         btc_convaddr(hexaddress,destaddress);
-        sprintf(buf,"%016llx%s",(long long)amount,hexaddress);
-        printf("(%s %.8f) ",destaddress,dstr(amount));
+        x = amount;
+        for (j=0; j<8; j++,x>>=8)
+        {
+            val = (x & 0xff);
+            init_hexbytes_noT(&buf[j*2],&val,1);
+        }
+        buf[j*2] = 0;
+        //sprintf(buf,"%016llx%s",(long long)amount,hexaddress);
+        strcat(buf,hexaddress);
+        if ( 1 )
+        {
+            char testaddr[64]; uint8_t rmd160[21];
+            decode_hex(rmd160,21,hexaddress);
+            if ( btc_convrmd160(testaddr,rmd160[0],rmd160+1) == 0 )
+                printf("{%s -> %s} ",destaddress,testaddr);
+        }
+        printf("(%s %.8f -> %s) ",destaddress,dstr(amount),buf);
         retstr = shuffle_layer(buf,addrs,num);
         strcpy(destaddr,destaddress);
         free(destaddress);
@@ -247,7 +262,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
         }
         T.numinputs++;
     }
-    printf("numinputs.%d numvins.%d\n",T.numinputs,numvins);
+    printf("numinputs.%d numvins.%d total %.8f\n",T.numinputs,numvins,dstr(totalinputs));
     if ( T.numinputs == numvins )
     {
         for (i=0; i<numvouts; i++)
@@ -263,10 +278,10 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                 T.outputs[T.numoutputs].value = SATOSHIDEN * value;
                 totaloutputs += T.outputs[T.numoutputs].value;
                 printf("(%s %.8f) ",coinaddr,dstr(value));
-            } else printf("error converting rmd160\n");
+            } else printf("error converting rmd160.(%s)\n",coinaddr);
             T.numoutputs++;
         }
-        printf("numoutputs.%d numvouts.%d\n",T.numoutputs,numvouts);
+        printf("numoutputs.%d numvouts.%d total %.8f\n",T.numoutputs,numvouts,dstr(totaloutputs));
         if ( T.numoutputs == numvouts )
         {
             fee = ((numvins >> 1) * coin->mgw.txfee) + (totalinputs >> 10);
