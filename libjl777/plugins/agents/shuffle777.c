@@ -545,10 +545,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     char *resultstr,tx[8192],*methodstr,*rawtx,*sig,*cointxid,*retstr = 0; int32_t i,vin; uint64_t shuffleid; struct coin777 *coin; struct shuffle_info *sp;
     retbuf[0] = 0;
     plugin->allowremote = 1;
-    //fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
     if ( initflag > 0 )
     {
-        // configure settings
+        fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
         strcpy(retbuf,"{\"result\":\"shuffle init\"}");
     }
     else
