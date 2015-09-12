@@ -83,13 +83,13 @@ int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len
     return(cipherlen);
 }
 
-int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,uint8_t *src,int32_t len)
+int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,int32_t maxlen,uint8_t *src,int32_t len)
 {
     bits256 seed; uint8_t buf[32768]; int32_t newlen = -1; HUFF H,*hp = &H;
     if ( nxt64bits == SUPERNET.my64bits )
     {
         memset(seed.bytes,0,sizeof(seed)), seed.bytes[0] = 1;
-        _init_HUFF(hp,len*2,dest);
+        _init_HUFF(hp,len,src), hseek(hp,0,SEEK_END);
         newlen = ramcoder_decoder(0,1,buf,sizeof(buf),hp,&seed);
         if ( decode_cipher((void *)dest,buf,&newlen,SUPERNET.myprivkey) != 0 )
             printf("shuffle_decrypt Error: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
@@ -126,15 +126,17 @@ int32_t shuffle_peel(char *peeled[],cJSON *strs,int32_t num)
     {
         if ( (str= jstr(jitem(strs,i),0)) != 0 )
         {
+            printf("peel.(%s) -> ",str);
             len = (int32_t)strlen(str) >> 1;
             src = calloc(1,len+16);
-            dest = calloc(1,len+16);
+            dest = calloc(1,2*len+16);
             decode_hex(src,len,str);
-            n = shuffle_decrypt(SUPERNET.my64bits,dest,src,len);
+            n = shuffle_decrypt(SUPERNET.my64bits,dest,2*len,src,len);
             hexstr = calloc(1,n*2+1);
             init_hexbytes_noT(hexstr,dest,n);
             free(src), free(dest);
             peeled[i] = hexstr;
+            printf("(%s)\n",hexstr);
         }
         else
         {
