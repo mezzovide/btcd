@@ -448,6 +448,7 @@ printf("shuffle_start(%s) addrs.%p\n",base,addrs);
             free_json(array);
         }
     }
+printf("shuffle_start(%s) addrs.%p\n",base,addrs);
     if ( (sp= shuffle_create(&createdflag,base,timestamp,addrs,num)) == 0 )
     {
         printf("cant create shuffle.(%s) numaddrs.%d\n",base,num);
