@@ -614,12 +614,27 @@ void cJSON_Minify(char *json)
 }
 
 // the following written by jl777
-void copy_cJSON(char *dest,cJSON *obj)
+/******************************************************************************
+ * Copyright © 2014-2015 The SuperNET Developers.                             *
+ *                                                                            *
+ * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
+ * the top-level directory of this distribution for the individual copyright  *
+ * holder information and the developer policies on copyright and licensing.  *
+ *                                                                            *
+ * Unless otherwise agreed in a custom licensing agreement, no part of the    *
+ * Nxt software, including this file, may be copied, modified, propagated,    *
+ * or distributed except according to the terms contained in the LICENSE file *
+ *                                                                            *
+ * Removal or modification of this copyright notice is prohibited.            *
+ *                                                                            *
+ ******************************************************************************/
+
+void copy_cJSON(struct destbuf *dest,cJSON *obj)
 {
     char *str;
     int i;
     long offset;
-    dest[0] = 0;
+    dest->buf[0] = 0;
     if ( obj != 0 )
     {
         str = cJSON_Print(obj);
@@ -628,9 +643,9 @@ void copy_cJSON(char *dest,cJSON *obj)
             offset = stripquotes(str);
             //strcpy(dest,str+offset);
             for (i=0; i<MAX_JSON_FIELD-1; i++)
-                if ( (dest[i]= str[offset+i]) == 0 )
+                if ( (dest->buf[i]= str[offset+i]) == 0 )
                     break;
-            dest[i] = 0;
+            dest->buf[i] = 0;
             free(str);
         }
     }
@@ -638,12 +653,12 @@ void copy_cJSON(char *dest,cJSON *obj)
 
 int64_t _get_cJSON_int(cJSON *json)
 {
-    char tmp[4096];
+    struct destbuf tmp;
     if ( json != 0 )
     {
-        copy_cJSON(tmp,json);
-        if ( tmp[0] != 0 )
-            return(calc_nxt64bits(tmp));
+        copy_cJSON(&tmp,json);
+        if ( tmp.buf[0] != 0 )
+            return(calc_nxt64bits(tmp.buf));
     }
     return(0);
 }
@@ -663,11 +678,11 @@ int64_t get_cJSON_int(cJSON *json,char *field)
 int64_t _conv_cJSON_float(cJSON *json)
 {
     int64_t conv_floatstr(char *);
-    char tmp[4096];
+    struct destbuf tmp;
     if ( json != 0 )
     {
-        copy_cJSON(tmp,json);
-        return(conv_floatstr(tmp));
+        copy_cJSON(&tmp,json);
+        return(conv_floatstr(tmp.buf));
     }
     return(0);
 }
@@ -714,13 +729,13 @@ cJSON *gen_list_json(char **list)
 uint64_t get_API_nxt64bits(cJSON *obj)
 {
     uint64_t nxt64bits = 0;
-    char buf[MAX_JSON_FIELD+2];
+    struct destbuf tmp;
     if ( obj != 0 )
     {
         if ( is_cJSON_Number(obj) != 0 )
             return((uint64_t)obj->valuedouble);
-        copy_cJSON(buf,obj);
-        nxt64bits = calc_nxt64bits(buf);
+        copy_cJSON(&tmp,obj);
+        nxt64bits = calc_nxt64bits(tmp.buf);
     }
     return(nxt64bits);
 }
@@ -731,22 +746,22 @@ uint64_t get_satoshi_obj(cJSON *json,char *field)
 {
     int32_t i,n;
     uint64_t prev,satoshis,mult = 1;
-    char numstr[MAX_JSON_FIELD],checkstr[MAX_JSON_FIELD];
+    struct destbuf numstr,checkstr;
     cJSON *numjson;
     numjson = cJSON_GetObjectItem(json,field);
-    copy_cJSON(numstr,numjson);
-    satoshis = prev = 0; mult = 1; n = (int32_t)strlen(numstr);
+    copy_cJSON(&numstr,numjson);
+    satoshis = prev = 0; mult = 1; n = (int32_t)strlen(numstr.buf);
     for (i=n-1; i>=0; i--,mult*=10)
     {
-        satoshis += (mult * (numstr[i] - '0'));
+        satoshis += (mult * (numstr.buf[i] - '0'));
         if ( satoshis < prev )
-            printf("get_satoshi_obj numstr.(%s) i.%d prev.%llu vs satoshis.%llu\n",numstr,i,(unsigned long long)prev,(unsigned long long)satoshis);
+            printf("get_satoshi_obj numstr.(%s) i.%d prev.%llu vs satoshis.%llu\n",numstr.buf,i,(unsigned long long)prev,(unsigned long long)satoshis);
         prev = satoshis;
     }
-    sprintf(checkstr,"%llu",(long long)satoshis);
-    if ( strcmp(checkstr,numstr) != 0 )
+    sprintf(checkstr.buf,"%llu",(long long)satoshis);
+    if ( strcmp(checkstr.buf,numstr.buf) != 0 )
     {
-        printf("SATOSHI GREMLIN?? numstr.(%s) -> %.8f -> (%s)\n",numstr,dstr(satoshis),checkstr);
+        printf("SATOSHI GREMLIN?? numstr.(%s) -> %.8f -> (%s)\n",numstr.buf,dstr(satoshis),checkstr.buf);
     }
     return(satoshis);
 }
@@ -776,7 +791,7 @@ void jadd64bits(cJSON *json,char *field,uint64_t nxt64bits) { char numstr[64]; s
 void jaddi(cJSON *json,cJSON *item) { cJSON_AddItemToArray(json,item); }
 void jaddistr(cJSON *json,char *str) { cJSON_AddItemToArray(json,cJSON_CreateString(str)); }
 void jaddinum(cJSON *json,double num) { cJSON_AddItemToArray(json,cJSON_CreateNumber(num)); }
-void jaddi64bits(cJSON *json,uint64_t nxt64bits) { char numstr[64]; sprintf(numstr,"\"%llu\"",(long long)nxt64bits), jaddistr(json,numstr); }
+void jaddi64bits(cJSON *json,uint64_t nxt64bits) { char numstr[64]; sprintf(numstr,"%llu",(long long)nxt64bits), jaddistr(json,numstr); }
 char *jstr(cJSON *json,char *field) { if ( field == 0 ) return(cJSON_str(json)); return(cJSON_str(cJSON_GetObjectItem(json,field))); }
 
 char *jstri(cJSON *json,int32_t i) { return(cJSON_str(cJSON_GetArrayItem(json,i))); }
@@ -805,7 +820,7 @@ void ensure_jsonitem(cJSON *json,char *field,char *value)
 int32_t in_jsonarray(cJSON *array,char *value)
 {
     int32_t i,n;
-    char remote[MAX_JSON_FIELD];
+    struct destbuf remote;
     if ( array != 0 && is_cJSON_Array(array) != 0 )
     {
         n = cJSON_GetArraySize(array);
@@ -813,8 +828,8 @@ int32_t in_jsonarray(cJSON *array,char *value)
         {
             if ( array == 0 || n == 0 )
                 break;
-            copy_cJSON(remote,cJSON_GetArrayItem(array,i));
-            if ( strcmp(remote,value) == 0 )
+            copy_cJSON(&remote,cJSON_GetArrayItem(array,i));
+            if ( strcmp(remote.buf,value) == 0 )
                 return(1);
         }
     }
@@ -823,13 +838,15 @@ int32_t in_jsonarray(cJSON *array,char *value)
 
 int32_t get_API_int(cJSON *obj,int32_t val)
 {
-    char buf[MAX_JSON_FIELD+2];
+    struct destbuf buf;
     if ( obj != 0 )
     {
         if ( is_cJSON_Number(obj) != 0 )
             return((int32_t)obj->valuedouble);
-        copy_cJSON(buf,obj);
-        val = atoi(buf);
+        copy_cJSON(&buf,obj);
+        val = myatoi(buf.buf,0);
+        if ( val < 0 )
+            val = 0;
     }
     return(val);
 }
@@ -838,13 +855,13 @@ int32_t jinti(cJSON *json,int32_t i) { if ( json == 0 ) return(0); return(get_AP
 
 uint32_t get_API_uint(cJSON *obj,uint32_t val)
 {
-    char buf[MAX_JSON_FIELD+2];
+    struct destbuf buf;
     if ( obj != 0 )
     {
         if ( is_cJSON_Number(obj) != 0 )
             return((uint32_t)obj->valuedouble);
-        copy_cJSON(buf,obj);
-        val = atoi(buf);
+        copy_cJSON(&buf,obj);
+        val = myatoi(buf.buf,0);
     }
     return(val);
 }
@@ -854,13 +871,13 @@ uint32_t juinti(cJSON *json,int32_t i) { if ( json == 0 ) return(0); return(get_
 double get_API_float(cJSON *obj)
 {
     double val = 0.;
-    char buf[MAX_JSON_FIELD+2];
+    struct destbuf buf;
     if ( obj != 0 )
     {
         if ( is_cJSON_Number(obj) != 0 )
             return(obj->valuedouble);
-        copy_cJSON(buf,obj);
-        val = atof(buf);
+        copy_cJSON(&buf,obj);
+        val = atof(buf.buf);
     }
     return(val);
 }
@@ -944,7 +961,7 @@ int32_t cmp_nxt64bits(const char *str,uint64_t nxt64bits)
 uint64_t calc_nxt64bits(const char *NXTaddr)
 {
     int32_t c;
-    int64_t n,i;
+    int64_t n,i,polarity = 1;
     uint64_t lastval,mult,nxt64bits = 0;
     if ( NXTaddr == 0 )
     {
@@ -962,6 +979,8 @@ uint64_t calc_nxt64bits(const char *NXTaddr)
         // printf("zero address?\n"); getchar();
         return(0);
     }
+    if ( NXTaddr[0] == '-' )
+        polarity = -1, NXTaddr++, n--;
     mult = 1;
     lastval = 0;
     for (i=n-1; i>=0; i--,mult*=10)
@@ -986,6 +1005,8 @@ uint64_t calc_nxt64bits(const char *NXTaddr)
     }
     if ( cmp_nxt64bits(NXTaddr,nxt64bits) != 0 )
         printf("error calculating nxt64bits: %s -> %llx -> %s\n",NXTaddr,(long long)nxt64bits,nxt64str(nxt64bits));
+    if ( polarity < 0 )
+        return(-(int64_t)nxt64bits);
     return(nxt64bits);
 }
 

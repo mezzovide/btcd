@@ -1,10 +1,18 @@
-//
-//  system777.c
-//  crypto777
-//
-//  Created by James on 4/9/15.
-//  Copyright (c) 2015 jl777. All rights reserved.
-//
+/******************************************************************************
+ * Copyright © 2014-2015 The SuperNET Developers.                             *
+ *                                                                            *
+ * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
+ * the top-level directory of this distribution for the individual copyright  *
+ * holder information and the developer policies on copyright and licensing.  *
+ *                                                                            *
+ * Unless otherwise agreed in a custom licensing agreement, no part of the    *
+ * Nxt software, including this file, may be copied, modified, propagated,    *
+ * or distributed except according to the terms contained in the LICENSE file *
+ *                                                                            *
+ * Removal or modification of this copyright notice is prohibited.            *
+ *                                                                            *
+ ******************************************************************************/
+
 
 #ifdef DEFINES_ONLY
 #ifndef crypto777_system777_h
@@ -39,7 +47,6 @@
 
 extern int32_t Debuglevel;
 
-#define OFFSET_ENABLED (bundledflag == 0)
 #ifndef MIN
 #define MIN(x,y) (((x)<=(y)) ? (x) : (y))
 #endif
@@ -154,7 +161,8 @@ struct teleport_info
 
 struct InstantDEX_info
 {
-    int32_t readyflag;
+    int32_t readyflag,numhist;
+    struct txinds777_info *history;
 }; extern struct InstantDEX_info INSTANTDEX;
 
 #define MAX_SERVERNAME 128
@@ -164,9 +172,6 @@ struct relayargs
     char name[16],endpoint[MAX_SERVERNAME];
     int32_t sock,type,bindflag,sendtimeout,recvtimeout;
 };
-
-#define CONNECTION_NUMBITS 10
-struct endpoint { uint64_t ipbits:32,port:16,transport:2,nn:4,directind:CONNECTION_NUMBITS; };
 struct _relay_info { int32_t sock,num,mytype,desttype; struct endpoint connections[1 << CONNECTION_NUMBITS]; };
 struct direct_connection { char handler[16]; struct endpoint epbits; int32_t sock; };
 
@@ -195,7 +200,6 @@ char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *
 uint16_t wait_for_myipaddr(char *ipaddr);
 void process_userinput(char *line);
 
-char *get_localtransport(int32_t bundledflag);
 int32_t init_socket(char *suffix,char *typestr,int32_t type,char *_bindaddr,char *_connectaddr,int32_t timeout);
 int32_t shutdown_plugsocks(union endpoints *socks);
 int32_t nn_local_broadcast(int32_t pushsock,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len);
@@ -235,7 +239,7 @@ int32_t busdata_poll();
 char *busdata_sync(uint32_t *noncep,char *jsonstr,char *broadcastmode,char *destNXTaddr);
 int32_t parse_ipaddr(char *ipaddr,char *ip_port);
 int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,char *NXTACCTSECRET,char *broadcastmode);
-int32_t validate_token(char *forwarder,char *pubkey,char *NXTaddr,char *tokenizedtxt,int32_t strictflag);
+int32_t validate_token(struct destbuf *forwarder,struct destbuf *pubkey,struct destbuf *NXTaddr,char *tokenizedtxt,int32_t strictflag);
 uint32_t busdata_nonce(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce);
 int32_t nonce_leverage(char *broadcaststr);
 char *get_broadcastmode(cJSON *json,char *broadcastmode);
@@ -378,7 +382,7 @@ void queue_enqueue(char *name,queue_t *queue,struct queueitem *item)
         safecopy(queue->name,name,sizeof(queue->name));
     if ( item == 0 )
     {
-        printf("FATAL type error: queueing empty value\n"), getchar();
+        printf("FATAL type error: queueing empty value\n");//, getchar();
         return;
     }
     lock_queue(queue);
@@ -533,7 +537,7 @@ uint16_t wait_for_myipaddr(char *ipaddr)
 {
     uint16_t port = 0;
     printf("need a portable way to find IP addr\n");
-    getchar();
+    //getchar();
     return(port);
 }
 
@@ -556,14 +560,14 @@ int32_t ismyaddress(char *server)
     {
         if ( SUPERNET.hostname[0] != 0 && strcmp(SUPERNET.hostname,server) == 0 )
             return(1);
-        if ( conv_domainname(ipaddr,server) == 0 && (strcmp(SUPERNET.myipaddr,ipaddr) == 0 || strcmp(SUPERNET.hostname,ipaddr) == 0) )
+        else if ( (ipbits= conv_domainname(ipaddr,server)) != 0 || SUPERNET.my64bits == ipbits )
+            return(1);
+        else if ( (strcmp(SUPERNET.myipaddr,ipaddr) == 0 || strcmp(SUPERNET.hostname,ipaddr) == 0) )
             return(1);
     }
     //printf("(%s) is not me (%s)\n",server,SUPERNET.myipaddr);
     return(0);
 }
-
-char *get_localtransport(int32_t bundledflag) { return(OFFSET_ENABLED ? "ipc" : "inproc"); }
 
 int32_t nn_local_broadcast(int32_t sock,uint64_t instanceid,int32_t flags,uint8_t *retstr,int32_t len)
 {

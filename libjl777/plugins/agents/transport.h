@@ -1,22 +1,43 @@
-//
-//  transport.h
-//  crypto777
-//
-//  Copyright (c) 2015 jl777. All rights reserved.
-//
+/**********************************************************************************
+ * The MIT License (MIT)                                                          *
+ *                                                                                *
+ * Copyright © 2014-2015 The SuperNET Developers.                                 *
+ *                                                                                *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy  *
+ *  of this software and associated documentation files (the "Software"), to deal *
+ *  in the Software without restriction, including without limitation the rights  *
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell     *
+ *  copies of the Software, and to permit persons to whom the Software is         *
+ *  furnished to do so, subject to the following conditions:                      *
+ *                                                                                *
+ *  The above copyright notice and this permission notice shall be included in    *
+ *  all copies or substantial portions of the Software.                           *
+ *                                                                                *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR    *
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,      *
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE   *
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER        *
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, *
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN     *
+ *  THE SOFTWARE.                                                                 *
+ *                                                                                *
+ * Removal or modification of this copyright notice is prohibited.                *
+ *                                                                                *
+ **********************************************************************************/
 
-#include "nn.h"
-#include "bus.h"
-#include "pubsub.h"
-#include "pipeline.h"
-#include "reqrep.h"
-#include "survey.h"
-#include "pair.h"
-#include "pubsub.h"
-#include "../common/system777.c"
+#include "../../nanomsg/src/nn.h"
+#include "../../nanomsg/src/bus.h"
+#include "../../nanomsg/src/pubsub.h"
+#include "../../nanomsg/src/pipeline.h"
+#include "../../nanomsg/src/reqrep.h"
+#include "../../nanomsg/src/survey.h"
+#include "../../nanomsg/src/pair.h"
+#include "../../nanomsg/src/pubsub.h"
 
 #define LOCALCAST 1
 #define BROADCAST 2
+#define OFFSET_ENABLED (bundledflag == 0)
+char *get_localtransport(int32_t bundledflag) { return(OFFSET_ENABLED ? "ipc" : "inproc"); }
 
 void set_connect_transport(char *connectaddr,int32_t bundledflag,int32_t permanentflag,char *ipaddr,uint16_t port,uint64_t daemonid)
 {
@@ -51,6 +72,8 @@ int32_t add_tagstr(struct daemon_info *dp,uint64_t tag,char **dest,int32_t retso
     //printf("ADDTAG.%llu <- %p\n",(long long)tag,dest);
     for (i=0; i<NUM_PLUGINTAGS; i++)
     {
+        if ( SUPERNET.tags[i][0] == tag )
+            return(-1);
         if ( SUPERNET.tags[i][0] == 0 )
         {
             if ( Debuglevel > 2 )
@@ -171,10 +194,10 @@ uint64_t send_to_daemon(int32_t sock,char **retstrp,char *name,uint64_t daemonid
                 printf("after find_daemoninfo send_to_daemon.(%s) tag.%llu dp.%p len.%d vs %ld retstrp.%p\n",jsonstr,(long long)tag,dp,len,strlen(jsonstr)+1,retstrp);
             if ( len > 0 )
             {
+                 if ( tag != 0 )
+                    duplicateflag = add_tagstr(dp,tag,retstrp,sock) < 0;
                 if ( Debuglevel > 2 )
-                    fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s) sock.%d\n",(long long)tag,jsonstr,sock);
-                if ( tag != 0 )
-                    duplicateflag = add_tagstr(dp,tag,retstrp,sock);
+                    fprintf(stderr,"HAVETAG.%llu send_to_daemon(%s) sock.%d duplicateflag.%d\n",(long long)tag,jsonstr,sock,duplicateflag);
                 if ( duplicateflag == 0 )
                 {
                     dp->numsent++;

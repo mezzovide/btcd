@@ -1,9 +1,17 @@
-//
-//  NXT_tx.h
-//
-//  Created by jl777 on 7/9/14.
-//  Copyright (c) 2014 jl777. All rights reserved.
-//
+/******************************************************************************
+ * Copyright © 2014-2015 The SuperNET Developers.                             *
+ *                                                                            *
+ * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
+ * the top-level directory of this distribution for the individual copyright  *
+ * holder information and the developer policies on copyright and licensing.  *
+ *                                                                            *
+ * Unless otherwise agreed in a custom licensing agreement, no part of the    *
+ * Nxt software, including this file, may be copied, modified, propagated,    *
+ * or distributed except according to the terms contained in the LICENSE file *
+ *                                                                            *
+ * Removal or modification of this copyright notice is prohibited.            *
+ *                                                                            *
+ ******************************************************************************/
 
 #ifndef xcode_NXT_tx_h
 #define xcode_NXT_tx_h
@@ -234,9 +242,9 @@ struct NXT_tx *set_NXT_tx(cJSON *json)
         utx->U.quantityQNT = quantity;
     else utx->U.amountNQT = calc_nxt64bits(amountNQT);
     utx->priceNQT = price;
-    utx->deadline = atoi(deadline);
-    utx->type = atoi(type);
-    utx->subtype = atoi(subtype);
+    utx->deadline = myatoi(deadline,1000);
+    utx->type = myatoi(type,256);
+    utx->subtype = myatoi(subtype,256);
     utx->timestamp = atoi(timestamp);
     utx->verify = (strcmp("true",verify) == 0);
     strcpy(utx->comment,comment);
@@ -545,8 +553,8 @@ uint64_t set_assettrade(int32_t i,int32_t n,struct assettrade *tp,cJSON *json)
         tp->buyer = get_API_nxt64bits(cJSON_GetObjectItem(json,"buyer"));
         tp->askorder = get_API_nxt64bits(cJSON_GetObjectItem(json,"askOrder"));
         tp->bidorder = get_API_nxt64bits(cJSON_GetObjectItem(json,"bidOrder"));
-        tp->bidheight = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"bidOrderHeight"),0);
-        tp->askheight = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"askOrderHeight"),0);
+        tp->bidheight = juint(json,"bidOrderHeight");
+        tp->askheight = juint(json,"askOrderHeight");
         if ( 1 )
         {
             copy_cJSON(name,cJSON_GetObjectItem(json,"name"));
@@ -628,6 +636,26 @@ int32_t update_NXT_assettrades()
         NXT_assettrades(trades,max - 1,-1,-1);
     free(trades);
     return(count);
+}
+
+int32_t trigger_items(cJSON *item)
+{
+    char feeutxbytes[MAX_JSON_FIELD],feesignedtx[MAX_JSON_FIELD],triggerhash[65],feesighash[65];
+    struct NXT_tx T,*feetx; uint32_t triggerheight,expiration;
+    set_NXTtx(SUPERNET.my64bits,&T,NXT_ASSETID,INSTANTDEX_FEE,calc_nxt64bits(INSTANTDEX_ACCT),-1);
+    triggerheight = _get_NXTheight(0) + FINISH_HEIGHT;
+    if ( (feetx= sign_NXT_tx(feeutxbytes,feesignedtx,SUPERNET.NXTACCTSECRET,SUPERNET.my64bits,&T,0,1.)) != 0 )
+    {
+        expiration = get_txhashes(feesighash,triggerhash,feetx);
+        jadd64bits(item,"feetxid",feetx->txid);
+        jaddstr(item,"triggerhash",triggerhash);
+        jaddnum(item,"triggerheight",triggerheight);
+        //sprintf(offer->comment + strlen(offer->comment) - 1,",\"feetxid\":\"%llu\",\"triggerhash\":\"%s\",\"triggerheight\":\"%u\"}",(long long)feetx->txid,triggerhash,offer->triggerheight);
+        //if ( strlen(triggerhash) == 64 && (retstr= submit_trades(offer,NXTACCTSECRET)) != 0 )
+        //    return(retstr);
+        return(0);
+    }
+    return(-1);
 }
 
 #endif

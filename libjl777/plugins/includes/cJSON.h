@@ -35,7 +35,7 @@
 
 #define SATOSHIDEN ((uint64_t)100000000L)
 #define dstr(x) ((double)(x) / SATOSHIDEN)
-#define MAX_JSON_FIELD 2048 // on the big side
+#define MAX_JSON_FIELD 4096 // on the big side
 
 #ifdef __cplusplus
 extern "C"
@@ -154,6 +154,8 @@ extern "C"
 #define cJSON_AddNumberToObject(object,name,n)	cJSON_AddItemToObject(object, name, cJSON_CreateNumber(n))
 #define cJSON_AddStringToObject(object,name,s)	cJSON_AddItemToObject(object, name, cJSON_CreateString(s))
     
+    struct destbuf { char buf[MAX_JSON_FIELD]; };
+    
     /* When assigning an integer value, it needs to be propagated to valuedouble too. */
 #define cJSON_SetIntValue(object,val)			((object)?(object)->valueint=(object)->valuedouble=(val):(val))
     
@@ -181,7 +183,7 @@ extern "C"
     void jaddinum(cJSON *json,double num);
     void jaddi64bits(cJSON *json,uint64_t nxt64bits);
 
-    void copy_cJSON(char *dest,cJSON *obj);
+    void copy_cJSON(struct destbuf *dest,cJSON *obj);
     cJSON *gen_list_json(char **list);
     int32_t extract_cJSON_str(char *dest,int32_t max,cJSON *json,char *field);
 
@@ -209,6 +211,16 @@ extern "C"
 #define replace_backslashquotes unstringify
     char *unstringify(char *str);
     
+#include "mutex.h"
+    
+#define portable_mutex_t struct nn_mutex
+#define portable_mutex_init nn_mutex_init
+#define portable_mutex_lock nn_mutex_lock
+#define portable_mutex_unlock nn_mutex_unlock
+
+#define CONNECTION_NUMBITS 10
+    struct endpoint { uint64_t ipbits:32,port:16,transport:2,nn:4,directind:CONNECTION_NUMBITS; };
+
 #ifdef __cplusplus
 }
 #endif

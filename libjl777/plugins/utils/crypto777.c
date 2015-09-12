@@ -1,9 +1,18 @@
-//
-//  SaM777.c
-//
-//  Created by jl777 on 3/13/15.
-//  Copyright (c) 2015 jl777. All rights reserved.
-//
+/******************************************************************************
+ * Copyright © 2014-2015 The SuperNET Developers.                             *
+ *                                                                            *
+ * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
+ * the top-level directory of this distribution for the individual copyright  *
+ * holder information and the developer policies on copyright and licensing.  *
+ *                                                                            *
+ * Unless otherwise agreed in a custom licensing agreement, no part of the    *
+ * Nxt software, including this file, may be copied, modified, propagated,    *
+ * or distributed except according to the terms contained in the LICENSE file *
+ *                                                                            *
+ * Removal or modification of this copyright notice is prohibited.            *
+ *                                                                            *
+ ******************************************************************************/
+
 #ifndef crypto777_c
 #define crypto777_c
 
@@ -185,8 +194,8 @@ struct crypto777_block *parse_block777(struct consensus_model *model,struct cryp
     uint32_t timestamp,blocknum = 0;
     if ( (bestacct= validate_block(block)) >= 0 && peerid < nn->numpeers && (json= cJSON_Parse(blockstr)) != 0 )
     {
-        blocknum = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"blocknum"),0);
-        timestamp = (uint32_t)get_API_int(cJSON_GetObjectItem(json,"timestamp"),0);
+        blocknum = juint(json,"blocknum");
+        timestamp = juint(json,"timestamp");
         metric = get_API_nxt64bits(cJSON_GetObjectItem(json,"metric"));
         model->peermetrics[blocknum][peerid] = metric;
         model->peerblocknum[peerid] = blocknum;

@@ -1,10 +1,30 @@
-//
-//  echodemo.c
-//  SuperNET API extension example agent
-//  crypto777
-//
-//  Copyright (c) 2015 jl777. All rights reserved.
-//
+
+/**********************************************************************************
+ * The MIT License (MIT)                                                          *
+ *                                                                                *
+ * Copyright © 2014-2015 The SuperNET Developers.                                 *
+ *                                                                                *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy  *
+ *  of this software and associated documentation files (the "Software"), to deal *
+ *  in the Software without restriction, including without limitation the rights  *
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell     *
+ *  copies of the Software, and to permit persons to whom the Software is         *
+ *  furnished to do so, subject to the following conditions:                      *
+ *                                                                                *
+ *  The above copyright notice and this permission notice shall be included in    *
+ *  all copies or substantial portions of the Software.                           *
+ *                                                                                *
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR    *
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,      *
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE   *
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER        *
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, *
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN     *
+ *  THE SOFTWARE.                                                                 *
+ *                                                                                *
+ * Removal or modification of this copyright notice is prohibited.                *
+ *                                                                                *
+ **********************************************************************************/
 
 #define PLUGINSTR "echodemo"
 #define PLUGNAME(NAME) echodemo ## NAME
@@ -14,6 +34,7 @@
 
 #define DEFINES_ONLY
 #include "plugin777.c"
+#include "../includes/cJSON.h"
 #undef DEFINES_ONLY
 
 STRUCTNAME
@@ -39,7 +60,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char echostr[MAX_JSON_FIELD],*resultstr,*methodstr,*addr,*retstr = 0;
+    char *resultstr,*methodstr,*addr,*retstr = 0; struct destbuf echostr;
     retbuf[0] = 0;
     plugin->allowremote = 1;
     //fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
@@ -52,7 +73,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     {
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
         methodstr = cJSON_str(cJSON_GetObjectItem(json,"method"));
-        copy_cJSON(echostr,cJSON_GetObjectItem(json,"echostr"));
+        copy_cJSON(&echostr,cJSON_GetObjectItem(json,"echostr"));
         retbuf[0] = 0;
         if ( resultstr != 0 && strcmp(resultstr,"registered") == 0 )
         {
@@ -69,7 +90,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(methodstr,"echo") == 0 )
         {
-            sprintf(retbuf,"{\"result\":\"%s\"}",echostr);
+            sprintf(retbuf,"{\"result\":\"%s\"}",echostr.buf);
         }
         else if ( strcmp(methodstr,"passthru") == 0 )
         {

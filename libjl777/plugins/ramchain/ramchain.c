@@ -1,9 +1,18 @@
-//
-//  ramchain.c
-//  crypto777
-//
-//  Copyright (c) 2015 jl777. All rights reserved.
-//
+/******************************************************************************
+ * Copyright © 2014-2015 The SuperNET Developers.                             *
+ *                                                                            *
+ * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
+ * the top-level directory of this distribution for the individual copyright  *
+ * holder information and the developer policies on copyright and licensing.  *
+ *                                                                            *
+ * Unless otherwise agreed in a custom licensing agreement, no part of the    *
+ * Nxt software, including this file, may be copied, modified, propagated,    *
+ * or distributed except according to the terms contained in the LICENSE file *
+ *                                                                            *
+ * Removal or modification of this copyright notice is prohibited.            *
+ *                                                                            *
+ ******************************************************************************/
+
 
 #ifdef INSIDE_MGW
 
@@ -284,7 +293,7 @@ struct ledger_addrinfo *ramchain_addrinfo(char *field,char *retbuf,int32_t maxle
         sprintf(retbuf,"{\"error\":\"invalid addr or addrind\",\"coin\":\"%s\"}",coin->name);
         return(0);
     }
-    printf("coin_addrinfo not coded yet\n"); getchar();
+    printf("coin_addrinfo not coded yet\n"); //getchar();
     //if ( (addrinfo= ledger_addrinfo(&firstblocknum,ramchain->activeledger,coinaddr,addrind)) == 0 )
     //    sprintf(retbuf,"{\"error\":\"cant find %s\",\"coin\":\"%s\"}",field,ramchain->name);
     return(0);//addrinfo);

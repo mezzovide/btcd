@@ -1,0 +1,889 @@
+define({ "api": [
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"allorderbooks\"}'",
+    "title": "Allorderbooks",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodAllOrderBooks",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "allorderbooks",
+            "description": "<p>Get list of all active orderbooks.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"allorderbooks\"}'",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\n\"orderbooks\": [\n  {\n    \"name\": \"Jay/NXT\",\n    \"base\": \"Jay\",\n    \"baseid\": \"8688289798928624137\",\n    \"rel\": \"NXT\",\n    \"relid\": \"5527630\",\n    \"exchange\": \"InstantDEX\"\n  },\n  {\n    \"name\": \"SuperNET/NXT\",\n    \"base\": \"SuperNET\",\n    \"baseid\": \"12071612744977229797\",\n    \"rel\": \"NXT\",\n    \"relid\": \"5527630\",\n    \"exchange\": \"InstantDEX\"\n  }\n]\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"balance\",\"exchange\":\"{exchange}\"}'",
+    "title": "Balance",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodBalance",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "openorders",
+            "description": "<p>Get list of active orders.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"bitfinex\"",
+              "\"btc38\"",
+              "\"bitstamp\"",
+              "\"btce\"",
+              "\"poloniex\"",
+              "\"bittrex\"",
+              "\"huobi\"",
+              "\"coinbase\"",
+              "\"okcoin\"",
+              "\"bityes\"",
+              "\"lakebtc\"",
+              "\"exmo\"",
+              "\"quadriga\""
+            ],
+            "optional": false,
+            "field": "exchange",
+            "description": "<p>Supported external exchanges</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"balance\",\"exchange\":\"btc38\"}'\n./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"balance\",\"exchange\":\"poloniex\"}'\n./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"balance\",\"exchange\":\"huobi\"}'",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Huobi-Response-Example:",
+          "content": "{\n\"total\": \"14.61\",\n\"net_asset\": \"14.61\",\n\"available_cny_display\": \"0.06\",\n\"available_btc_display\": \"0.0099\",\n\"available_ltc_display\": \"0.0000\",\n\"frozen_cny_display\": \"0.00\",\n\"frozen_btc_display\": \"0.0000\",\n\"frozen_ltc_display\": \"0.0000\",\n\"loan_cny_display\": \"0.00\",\n\"loan_btc_display\": \"0.0000\",\n\"loan_ltc_display\": \"0.0000\"\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"cancelorder\",\"orderid\":\"{orderid}\"}'",
+    "title": "Cancelorder",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodCancelOrder",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "cancelorder",
+            "description": "<p>Cancel active order. orderid can be found in the response field from orderbook or openorders call.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "orderid",
+            "description": "<p>orderid.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"cancelorder\",\"orderid\":\"{1687151384261107915}'",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\n\"ordercanceled\": \"1687151384261107915\"\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"disable\",\"baseid\":\"{baseid}\",\"relid\":\"{relid}\",\"exchange\":\"{exchange}\"}'",
+    "title": "Disable",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodDisable",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "disable",
+            "description": "<p>Disable the selected pair from being polled.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "baseid",
+            "description": "<p>Base asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "relid",
+            "description": "<p>Rel asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"nxtae\"",
+              "\"InstantDEX\"",
+              "\"bitfinex\"",
+              "\"btc38\"",
+              "\"bitstamp\"",
+              "\"btce\"",
+              "\"poloniex\"",
+              "\"bittrex\"",
+              "\"huobi\"",
+              "\"coinbase\"",
+              "\"okcoin\"",
+              "\"bityes\"",
+              "\"lakebtc\"",
+              "\"exmo\"",
+              "\"quadriga\""
+            ],
+            "optional": false,
+            "field": "exchange",
+            "defaultValue": "null",
+            "description": "<p>(optional) If specified, only return data or use data from selected exchange.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"disable\",\"baseid\":\"8688289798928624137\",\"relid\":\"5527630\",\"exchange\":\"nxtae\"}'\n#Disable Jay/NXT polling from NXTAE.",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\"result\":\"success\"}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"enable\",\"baseid\":\"{baseid}\",\"relid\":\"{relid}\",\"exchange\":\"{exchange}\"}'",
+    "title": "Enable",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodEnable",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "enable",
+            "description": "<p>Enable the selected pair to be polled.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "baseid",
+            "description": "<p>Base asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "relid",
+            "description": "<p>Rel asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"nxtae\"",
+              "\"InstantDEX\"",
+              "\"bitfinex\"",
+              "\"btc38\"",
+              "\"bitstamp\"",
+              "\"btce\"",
+              "\"poloniex\"",
+              "\"bittrex\"",
+              "\"huobi\"",
+              "\"coinbase\"",
+              "\"okcoin\"",
+              "\"bityes\"",
+              "\"lakebtc\"",
+              "\"exmo\"",
+              "\"quadriga\""
+            ],
+            "optional": false,
+            "field": "exchange",
+            "defaultValue": "null",
+            "description": "<p>(optional) If specified, only return data or use data from selected exchange.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"enable\",\"baseid\":\"8688289798928624137\",\"relid\":\"5527630\",\"exchange\":\"nxtae\"}'\n#Enable Jay/NXT polling from NXTAE.",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\"result\":\"success\"}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"makebasket\",\"name\":\"{name}\",\"base\":\"{base}\",\"rel\":\"{rel}\",\"basket\":[{\"exchange\":\"{exchange}\"}'",
+    "title": "Makebasket",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodMakeBasket",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "makebasket",
+            "description": "<p>Make basket pair, can be done in SuperNET.conf too.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "name",
+            "description": "<p>Pair's name.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "base",
+            "description": "<p>Base asset name.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "rel",
+            "description": "<p>Rel asset name.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"nxtae\"",
+              "\"InstantDEX\"",
+              "\"bitfinex\"",
+              "\"btc38\"",
+              "\"bitstamp\"",
+              "\"btce\"",
+              "\"poloniex\"",
+              "\"bittrex\"",
+              "\"huobi\"",
+              "\"coinbase\"",
+              "\"okcoin\"",
+              "\"bityes\"",
+              "\"lakebtc\"",
+              "\"exmo\"",
+              "\"quadriga\""
+            ],
+            "optional": false,
+            "field": "exchange",
+            "defaultValue": "null",
+            "description": "<p>(optional) If specified, only return data or use data from selected exchange.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"makebasket\",\"name\":\"NXT/BTC\",\"base\":\"NXT\",\"rel\":\"BTC\",\"basket\":[{\"exchange\":\"btc38\"},{\"exchange\":\"nxtae\",\"baseid\":\"17554243582654188572\",\"relid\":\"NXT\",\"wt\":-1}]}'",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\"result\":\"basket made\"}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"openorders\",\"exchange\":\"{exchange}\"}'",
+    "title": "Openorders",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodOpenOrders",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "openorders",
+            "description": "<p>Get list of active orders.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"nxtae\"",
+              "\"InstantDEX\"",
+              "\"bitfinex\"",
+              "\"btc38\"",
+              "\"bitstamp\"",
+              "\"btce\"",
+              "\"poloniex\"",
+              "\"bittrex\"",
+              "\"huobi\"",
+              "\"coinbase\"",
+              "\"okcoin\"",
+              "\"bityes\"",
+              "\"lakebtc\"",
+              "\"exmo\"",
+              "\"quadriga\""
+            ],
+            "optional": false,
+            "field": "exchange",
+            "defaultValue": "null",
+            "description": "<p>(optional) If specified, only return data or use data from selected exchange.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"openorders\"}'\n./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"openorders\",\"exchange\":\"nxtae\"}'",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\n\"openorders\": [\n  {\n    \"quoteid\": \"15812219587932742311\",\n    \"base\": \"Jay\",\n    \"baseid\": \"8688289798928624137\",\n    \"baseamount\": \"100000000\",\n    \"rel\": \"NXT\",\n    \"relid\": \"5527630\",\n    \"relamount\": \"100000000\",\n    \"price\": 1,\n    \"volume\": 1,\n    \"offerNXT\": \"6746683124695165774\",\n    \"timestamp\": \"1440498301\",\n    \"isask\": \"0\",\n    \"exchange\": \"InstantDEX\",\n    \"gui\": \"\"\n  }\n]\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"openorders\",\"baseid\":\"{baseid}\",\"relid\":\"{relid}\",\"exchange\":\"{exchange}\"}'",
+    "title": "Orderbook",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodOrderBook",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "orderbook",
+            "description": "<p>Get orderbook for pairs.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "baseid",
+            "description": "<p>Base asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "relid",
+            "description": "<p>Rel asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"nxtae\"",
+              "\"InstantDEX\"",
+              "\"bitfinex\"",
+              "\"btc38\"",
+              "\"bitstamp\"",
+              "\"btce\"",
+              "\"poloniex\"",
+              "\"bittrex\"",
+              "\"huobi\"",
+              "\"coinbase\"",
+              "\"okcoin\"",
+              "\"bityes\"",
+              "\"lakebtc\"",
+              "\"exmo\"",
+              "\"quadriga\""
+            ],
+            "optional": false,
+            "field": "exchange",
+            "defaultValue": "null",
+            "description": "<p>(optional) If specified, only return data or use data from selected exchange.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"baseid\":\"8688289798928624137\",\"relid\":\"5527630\"}'\n#Open Jay/NXT orderbook from all exchanges combined.\n\n./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"orderbook\",\"baseid\":\"8688289798928624137\",\"relid\":\"5527630\",\"exchange\":\"InstantDEX\"}'\n#Open Jay/NXT orderbook only from InstantDEX exchange.",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\n\"inverted\": 0,\n\"contract\": \"Jay/NXT\",\n\"baseid\": \"8688289798928624137\",\n\"relid\": \"5527630\",\n\"bids\": [\n  {\n    \"plugin\": \"InstantDEX\",\n    \"method\": \"tradesequence\",\n    \"dotrade\": 1,\n    \"price\": 12.321,\n    \"volume\": 100\n  },\n  {\n    \"plugin\": \"InstantDEX\",\n    \"method\": \"tradesequence\",\n    \"dotrade\": 1,\n    \"price\": 12.32,\n    \"volume\": 99\n  },\n  {\n    \"plugin\": \"InstantDEX\",\n    \"method\": \"tradesequence\",\n    \"dotrade\": 1,\n    \"price\": 12.31,\n    \"volume\": 200\n  }\n],\n\"asks\": [\n  {\n    \"plugin\": \"InstantDEX\",\n    \"method\": \"tradesequence\",\n    \"dotrade\": 1,\n    \"price\": 15.749,\n    \"volume\": 17\n  },\n  {\n    \"plugin\": \"InstantDEX\",\n    \"method\": \"tradesequence\",\n    \"dotrade\": 1,\n    \"price\": 15.75,\n    \"volume\": 225.0492\n  },\n  {\n    \"plugin\": \"InstantDEX\",\n    \"method\": \"tradesequence\",\n    \"dotrade\": 1,\n    \"price\": 15.79,\n    \"volume\": 149.948\n  }\n],\n\"numbids\": 8,\n\"numasks\": 25,\n\"lastbid\": 12.321,\n\"lastask\": 15.749,\n\"NXT\": \"6746683124695165774\",\n\"timestamp\": 1440517635,\n\"maxdepth\": 25\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"placeask\",\"baseid\":\"{baseid}\",\"relid\":\"{relid}\",\"price\":\"{price}\",\"volume\":\"{volume}\",\"exchange\":\"{exchange}\"}'",
+    "title": "Placeask",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodPlaceAsk",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "placeask",
+            "description": "<p>Submit ask order.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Number</p> ",
+            "optional": false,
+            "field": "price",
+            "description": "<p>Bid/Ask Price.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Number</p> ",
+            "optional": false,
+            "field": "volume",
+            "description": "<p>Bid/Ask Volume.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "baseid",
+            "description": "<p>Base asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "relid",
+            "description": "<p>Rel asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"nxtae\"",
+              "\"InstantDEX\"",
+              "\"bitfinex\"",
+              "\"btc38\"",
+              "\"bitstamp\"",
+              "\"btce\"",
+              "\"poloniex\"",
+              "\"bittrex\"",
+              "\"huobi\"",
+              "\"coinbase\"",
+              "\"okcoin\"",
+              "\"bityes\"",
+              "\"lakebtc\"",
+              "\"exmo\"",
+              "\"quadriga\""
+            ],
+            "optional": false,
+            "field": "exchange",
+            "defaultValue": "null",
+            "description": "<p>(optional) If specified, only return data or use data from selected exchange.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"placeask\",\"baseid\":\"8688289798928624137\",\"relid\":\"5527630\",\"price\":1,\"volume\":1,\"exchange\":\"InstantDEX\"}'\n#Submit ask order : 1 Jay assets @ 1 Nxt into InstantDEX.\n\n./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"placeask\",\"baseid\":\"8688289798928624137\",\"relid\":\"5527630\",\"price\":1,\"volume\":1}'\n#Submit ask order : 1 Jay assets @ 1 Nxt. Automatch will be used if no exchange specified.",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\n\"quoteid\": \"17093329214979608856\",\n\"base\": \"Jay\",\n\"baseid\": \"8688289798928624137\",\n\"baseamount\": \"100000000\",\n\"rel\": \"NXT\",\n\"relid\": \"5527630\",\n\"relamount\": \"100000000\",\n\"price\": 1,\n\"volume\": 1,\n\"offerNXT\": \"6746683124695165774\",\n\"timestamp\": \"1440518266\",\n\"isask\": \"1\",\n\"exchange\": \"InstantDEX\",\n\"gui\": \"\",\n\"plugin\": \"relay\",\n\"destplugin\": \"InstantDEX\",\n\"method\": \"busdata\",\n\"submethod\": \"ask\"\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"placebid\",\"baseid\":\"{baseid}\",\"relid\":\"{relid}\",\"price\":\"{price}\",\"volume\":\"{volume}\",\"exchange\":\"{exchange}\"}'",
+    "title": "Placebid",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodPlaceBid",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "placebid",
+            "description": "<p>Submit bid order.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Number</p> ",
+            "optional": false,
+            "field": "price",
+            "description": "<p>Bid/Ask Price.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Number</p> ",
+            "optional": false,
+            "field": "volume",
+            "description": "<p>Bid/Ask Volume.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "baseid",
+            "description": "<p>Base asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "relid",
+            "description": "<p>Rel asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"nxtae\"",
+              "\"InstantDEX\"",
+              "\"bitfinex\"",
+              "\"btc38\"",
+              "\"bitstamp\"",
+              "\"btce\"",
+              "\"poloniex\"",
+              "\"bittrex\"",
+              "\"huobi\"",
+              "\"coinbase\"",
+              "\"okcoin\"",
+              "\"bityes\"",
+              "\"lakebtc\"",
+              "\"exmo\"",
+              "\"quadriga\""
+            ],
+            "optional": false,
+            "field": "exchange",
+            "defaultValue": "null",
+            "description": "<p>(optional) If specified, only return data or use data from selected exchange.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"placebid\",\"baseid\":\"8688289798928624137\",\"relid\":\"5527630\",\"price\":1,\"volume\":1,\"exchange\":\"InstantDEX\"}'\n#Submit bid order : 1 Jay assets @ 1 Nxt into InstantDEX.\n\n./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"placebid\",\"baseid\":\"8688289798928624137\",\"relid\":\"5527630\",\"price\":1,\"volume\":1}'\n#Submit bid order : 1 Jay assets @ 1 Nxt. Automatch will be used if no exchange specified.",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\n\"quoteid\": \"14436741218861091498\",\n\"base\": \"Jay\",\n\"baseid\": \"8688289798928624137\",\n\"baseamount\": \"100000000\",\n\"rel\": \"NXT\",\n\"relid\": \"5527630\",\n\"relamount\": \"100000000\",\n\"price\": 1,\n\"volume\": 1,\n\"offerNXT\": \"6746683124695165774\",\n\"timestamp\": \"1440518600\",\n\"isask\": \"0\",\n\"exchange\": \"InstantDEX\",\n\"gui\": \"\",\n\"plugin\": \"relay\",\n\"destplugin\": \"InstantDEX\",\n\"method\": \"busdata\",\n\"submethod\": \"bid\"\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  },
+  {
+    "type": "btcd",
+    "url": "'{\"plugin\":\"InstantDEX\",\"method\":\"tradesequence\",\"dotrade\":{dotrade},\"price\":{price},\"volume\":{volume},\"trades\":[{\"group\":{group},\"exchange\":\"{exchange}\",\"asset\":\"{asset}\",\"offerNXT\":\"{offernxt}\",\"baseid\":\"{baseid}\",\"relid\":\"{relid}\",\"trade\":\"{trade}\",\"recvbase\":\"{recvbase}\",\"sendrel\":\"{sendrel}\",\"orderprice\":{orderprice},\"ordervolume\":{ordervolume},\"orderid\":\"{orderid}\",\"quoteid\":\"{quoteid}\"}]}'",
+    "title": "Tradesequence",
+    "version": "0.1.0",
+    "name": "InstantDEXMethodTradeSequence",
+    "group": "InstantDEX",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "tradesequence",
+            "description": "<p>Step-by-step InstantDEX trading process logic.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Boolean</p> ",
+            "optional": false,
+            "field": "dotrade",
+            "description": "<p>Switch between real trading or dry-run.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Number</p> ",
+            "optional": false,
+            "field": "price",
+            "description": "<p>Bid/Ask Price.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Number</p> ",
+            "optional": false,
+            "field": "volume",
+            "description": "<p>Bid/Ask Volume.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Number</p> ",
+            "optional": false,
+            "field": "group",
+            "description": "<p>Number of basket group.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"nxtae\"",
+              "\"InstantDEX\"",
+              "\"bitfinex\"",
+              "\"btc38\"",
+              "\"bitstamp\"",
+              "\"btce\"",
+              "\"poloniex\"",
+              "\"bittrex\"",
+              "\"huobi\"",
+              "\"coinbase\"",
+              "\"okcoin\"",
+              "\"bityes\"",
+              "\"lakebtc\"",
+              "\"exmo\"",
+              "\"quadriga\""
+            ],
+            "optional": false,
+            "field": "exchange",
+            "defaultValue": "null",
+            "description": "<p>(optional) If specified, only return data or use data from selected exchange.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "asset",
+            "description": "<p>Numerical asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "offerNXT",
+            "description": "<p>Numerical NXT sender ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "baseid",
+            "description": "<p>Base asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "relid",
+            "description": "<p>Rel asset ID.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "allowedValues": [
+              "\"swap\"",
+              "\"buy\"",
+              "\"sell\""
+            ],
+            "optional": false,
+            "field": "trade",
+            "description": "<p>Trade methods.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "recvbase",
+            "description": "<p>The amount of base/baseid to be received.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "sendrel",
+            "description": "<p>The amount of rel/relid to be sent.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Number</p> ",
+            "optional": false,
+            "field": "orderprice",
+            "description": "<p>The price to be traded per &quot;trades&quot; sequence.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>Number</p> ",
+            "optional": false,
+            "field": "ordervolume",
+            "description": "<p>The amount of volume to be traded per &quot;trades&quot; sequence.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "orderid",
+            "description": "<p>orderid.</p> "
+          },
+          {
+            "group": "Parameter",
+            "type": "<p>String</p> ",
+            "optional": false,
+            "field": "quoteid",
+            "description": "<p>quoteid.</p> "
+          }
+        ]
+      },
+      "examples": [
+        {
+          "title": "RPC-Call-Example:",
+          "content": "./BitcoinDarkd SuperNET '{\"plugin\":\"InstantDEX\",\"method\":\"tradesequence\",\"dotrade\":1,\"price\":1,\"volume\":1,\"trades\":[{\"group\":0,\"exchange\":\"InstantDEX\",\"asset\":\"8688289798928624137\",\"offerNXT\":\"11471677413693100042\",\"baseid\":\"8688289798928624137\",\"relid\":\"5527630\",\"trade\":\"swap\",\"recvbase\":\"10000\",\"sendrel\":\"100000000\",\"orderprice\":1,\"ordervolume\":1,\"orderid\":\"17781610373390691008\",\"quoteid\":\"17781610373390691008\"}]}'",
+          "type": "btcd"
+        }
+      ]
+    },
+    "success": {
+      "examples": [
+        {
+          "title": "Response-Example:",
+          "content": "{\n\"traderesults\": [\n  {\n    \"orderid\": \"10627900755374734772\",\n    \"quoteid\": \"17781610373390691008\",\n    \"offerNXT\": \"6746683124695165774\",\n    \"plugin\": \"relay\",\n    \"destplugin\": \"InstantDEX\",\n    \"method\": \"busdata\",\n    \"submethod\": \"swap\",\n    \"exchange\": \"InstantDEX\",\n    \"base\": \"Jay\",\n    \"rel\": \"NXT\",\n    \"baseid\": \"8688289798928624137\",\n    \"relid\": \"5527630\",\n    \"baseqty\": \"10000\",\n    \"relqty\": \"-100000000\",\n    \"price\": 1,\n    \"volume\": 1,\n    \"F\": \"506086\",\n    \"T\": \"cc95caae0ff5ecd89b3e0a6e28a015ae3e89d35939e49a8da527b5d01aba7a6a\",\n    \"FH\": \"39500ef67070f015e14ec8fd251569bbe90e22e6467e629b6836851672cd35ef\",\n    \"U\": \"0010273e4b037800b2737a50100da1ba43aa87ba3da42de66fd0a84d5d26d77312e882961cf1ea2d0a900c05d495339f00e1f5050000000000e1f50500000000cc95caae0ff5ecd89b3e0a6e28a015ae3e89d35939e49a8da527b5d01aba7a6aZ01000000dab807002b82975378eefa1b01200000806234376433373930366465333764393363303661356137303663663863346636\",\n    \"S\": \"f516e76ec24569548c4e55fb60f6991265b3ba14e9ef3aa90a25fba8d42c396b\",\n    \"a\": \"8688289798928624137\",\n    \"q\": \"10000\"\n  }\n]\n}",
+          "type": "json"
+        }
+      ]
+    },
+    "filename": "./supernet.js",
+    "groupTitle": "InstantDEX"
+  }
+] });

@@ -1,3 +1,17 @@
+/******************************************************************************
+ * Copyright © 2014-2015 The SuperNET Developers.                             *
+ *                                                                            *
+ * See the AUTHORS, DEVELOPER-AGREEMENT and LICENSE files at                  *
+ * the top-level directory of this distribution for the individual copyright  *
+ * holder information and the developer policies on copyright and licensing.  *
+ *                                                                            *
+ * Unless otherwise agreed in a custom licensing agreement, no part of the    *
+ * Nxt software, including this file, may be copied, modified, propagated,    *
+ * or distributed except according to the terms contained in the LICENSE file *
+ *                                                                            *
+ * Removal or modification of this copyright notice is prohibited.            *
+ *                                                                            *
+ ******************************************************************************/
 
 #ifdef DEFINES_ONLY
 #ifndef serdes777_h
@@ -77,7 +91,7 @@ struct peggy_tx
     union peggy_txtype details; char hexstr[512];
     uint8_t data[4096];
     struct acct777_sig sigs[PEGGY_MAXSIGS];
-    uint64_t required;
+   //uint64_t required;
 };
 
 /////////////////
@@ -423,7 +437,7 @@ int32_t serdes777_rwinout(int32_t rwflag,int32_t inoutflag,void *inout,HUFF *TX)
     if ( a < 0 || b < 0 || c < 0 || d < 0 )
     {
         printf("serdes777_rwinput.%d error encoding type.%d %d %d %d %d\n",rwflag,type,a,b,c,d);
-        getchar();
+        //getchar();
         return(-1);
     }
     return(a + b + c + d);
@@ -764,7 +778,8 @@ int32_t peggy_outputs(struct peggy_tx *Ptx,cJSON *array)
 
 int32_t peggy_details(struct peggy_tx *Ptx,cJSON *json,int32_t txtype,uint32_t btcusd)
 {
-    int32_t i,n=0; cJSON *item,*array; char name[1024],*hashstr,*refundstr; struct peggy_txtune *tune; struct peggy_txmicropay *mp; struct peggy_txbet *bet;
+    struct destbuf name;
+    int32_t i,n=0; cJSON *item,*array; char *hashstr,*refundstr; struct peggy_txtune *tune; struct peggy_txmicropay *mp; struct peggy_txbet *bet;
     Ptx->details.price.timestamp = juint(json,"genesistime");
     Ptx->details.price.maxlockdays = juint(json,"maxlockdays");
     //printf("BTCUSD.%d vs %d\n",Ptx->details.prices.btcusd,btcusd);
@@ -781,8 +796,8 @@ int32_t peggy_details(struct peggy_tx *Ptx,cJSON *json,int32_t txtype,uint32_t b
                     break;
                 case PEGGY_TXBET:
                     bet = &Ptx->details.bets[i];
-                    copy_cJSON(name,jobj(item,"peg"));
-                    safecopy(bet->peg,name,sizeof(bet->peg));
+                    copy_cJSON(&name,jobj(item,"peg"));
+                    safecopy(bet->peg,name.buf,sizeof(bet->peg));
                     bet->binary = juint(item,"binary");
                     bet->prediction.Pval = juint(item,"prediction");
                     break;
@@ -791,8 +806,8 @@ int32_t peggy_details(struct peggy_tx *Ptx,cJSON *json,int32_t txtype,uint32_t b
                     break;
                 case PEGGY_TXTUNE:
                     tune = &Ptx->details.tune[i];
-                    copy_cJSON(name,jobj(item,"peg"));
-                    safecopy(tune->peg,name,sizeof(bet->peg));
+                    copy_cJSON(&name,jobj(item,"peg"));
+                    safecopy(tune->peg,name.buf,sizeof(bet->peg));
                     tune->type = juint(item,"type");
                     tune->val = j64bits(item,"val");
                     tune->B.val = j64bits(item,"valB");
@@ -822,7 +837,7 @@ int32_t peggy_details(struct peggy_tx *Ptx,cJSON *json,int32_t txtype,uint32_t b
 char *peggy_tx(char *jsonstr)
 {
     cJSON *json; int32_t i,n,len,signedcount; char *hexstr,opreturnstr[8192],retbuf[4096],retbufstr[8192],checkstr[8192];
-    struct peggy_tx Ptx,checkPtx; bits256 privkey;
+    struct peggy_tx Ptx,checkPtx; bits256 privkey; struct destbuf tmp;
     memset(&Ptx,0,sizeof(Ptx));
     opreturnstr[0] = 0;
     memset(privkey.bytes,0,sizeof(privkey));
@@ -844,7 +859,7 @@ char *peggy_tx(char *jsonstr)
         Ptx.expiration = juint(json,"expiration");
         if ( (Ptx.funding.amount= juint(json,"funds")) != 0 )
         {
-            copy_cJSON(Ptx.funding.src.coinaddr,jobj(json,"fundsaddr"));
+            copy_cJSON(&tmp,jobj(json,"fundsaddr")), safecopy(Ptx.funding.src.coinaddr,tmp.buf,sizeof(Ptx.funding.src.coinaddr));
             Ptx.flags |= PEGGY_FLAGS_HASFUNDING;
             Ptx.funding.type = PEGGY_ADDRFUNDING;
         }

@@ -1,3 +1,5 @@
+// MIT license
+
 #ifndef _NONPORTABLEMAC_H
 #define _NONPORTABLEMAC_H
 

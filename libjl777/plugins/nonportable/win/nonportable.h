@@ -1,10 +1,12 @@
+// MIT license
+
 #ifndef NONPORTABLE_WIN_H
 #define NONPORTABLE_WIN_H
 
 //Includes
 #include <inttypes.h>
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 #include <in6addr.h>
 #include <ws2tcpip.h>
 #include <io.h>
