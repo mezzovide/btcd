@@ -356,6 +356,8 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
     printf("validate.(%s) vin.%s vout.%s\n",rawtx,sp->inputtxid,sp->destaddr);
     if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
     {
+        disp_cointx(cointx);
+        printf("validate.(%s) vin.%s vout.%s numoutputs.%d numinputs.%d\n",rawtx,sp->inputtxid,sp->destaddr,cointx->numoutputs,cointx->numinputs);
         sp->T = cointx;
         for (i=0; i<cointx->numoutputs; i++)
         {
@@ -385,6 +387,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             if ( (sp->change == 0 || changeout >= 0) && vout >= 0 )
                 break;
         }
+        printf("sp->change %llu changeout.%d vout.%d\n",(long long)sp->change,changeout,vout);
         if ( (sp->change == 0 || changeout >= 0) && vout >= 0 )
         {
             for (i=0; i<cointx->numinputs; i++)
