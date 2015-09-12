@@ -551,7 +551,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     plugin->allowremote = 1;
     if ( initflag > 0 )
     {
-        if ( (jsonstr= loadfile(&allocsize,"SuperNET.conf")) != 0 )
+        if ( 0 && (jsonstr= loadfile(&allocsize,"SuperNET.conf")) != 0 )
         {
             if ( (json= cJSON_Parse(jsonstr)) != 0 )
                 SuperNET_initconf(json), free_json(json);
