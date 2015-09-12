@@ -366,7 +366,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             if ( vout < 0 && strcmp(coinaddr,sp->destaddr) == 0 )
             {
                 printf("matched dest.(%s) %.8f\n",sp->destaddr,dstr(sp->amount));
-                if ( cointx->outputs[i].value == sp->amount )
+                if ( cointx->outputs[i].value >= sp->amount )
                     vout = i;
                 else
                 {
@@ -377,7 +377,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             if ( sp->change != 0 && changeout < 0 && strcmp(coinaddr,sp->changeaddr) == 0 )
             {
                 printf("matched change.(%s) %.8f\n",sp->changeaddr,dstr(sp->change));
-                if ( cointx->outputs[i].value == sp->change )
+                if ( cointx->outputs[i].value >= sp->change )
                     changeout = i;
                 else
                 {
