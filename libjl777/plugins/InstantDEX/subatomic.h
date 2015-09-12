@@ -313,24 +313,27 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
     sigstr[0] = 0;
     if ( (privkey= shuffle_getprivkey(&value,&scriptPubKey,&locktime,coin,vin->tx.txidstr,vin->tx.vout)) != 0 )
     {
-        printf("shuffle_getprivkey.(%s)\n",privkey);
-        if ( btc_setprivkey(&key,privkey) == 0 )//&& btc_getpubkey(pubP,data,&key) > 0 )
+        printf("shuffle_getprivkey.(%s) [%s]\n",privkey,scriptPubKey.buf);
+        if ( btc_setprivkey(&key,privkey) == 0 && btc_getpubkey(pubP,data,&key) > 0 )
         {
             for (i=0; i<T->numinputs; i++)
                 strcpy(T->inputs[i].sigs,"00");
+            strcpy(scriptPubKey.buf,"76a914");
+            calc_OP_HASH160(scriptPubKey.buf + 6,data,pubP);
+            strcat(scriptPubKey.buf,"88ac");
             strcpy(vin->sigs,scriptPubKey.buf);
             vin->sequence = (uint32_t)-1;
             T->nlocktime = 0;
             emit_cointx(&hash2,data,sizeof(data),T,coin->mgw.oldtx_format,SIGHASH_ALL);
-            if ( bp_sign(&key,hash2.bytes,sizeof(hash2),&sig,&siglen) != 0 )
+            if ( bp_sign(&key,hash2.bytes,sizeof(hash2),&sig,&siglen) != 0 && sig != 0 )
             {
                 memcpy(sigbuf,sig,siglen);
+                free(sig);
                 sigbuf[siglen++] = SIGHASH_ALL;
                 init_hexbytes_noT(hexstr,sigbuf,(int32_t)siglen);
-                sprintf(vin->sigs,"%02lx%s%02lx%s00%s",siglen,hexstr,strlen(pubP)/2,pubP,scriptPubKey.buf);
+                sprintf(vin->sigs,"%02lx%s%02lx%s%s",siglen,hexstr,strlen(pubP)/2,pubP,scriptPubKey.buf);
                 strcpy(sigstr,vin->sigs);
-                free(sig);
-                printf("after P.(%s) siglen.%02lx sig.(%s)\n",vin->sigs,siglen,hexstr);
+                printf("after P.(%s) siglen.%02lx sig.(%s)\n",vin->sigs,siglen,scriptPubKey.buf);
             }
         }
         else
