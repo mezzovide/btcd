@@ -241,7 +241,7 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amoun
 char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
 {
     struct cointx_info T; int32_t i,j; char *txid,coinaddr[128],txbytes[65536]; uint8_t vout,rmd160[21],data[8];
-    uint64_t totaloutputs,totalinputs,value,fee,sharedfee;
+    uint64_t totaloutputs,totalinputs,value,fee,sharedfee; struct rawvout *v;
     memset(&T,0,sizeof(T));
     T.version = 1;
     T.timestamp = (uint32_t)time(NULL);
@@ -268,6 +268,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
     {
         for (T.numoutputs=i=0; i<numvouts; i++)
         {
+            v = &T.outputs[T.numoutputs];
             decode_hex(data,8,vouts[i]);
             for (value=j=0; j<8; j++)
             {
@@ -278,10 +279,11 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
             decode_hex(rmd160,21,vouts[i] + 16);
             if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )
             {
-                safecopy(T.outputs[T.numoutputs].coinaddr,coinaddr,sizeof(T.outputs[T.numoutputs].coinaddr));
-                T.outputs[T.numoutputs].value = value;
-                totaloutputs += T.outputs[T.numoutputs].value;
-                printf("%d.(%s %.8f) ",T.numoutputs,T.outputs[T.numoutputs].coinaddr,dstr(value));
+                sprintf(v->script,"76a914%s88ac",vouts[i]+18);
+                safecopy(v->coinaddr,coinaddr,sizeof(v->coinaddr));
+                v->value = value;
+                totaloutputs += v->value;
+                printf("%d.(%s %.8f) ",T.numoutputs,v->coinaddr,dstr(value));
             } else printf("error converting rmd160.(%s)\n",coinaddr);
             T.numoutputs++;
         }
