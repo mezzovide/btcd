@@ -565,7 +565,7 @@ uint8_t *encode_str(int32_t *cipherlenp,void *str,int32_t len,bits256 destpubkey
     nonce = &cipher[sizeof(mypubkey)];
     randombytes(nonce,crypto_box_NONCEBYTES);
     cipher = &nonce[crypto_box_NONCEBYTES];
-   //printf("len.%ld -> %ld %ld\n",len,len+crypto_box_ZEROBYTES,len + crypto_box_ZEROBYTES + crypto_box_NONCEBYTES);
+//printf("len.%d -> %d %d\n",len,len+crypto_box_ZEROBYTES,len + crypto_box_ZEROBYTES + crypto_box_NONCEBYTES);
     memset(cipher,0,len+crypto_box_ZEROBYTES);
     memset(buf,0,crypto_box_ZEROBYTES);
     memcpy(buf+crypto_box_ZEROBYTES,str,len);

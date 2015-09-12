@@ -18,14 +18,14 @@
 #define crypto777_portable777_h
 
 #include <stdint.h>
-#include "mutex.h"
-#include "nn.h"
-#include "pubsub.h"
-#include "pipeline.h"
-#include "survey.h"
-#include "reqrep.h"
-#include "bus.h"
-#include "pair.h"
+#include "../../nanomsg/src/utils/mutex.h"
+#include "../../nanomsg/src/nn.h"
+#include "../../nanomsg/src/pubsub.h"
+#include "../../nanomsg/src/pipeline.h"
+#include "../../nanomsg/src/survey.h"
+#include "../../nanomsg/src/reqrep.h"
+#include "../../nanomsg/src/bus.h"
+#include "../../nanomsg/src/pair.h"
 #include "sha256.h"
 #include "cJSON.h"
 #include "uthash.h"
@@ -328,5 +328,11 @@ struct subatomic_rawtransaction
     char rawtransaction[1024],signedtransaction[1024],txid[128];
     struct subatomic_unspent_tx inputs[MAX_SUBATOMIC_INPUTS];   // must be last, could even make it variable sized
 };
+
+int32_t btc_coinaddr(char *coinaddr,uint8_t addrtype,char *pubkeystr);
+int32_t btc_convaddr(char *hexaddr,char *addr58);
+int32_t btc_convrmd160(char *coinaddr,uint8_t addrtype,uint8_t md160[20]);
+uint8_t *encode_str(int32_t *cipherlenp,void *str,int32_t len,bits256 destpubkey,bits256 myprivkey,bits256 mypubkey);
+int32_t decode_cipher(uint8_t *str,uint8_t *cipher,int32_t *lenp,uint8_t *myprivkey);
 
 #endif

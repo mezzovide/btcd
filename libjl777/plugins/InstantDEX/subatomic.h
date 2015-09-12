@@ -186,14 +186,33 @@ int32_t btc_getpubkey(char pubkeystr[67],uint8_t pubkeybuf[33],struct bp_key *ke
     return((int32_t)len);
 }
 
-int32_t btc_coinaddr(char *coinaddr,uint8_t addrtype,char *pubkeystr)
+int32_t btc_convrmd160(char *coinaddr,uint8_t addrtype,uint8_t md160[20])
 {
-    uint8_t md160[20]; char hashstr[41]; cstring *btc_addr;
-    calc_OP_HASH160(hashstr,md160,pubkeystr);
-    if ( (btc_addr= base58_encode_check(addrtype,true,md160,sizeof(md160))) != 0 )
+    cstring *btc_addr;
+    if ( (btc_addr= base58_encode_check(addrtype,true,md160,20)) != 0 )
     {
         strcpy(coinaddr,btc_addr->str);
         cstr_free(btc_addr,true);
+    }
+    return(-1);
+}
+
+int32_t btc_coinaddr(char *coinaddr,uint8_t addrtype,char *pubkeystr)
+{
+    uint8_t rmd160[20]; char hashstr[41];
+    calc_OP_HASH160(hashstr,rmd160,pubkeystr);
+    return(btc_convrmd160(coinaddr,addrtype,rmd160));
+}
+
+int32_t btc_convaddr(char *hexaddr,char *addr58)
+{
+    uint8_t addrtype; cstring *cstr;
+    if ( (cstr= base58_decode_check(&addrtype,(const char *)addr58)) != 0 )
+    {
+        sprintf(hexaddr,"%02x",addrtype);
+        init_hexbytes_noT(hexaddr+2,(void *)cstr->str,cstr->len);
+        cstr_free(cstr,true);
+        return(0);
     }
     return(-1);
 }
@@ -629,15 +648,14 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
     return(ups);
 }
 
-struct subatomic_unspent_tx *subatomic_bestfit(uint64_t *valuep,struct coin777 *coin,struct subatomic_unspent_tx *unspents,int32_t numunspents,uint64_t value,int32_t mode)
+struct subatomic_unspent_tx *subatomic_bestfit(struct coin777 *coin,struct subatomic_unspent_tx *unspents,int32_t numunspents,uint64_t value,int32_t mode)
 {
     int32_t i; uint64_t above,below,gap,atx_value; struct subatomic_unspent_tx *vin,*abovevin,*belowvin;
     abovevin = belowvin = 0;
-    *valuep = 0;
     for (above=below=i=0; i<numunspents; i++)
     {
         vin = &unspents[i];
-        *valuep = atx_value = vin->amount;
+        atx_value = vin->amount;
         if ( atx_value == value )
             return(vin);
         else if ( atx_value > value )
@@ -664,7 +682,7 @@ struct subatomic_unspent_tx *subatomic_bestfit(uint64_t *valuep,struct coin777 *
 
 int64_t subatomic_calc_rawinputs(struct coin777 *coin,struct subatomic_rawtransaction *rp,uint64_t amount,struct subatomic_unspent_tx *ups,int32_t num,uint64_t donation)
 {
-    uint64_t value,sum = 0; struct subatomic_unspent_tx *up; int32_t i;
+    uint64_t sum = 0; struct subatomic_unspent_tx *up; int32_t i;
     rp->inputsum = rp->numinputs = 0;
     printf("unspent num %d, amount %.8f vs donation %.8f txfee %.8f\n",num,dstr(amount),dstr(donation),dstr(coin->mgw.txfee));
     if ( coin == 0 || num == 0 ) // (donation + coin->mgw.txfee) > amount ||
@@ -672,10 +690,9 @@ int64_t subatomic_calc_rawinputs(struct coin777 *coin,struct subatomic_rawtransa
     amount += coin->mgw.txfee + donation;
     for (i=0; i<num&&i<((int32_t)(sizeof(rp->inputs)/sizeof(*rp->inputs))); i++)
     {
-        if ( (up= subatomic_bestfit(&value,coin,ups,num,amount,0)) != 0 )
+        if ( (up= subatomic_bestfit(coin,ups,num,amount,0)) != 0 )
         {
             sum += up->amount;
-            printf("%.8f ",dstr(value));
             rp->inputs[rp->numinputs++] = *up;
             if ( sum >= amount )
             {

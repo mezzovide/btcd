@@ -23,6 +23,7 @@
 #define DEFINES_ONLY
 #include "../includes/portable777.h"
 #include "../coins/coins777.c"
+#include "../utils/ramcoder.c"
 #include "plugin777.c"
 #undef DEFINES_ONLY
 
@@ -58,9 +59,51 @@ int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,uint8_t *src,int32_t le
     return(len);
 }
 
-int32_t shuffle_encrypt(uint64_t nxt64bits,uint8_t *dest,uint8_t *src,int32_t len)
+//uint8_t *encode_str(int32_t *cipherlenp,void *str,int32_t len,bits256 destpubkey,bits256 myprivkey,bits256 mypubkey)
+//int32_t decode_cipher(uint8_t *str,uint8_t *cipher,int32_t *lenp,uint8_t *myprivkey)
+
+int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len)
 {
-    cJSON *item; char *str; int32_t n = 0;
+    uint8_t *cipher; bits256 destpubkey,onetime_pubkey,onetime_privkey;
+    char destNXT[64]; int32_t haspubkey,cipherlen;
+    expand_nxt64bits(destNXT,destbits);
+    destpubkey = issue_getpubkey(&haspubkey,destNXT);
+    if ( haspubkey == 0 )
+    {
+        printf("%s doesnt have pubkey, cant shuffle with him\n",destNXT);
+        return(-1);
+    }
+    crypto_box_keypair(onetime_pubkey.bytes,onetime_privkey.bytes);
+    cipher = encode_str(&cipherlen,src,len,destpubkey,onetime_privkey,onetime_pubkey);
+    if ( 1 )
+    {
+        uint8_t data[8192],check[8192]; void *code; bits256 seed; HUFF H,*hp = &H; int32_t newlen;
+        code = huff_hexcode(cipher,cipherlen);
+        free(code);
+        memset(seed.bytes,0,sizeof(seed));
+        _init_HUFF(hp,sizeof(data),data);
+        ramcoder_encoder(0,1,cipher,cipherlen,0,&seed);
+        memset(seed.bytes,0,sizeof(seed));
+        hrewind(hp);
+        newlen = ramcoder_decoder(0,1,check,sizeof(check),0,&seed);
+        if ( newlen != cipherlen || memcmp(check,cipher,cipherlen) != 0 )
+            printf("ramcoder error newlen.%d vs %d\n",newlen,cipherlen);
+    }
+    if ( 0 )
+    {
+        char hexstr[8192]; uint8_t buf[8192]; bits256 pubkey,privkey;
+        crypto_box_keypair(pubkey.bytes,privkey.bytes);
+        cipher = encode_str(&cipherlen,src,len,pubkey,onetime_privkey,onetime_pubkey);
+        init_hexbytes_noT(hexstr,cipher,cipherlen);
+        printf(" encrypted -> (%s).%d\n",hexstr,cipherlen);
+        decode_cipher(buf,cipher,&cipherlen,privkey.bytes);
+        init_hexbytes_noT(hexstr,buf,cipherlen);
+        printf("decrypted.(%s)\n",hexstr);
+    }
+    memcpy(dest,cipher,cipherlen);
+    free(cipher);
+    return(cipherlen);
+    /*cJSON *item; char *str; int32_t n = 0;
     if ( (item= privatemessage_encrypt(nxt64bits,src,len)) != 0 )
     {
         if ( (str= cJSON_str(item)) != 0 )
@@ -70,7 +113,7 @@ int32_t shuffle_encrypt(uint64_t nxt64bits,uint8_t *dest,uint8_t *src,int32_t le
         }
         free_json(item);
     }
-    return(n);
+    return(n);*/
 }
 
 uint64_t shuffle_txfee(struct coin777 *coin,int32_t numvins,int32_t numvouts)
@@ -131,6 +174,7 @@ char *shuffle_layer(char *str,uint64_t *addrs,int32_t num)
         return(0);
     }
     decode_hex(data,len,str);
+    printf("layer.(%s) len.%d num.%d %llx\n",str,len,num,*(long long *)data);
     if ( num > 0 )
     {
         for (i=num-1; i>=0; i--)
@@ -141,6 +185,7 @@ char *shuffle_layer(char *str,uint64_t *addrs,int32_t num)
         }
     }
     init_hexbytes_noT((char *)dest,data,len);
+    printf("(%s) newlen.%d\n",(char *)dest,len);
     return(clonestr((char *)dest));
 }
 
@@ -158,19 +203,20 @@ char *shuffle_onetime(char *pubkey,struct coin777 *coin,char *type,uint64_t *add
 
 char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coin,uint64_t amount,uint64_t *addrs,int32_t num)
 {
-    uint64_t total,value; int32_t n; struct rawvin vin; struct subatomic_unspent_tx *utx,*up; char buf[512],*retstr = 0;
+    uint64_t total; int32_t n; struct rawvin vin; struct subatomic_unspent_tx *utx,*up; char buf[512],*retstr = 0;
     memset(&vin,0,sizeof(vin));
     *changep = 0;
     if ( (utx= gather_unspents(&total,&n,coin,0)) != 0  )
     {
-        if ( (up= subatomic_bestfit(&value,coin,utx,num,amount,1)) != 0 )
+        if ( (up= subatomic_bestfit(coin,utx,n,amount,1)) != 0 )
         {
             *changep = (up->amount - amount);
             *vinp = up->vout;
             strcpy(txid,up->txid.buf);
-            sprintf(buf,"[\"%s\", %d]",up->txid.buf,up->vout);
+            sprintf(buf,"%02x%s",up->vout,up->txid.buf);
+            printf("shuffle_vin.(%s)\n",buf);
             retstr = shuffle_layer(buf,addrs,num);
-        }
+        } else printf("no bestfits: %p\n",up);
         free(utx);
     }
     return(retstr);
@@ -178,10 +224,13 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
 
 char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amount,uint64_t *addrs,int32_t num)
 {
-    char buf[512],pubkey[128],*destaddress,*retstr = 0;
+    char buf[512],pubkey[128],hexaddress[64],*destaddress,*retstr = 0; uint8_t rmd160[21];
     if ( (destaddress= shuffle_onetimeaddress(pubkey,coin,type)) != 0 )
     {
-        sprintf(buf,"[\"%s\", %.8f]",destaddress,dstr(amount));
+        btc_convaddr(hexaddress,destaddress);
+        decode_hex(rmd160,21,hexaddress);
+        //btc_convrmd160(testaddr,rmd160[0],rmd160+1);
+        sprintf(buf,"%016llx%s",(long long)amount,hexaddress);
         retstr = shuffle_layer(buf,addrs,num);
         strcpy(destaddr,destaddress);
         free(destaddress);
@@ -426,14 +475,12 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
     cJSON *array; struct InstantDEX_quote *iQ = 0; int32_t createdflag,i,n; uint32_t now; uint64_t _addrs[64],quoteid = 0;
     struct shuffle_info *sp; struct coin777 *coin;
-printf("shuffle_start(%s)\n",base);
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
     coin = coin777_find(base,1);
     now = (uint32_t)time(NULL);
     if ( timestamp != 0 && now > timestamp+777 )
         return(clonestr("{\"error\":\"shuffle expired\"}"));
-printf("shuffle_start(%s) addrs.%p\n",base,addrs);
     if ( addrs == 0 )
     {
         addrs = _addrs, num = 0;
@@ -448,7 +495,7 @@ printf("shuffle_start(%s) addrs.%p\n",base,addrs);
             free_json(array);
         }
     }
-printf("shuffle_start(%s) addrs.%p\n",base,addrs);
+printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
     if ( (sp= shuffle_create(&createdflag,base,timestamp,addrs,num)) == 0 )
     {
         printf("cant create shuffle.(%s) numaddrs.%d\n",base,num);
@@ -463,7 +510,7 @@ printf("shuffle_start(%s) addrs.%p\n",base,addrs);
         }
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
-            printf("quoteid.%llu\n",(long long)quoteid);
+            i = sp->myind;
             sp->amount = iQ->s.baseamount;
             iQ->s.pending = 1;
             sp->fee = ((sp->amount>>10) < coin->mgw.txfee) ? coin->mgw.txfee : (sp->amount>>10);
@@ -471,8 +518,11 @@ printf("shuffle_start(%s) addrs.%p\n",base,addrs);
             if ( sp->change != 0 )
                 sp->changestr = shuffle_vout(sp->changeaddr,coin,"change",sp->change,&addrs[i+1],num-i-1);
             sp->voutstr = shuffle_vout(sp->destaddr,coin,"shuffled",sp->amount,&addrs[i+1],num-i-1);
-            if ( i == num || sp->amount == 0 || coin == 0 || sp->vinstr == 0 || sp->voutstr == 0 )
-                return(clonestr("{\"error\":\"this node not shuffling\"}"));
+            if ( sp->amount == 0 || coin == 0 || sp->vinstr == 0 || sp->voutstr == 0 )
+            {
+                printf("num.%d amount %.8f (%s) vinstr.(%s) voutstr.(%s)\n",num,dstr(sp->amount),coin->name,sp->vinstr,sp->voutstr);
+                return(clonestr("{\"error\":\"this node not shuffling due to calc error\"}"));
+            }
             else return(clonestr("{\"success\":\"shuffle created\"}"));
         }
     }

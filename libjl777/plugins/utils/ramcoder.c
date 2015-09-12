@@ -58,16 +58,21 @@ int32_t init_ramcoder(struct ramcoder *coder,HUFF *hp,bits256 *seed)
     coder->cumulativeProb = coder->lower = coder->code = coder->underflowBits = coder->ranges[0] = 0;
     for (i=1; i<=coder->upper_lastsymbol; i++)
     {
-        coder->ranges[i] = coder->ranges[i - 1] + 1 + 10*((i <= 0x100) ? (GETBIT(seed->bytes,i-1) != 0) : 0);
+        coder->ranges[i] = coder->ranges[i - 1] + 1 + 0*((i <= 0x100) ? (GETBIT(seed->bytes,i-1) != 0) : 0);
         //printf("%d ",coder->ranges[i]);
     }
     for (i=1; i<=coder->upper_lastsymbol; i++)
         coder->cumulativeProb += (coder->ranges[i] - coder->ranges[i - 1]);
-   // printf("cumulative.%d\n",coder->cumulativeProb);
+    //printf("cumulative.%d\n",coder->cumulativeProb);
     precision = (8 * sizeof(uint16_t));
     coder->upper = (1LL << precision) - 1;
     if ( hp != 0 )
-        coder->code = hread(&numbits,precision,hp), coder->code <<= (precision - numbits);
+    {
+        for (i=0; i<precision; i++)
+            coder->code = (coder->code << 1) | hgetbit(hp);
+        //coder->code = hread(&numbits,precision,hp), coder->code <<= (precision - numbits);
+        //printf("set code %x\n",coder->code);
+    }
     return(numbits);
 }
 
@@ -94,9 +99,11 @@ int32_t ramcoder_putbits(HUFF *hp,struct ramcoder *coder,int32_t flushflag)
             case 1:  coder->underflowBits++, ramcoder_normalize(coder); break;
             case 0:
                 hputbit(hp,(coder->upper & RAMMASK_BIT(0)) != 0), numbits++;
+                //printf("%d> ",(coder->upper & RAMMASK_BIT(0)) != 0);
                 while ( coder->underflowBits > 0 )
                 {
                     hputbit(hp,(coder->upper & RAMMASK_BIT(0)) == 0), numbits++;
+                    //printf("%d> ",(coder->upper & RAMMASK_BIT(0)) == 0);
                     coder->underflowBits--;
                 }
                 break;
@@ -128,8 +135,8 @@ int32_t ramcoder_getbits(HUFF *hp,struct ramcoder *coder)
         ramcoder_shiftbits(coder);
         coder->code <<= 1;
         if ( (nextBit= hgetbit(hp)) >= 0 )
-            coder->code |= nextBit;//, printf("%c",'0'+nextBit);
-        else return(numbits);//printf("ramcoder_getbits end of bits?\n");
+            coder->code |= nextBit; //, printf("<%c",'0'+nextBit);
+        else return(numbits);
         numbits++;
     }
 }
@@ -197,6 +204,7 @@ int32_t ramcoder_encoder(struct ramcoder *coder,int32_t updateprobs,uint8_t *buf
     if ( coder == 0 )
     {
         memset(_coder,0,sizeof(_coder));
+        hrewind(hp);
         coder = (struct ramcoder *)_coder, init_ramcoder(coder,0,seed);
         return(ramcoder_emit(hp,coder,updateprobs,buf,len)
                + ramcoder_update(coder->lastsymbol,coder,updateprobs,RAMCODER_PUTBITS,hp)
@@ -209,7 +217,7 @@ int32_t ramcoder_encoder(struct ramcoder *coder,int32_t updateprobs,uint8_t *buf
 int32_t ramcoder_decode(struct ramcoder *coder,int32_t updateprobs,HUFF *hp)
 {
     int32_t ind;
-#define RAMDECODER_UNSCALED(coder) (((uint32_t)(coder->code - coder->lower) + 1) * (uint32_t)coder->cumulativeProb - 1) / ((uint32_t)(coder->upper - coder->lower) + 1)
+#define RAMDECODER_UNSCALED(coder) ((((uint32_t)coder->code - coder->lower) + 1) * (uint32_t)coder->cumulativeProb - 1) / (((uint32_t)coder->upper - coder->lower) + 1)
     if ( (ind= ramdecoder_bsearch(RAMDECODER_UNSCALED(coder),coder)) < 0 || ind == coder->lastsymbol )
         return(-1);
     //fprintf(stderr,"output.%02x ",ind);
@@ -222,7 +230,7 @@ int32_t ramcoder_decoder(struct ramcoder *coder,int32_t updateprobs,uint8_t *buf
     uint8_t _coder[sizeof(*coder) + 0x102*sizeof(coder->ranges[0])];
     int32_t val,n = 0,numbits = 0;
     if ( coder == 0 )
-        memset(_coder,0,sizeof(_coder)), coder = (struct ramcoder *)_coder, numbits = init_ramcoder(coder,hp,seed);
+        memset(_coder,0,sizeof(_coder)), coder = (struct ramcoder *)_coder, hrewind(hp), numbits = init_ramcoder(coder,hp,seed);
     while ( n < maxlen )
     {
         if ( (val= ramcoder_decode(coder,updateprobs,hp)) < 0 )
