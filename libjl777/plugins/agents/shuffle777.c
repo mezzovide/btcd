@@ -547,7 +547,13 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
     plugin->allowremote = 1;
     if ( initflag > 0 )
     {
-        fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s) (%s)\n",plugin->name,jsonstr,jprint(json,0));
+        if ( (jsonstr= loadfile(&allocsize,"SuperNET.conf")) != 0 )
+        {
+            if ( (json= cJSON_Parse(jsonstr)) != 0 )
+                SuperNET_initconf(json), free_json(json);
+            fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
+            free(jsonstr);
+        }
         strcpy(retbuf,"{\"result\":\"shuffle init\"}");
     }
     else

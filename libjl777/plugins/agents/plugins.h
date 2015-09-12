@@ -501,7 +501,7 @@ char *register_daemon(char *plugin,uint64_t daemonid,uint64_t instanceid,cJSON *
 
 char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin,char *method,uint64_t daemonid,uint64_t instanceid,char *origargstr,int32_t len,int32_t timeout,char *tokenstr)
 {
-    struct daemon_info *dp; char retbuf[8192],jsonargs[128],*str,*methodsstr,*retstr; uint64_t tag; cJSON *json; int32_t ind,async;
+    struct daemon_info *dp; char retbuf[8192],*str,*methodsstr,*retstr; uint64_t tag; cJSON *json; int32_t ind,async;
     if ( Debuglevel > 2 )
         printf("inside plugin_method: localaccess.%d origargstr.(%s).%d retstrp.%p token.(%s)\n",localaccess,origargstr,len,retstrp,tokenstr!=0?tokenstr:"");
     async = (timeout == 0 || retstrp != 0);
@@ -513,10 +513,7 @@ char *plugin_method(int32_t sock,char **retstrp,int32_t localaccess,char *plugin
         if ( is_bundled_plugin(plugin) != 0 )
         {
             if ( SUPERNET.iamrelay <= 1 )
-            {
-                sprintf(jsonargs,"{\"filename\":\"SuperNET.conf\"}");
-                language_func((char *)plugin,"",0,0,1,(char *)plugin,jsonargs,call_system);
-            }
+                language_func((char *)plugin,"",0,0,1,(char *)plugin,origargstr,call_system);
             return(clonestr("{\"error\":\"cant find plugin, AUTOLOAD\"}"));
         }
         fprintf(stderr,"cant find.(%s)\n",plugin);
