@@ -455,7 +455,7 @@ struct shuffle_info *shuffle_find(uint64_t shuffleid)
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
     cJSON *array; struct InstantDEX_quote *iQ = 0; char destNXT[64],buf[2048],*addrstr;
-    int32_t createdflag,i,n,haspubkey,myind = -1; uint32_t now;
+    int32_t createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
     uint64_t _addrs[64],quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
@@ -470,8 +470,10 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
         {
             if ( (n= cJSON_GetArraySize(array)) > 0 )
             {
-                for (i=0; i<n; i++)
+                r = (rand() % n);
+                for (j=0; j<n; j++)
                 {
+                    i = (j + r) % n;
                     if ( (addrs[num]= j64bits(jitem(array,i),0)) != 0 )
                     {
                         if ( addrs[num] == SUPERNET.my64bits )
@@ -479,7 +481,10 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
                         expand_nxt64bits(destNXT,addrs[num]);
                         issue_getpubkey(&haspubkey,destNXT);
                         num += haspubkey;
+                        if ( num == sizeof(_addrs)/sizeof(*_addrs) )
+                            break;
                     }
+                    printf("i.%d j.%d num.%d %llu\n",i,j,num,(long long)addrs[num-1]);
                 }
             }
             free_json(array);
@@ -497,7 +502,7 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
         printf("cant create shuffle.(%s) numaddrs.%d\n",base,num);
         return(clonestr("{\"error\":\"cant create shuffleid\"}"));
     }
-    if ( createdflag != 0 && addrs[sp->myind] == SUPERNET.my64bits )
+    if ( createdflag != 0 && sp->myind == 0 && addrs[sp->myind] == SUPERNET.my64bits )
     {
         if ( quoteid == 0 )
         {
@@ -521,8 +526,8 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
             else
             {
                 array = cJSON_CreateArray();
-                for (i=0; i<num; i++)
-                    jaddi64bits(array,addrs[i]);
+                for (j=0; j<num; j++)
+                    jaddi64bits(array,addrs[j]);
                 addrstr = jprint(array,1);
                 sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":%u,\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"],\"addrs\":%s}",(long long)sp->shuffleid,sp->timestamp,sp->base,sp->vinstr,sp->voutstr,addrstr);
                 free(addrstr);
@@ -552,9 +557,8 @@ int32_t shuffle_incoming(char *jsonstr)
             if ( (array= jarray(&num,json,"addrs")) != 0 )
                 for (i=0; i<num; i++)
                     addrs[i] = j64bits(jitem(array,i),0);
-            free_json(array);
             sp = shuffle_create(&createdflag,base,juint(json,"timestamp"),addrs,num);
-            if ( sp->shuffleid != shuffleid )
+            if ( sp != 0 && sp->shuffleid != shuffleid )
             {
                 printf("shuffleid mismatch %llu vs %llu\n",(long long)sp->shuffleid,(long long)shuffleid);
                 free_json(json);
