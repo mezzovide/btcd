@@ -454,7 +454,7 @@ struct shuffle_info *shuffle_find(uint64_t shuffleid)
 
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
-    cJSON *array; struct InstantDEX_quote *iQ = 0; char destNXT[64],buf[2048];
+    cJSON *array; struct InstantDEX_quote *iQ = 0; char destNXT[64],buf[2048],*addrstr;
     int32_t createdflag,i,n,haspubkey,myind = -1; uint32_t now;
     uint64_t _addrs[64],quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
@@ -520,7 +520,12 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
             }
             else
             {
-                sprintf(buf,"{\"shuffleid\":\"%llu\",\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"]}",(long long)sp->shuffleid,sp->base,sp->vinstr,sp->voutstr);
+                array = cJSON_CreateArray();
+                for (i=0; i<num; i++)
+                    jaddi64bits(array,addrs[i]);
+                addrstr = jprint(array,1);
+                sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":%u,\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"],\"addrs\":%s}",(long long)sp->shuffleid,sp->timestamp,sp->base,sp->vinstr,sp->voutstr,addrstr);
+                free(addrstr);
                 expand_nxt64bits(destNXT,addrs[i + 1]);
                 printf("destNXT.(%s) addrs[%d] %llu\n",destNXT,i+1,(long long)addrs[i+1]);
                 //if ( strlen(buf) >= sizeof(hexstr)>>1 )
@@ -534,14 +539,28 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
     return(clonestr("{\"success\":\"shuffle already there\"}"));
 }
 
-char *shuffle_incoming(char *jsonstr)
+int32_t shuffle_incoming(char *jsonstr)
 {
-    struct coin777 *coin = 0; cJSON *newjson,*json,*vins,*vouts; int32_t i,j,numvins,numvouts; struct shuffle_info *sp;
+    struct coin777 *coin = 0; cJSON *newjson,*json,*vins,*vouts,*array; int32_t i,j,num,createdflag,numvins,numvouts; struct shuffle_info *sp;
     char *newvins[1024],*newvouts[1024],destNXT[64],buf[8192],*base,*str,*txbytes,*msg; uint64_t shuffleid; uint32_t nonce;
+    uint64_t addrs[64];
     if ( (json= cJSON_Parse(jsonstr)) != 0 && (base= jstr(json,"base")) != 0 && (shuffleid= j64bits(json,"shuffleid")) != 0 )
     {
         coin = coin777_find(base,0);
-        sp = shuffle_find(shuffleid);
+        if ( (sp= shuffle_find(shuffleid)) == 0 )
+        {
+            if ( (array= jarray(&num,json,"addrs")) != 0 )
+                for (i=0; i<num; i++)
+                    addrs[i] = j64bits(jitem(array,i),0);
+            free_json(array);
+            sp = shuffle_create(&createdflag,base,juint(json,"timestamp"),addrs,num);
+            if ( sp->shuffleid != shuffleid )
+            {
+                printf("shuffleid mismatch %llu vs %llu\n",(long long)sp->shuffleid,(long long)shuffleid);
+                free_json(json);
+                return(-1);
+            }
+        }
         if ( sp != 0 && strcmp(sp->base,base) == 0 && coin != 0 && (vins= jarray(&numvins,json,"vins")) != 0 && (vouts= jarray(&numvouts,json,"vouts")) != 0 )
         {
             if ( numvins < sizeof(newvins)/sizeof(*newvins)-2 && numvouts < sizeof(newvouts)/sizeof(*newvouts)-2 )
@@ -583,7 +602,7 @@ char *shuffle_incoming(char *jsonstr)
         } else printf("shuffle_incoming: missing sp.%p or coin.%p\n",sp,coin);
         free_json(json);
     }
-    return(clonestr("{\"success\":\"shuffled\"}"));
+    return(0);
 }
 
 #define SHUFFLE_METHODS "validate", "signed", "start"
