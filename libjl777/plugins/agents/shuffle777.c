@@ -269,12 +269,12 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
         for (i=0; i<numvouts; i++)
         {
             decode_hex(data,8,vouts[i]);
-            for (value=j=0; j<8; j++,value<<=8)
+            for (value=j=0; j<8; j++)
             {
-                value |= data[7-j];
-                //printf("{%02x} ",data[7-j]);
+                value = (value << 8) | data[7-j];
+                printf("{%02x} ",data[7-j]);
             }
-            //printf("decode.(%s %.8f %llx)\n",vouts[i] + 16,dstr(value),(long long)value);
+            printf("decode.(%s %.8f %llx)\n",vouts[i] + 16,dstr(value),(long long)value);
             decode_hex(rmd160,21,vouts[i] + 16);
             if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )
             {
