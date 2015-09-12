@@ -182,7 +182,8 @@ chessjs:  doesntexist; \
     git clone https://github.com/exoticorn/stockfish-js
 
 nanomsg:  doesntexist; \
-   git clone https://github.com/nanomsg/nanomsg; cd nanomsg; ./autogen.sh && CFLAGS='$(CFLAGS) -fPIC ' ./configure --with-pic; $(MAKE) -lanl; $(MAKE) check; cp .libs/libnanomsg.a ../libs; cp src/*.h ../includes; cd ..
+   git clone https://github.com/nanomsg/nanomsg; cd nanomsg; \
+   cd nanomsg; ./autogen.sh && ./configure --with-pic; $(MAKE) -lanl; cp .libs/libnanomsg.a ../libs; cd ..
 
 python: doesntexist; \
     tar -xvf Python-3.4.3.tgz; cd Python-3.4.3; ./configure; $(MAKE) all; cp libpython3.so libpython3.4m.a ../libs; cp pyconfig.h Include; ln ./build/lib.linux-x86_64-3.4/_sysconfigdata.py Lib; cd ..;

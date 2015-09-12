@@ -571,7 +571,7 @@ int32_t shuffle_incoming(char *jsonstr)
                         myind = i;
             }
             sp = shuffle_create(&createdflag,base,juint(json,"timestamp"),addrs,num);
-            if ( sp != 0 && sp->shuffleid != shuffleid )
+            if ( sp == 0 || (sp != 0 && sp->shuffleid != shuffleid) )
             {
                 printf("shuffleid mismatch %llu vs %llu\n",(long long)sp->shuffleid,(long long)shuffleid);
                 free_json(json);
@@ -597,6 +597,7 @@ int32_t shuffle_incoming(char *jsonstr)
                         shuffle_strs(newvins,numvins);
                     for (j=0; j<13; j++)
                         shuffle_strs(newvouts,numvouts);
+                    printf("myind.%d numaddrs.%d numvins.%d numvouts.%d\n",myind,sp->numaddrs,numvins,numvouts);
                     if ( myind == sp->numaddrs-1 )
                     {
                         if ( (txbytes= shuffle_cointx(coin,newvins,numvins,newvouts,numvouts)) != 0 )
