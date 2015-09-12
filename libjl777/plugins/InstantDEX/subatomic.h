@@ -251,26 +251,26 @@ int32_t script_coinaddr(char *coinaddr,cJSON *scriptobj)
     struct destbuf buf; cJSON *addresses;
     coinaddr[0] = 0;
     if ( scriptobj == 0 )
-        return(0);
-    addresses = cJSON_GetObjectItem(scriptobj,"addresses");
-    if ( addresses != 0 )
+        return(-1);
+    if ( (addresses= cJSON_GetObjectItem(scriptobj,"addresses")) != 0 )
     {
         copy_cJSON(&buf,jitem(addresses,0));
         strcpy(coinaddr,buf.buf);
+        return(0);
     }
-    return(0);
+    return(-1);
 }
 
 char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t *locktimep,struct coin777 *coin,char *txid,int32_t vout)
 {
     char *rawtransaction,*txidstr,*privkey=0,coinaddr[64]; uint64_t value = 0; int32_t n,reqSigs; cJSON *json,*scriptobj,*array,*item,*hexobj;
     *locktimep = -1;
-    if ( (rawtransaction= get_rawtransaction(coin->name,coin->serverport,coin->userpass,txid)) == 0 )
+    if ( (rawtransaction= _get_transaction(coin->name,coin->serverport,coin->userpass,txid)) == 0 )
     {
         printf("shuffle_getprivkey: error getting (%s)\n",txid);
         return(0);
     }
-    if ( (json= get_decoderaw_json(coin,rawtransaction)) != 0 )
+    if ( (json= cJSON_Parse(rawtransaction)) != 0 )//get_decoderaw_json(coin,rawtransaction)) != 0 )
     {
         *locktimep = (int32_t)get_cJSON_int(json,"locktime");
         if ( (txidstr= jstr(json,"txid")) == 0 || strcmp(txidstr,txid) != 0 )
@@ -284,7 +284,7 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
         if ( (array= jarray(&n,json,"vout")) != 0 && (item= jitem(array,vout)) != 0 )
         {
             scriptobj = cJSON_GetObjectItem(item,"scriptPubKey");
-            if ( scriptobj != 0 && script_coinaddr(coinaddr,scriptobj) != 0 )
+            if ( scriptobj != 0 && script_coinaddr(coinaddr,scriptobj) == 0 )
             {
                 reqSigs = (int32_t)get_cJSON_int(item,"reqSigs");
                 value = conv_cJSON_float(item,"value");
@@ -305,7 +305,7 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
 
 char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi)
 {
-    char hexstr[1024],pubP[128],*privkey; bits256 hash2; uint8_t data[128],sigbuf[512]; struct bp_key key; struct destbuf scriptPubKey;
+    char hexstr[1024],pubP[128],*privkey; bits256 hash2; uint8_t data[32768],sigbuf[512]; struct bp_key key; struct destbuf scriptPubKey;
     struct cointx_info *T; int32_t i; void *sig = NULL; size_t siglen = 0; struct cointx_input *vin; uint64_t value; uint32_t locktime;
     T = calloc(1,sizeof(*T));
     *T = *refT;
@@ -330,10 +330,8 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
                 sprintf(vin->sigs,"%02lx%s%02lx%s00%s",siglen,hexstr,strlen(pubP)/2,pubP,scriptPubKey.buf);
                 strcpy(sigstr,vin->sigs);
                 free(sig);
-                printf("after P.(%s) siglen.%02lx\n",vin->sigs,siglen);
+                printf("after P.(%s) siglen.%02lx sig.(%s)\n",vin->sigs,siglen,hexstr);
             }
-            _emit_cointx(hexstr,sizeof(hexstr),T,coin->mgw.oldtx_format);
-            disp_cointx(T);
         }
         else
         {
@@ -345,7 +343,9 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
         free(privkey);
     } else printf("shuffle_getprivkey null\n");
     free(T);
-    return(clonestr(vin->sigs));
+    if ( sigstr[0] != 0 )
+        return(sigstr);
+    else return(0);
 }
 
 int32_t script_has_coinaddr(cJSON *scriptobj,char *coinaddr)
