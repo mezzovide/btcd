@@ -49,10 +49,10 @@ int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len
         return(-1);
     }
     crypto_box_keypair(onetime_pubkey.bytes,onetime_privkey.bytes);
+    memset(seed.bytes,0,sizeof(seed));
+    seed.bytes[0] = 1;
     if ( (cipher= encode_str(&cipherlen,src,len,destpubkey,onetime_privkey,onetime_pubkey)) != 0 )
     {
-        memset(seed.bytes,0,sizeof(seed));
-        seed.bytes[0] = 1;
         memset(dest,0,cipherlen*2);
         _init_HUFF(hp,cipherlen*2,dest);
         ramcoder_encoder(0,1,cipher,cipherlen,hp,&seed);
@@ -89,8 +89,10 @@ int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,int32_t maxlen,uint8_t 
     if ( nxt64bits == SUPERNET.my64bits )
     {
         memset(seed.bytes,0,sizeof(seed)), seed.bytes[0] = 1;
-        _init_HUFF(hp,len,src), hseek(hp,0,SEEK_END);
+        _init_HUFF(hp,len,src), hp->endpos = len << 3;
+        printf("src %llx len.%d\n",*(long long *)src,len);
         newlen = ramcoder_decoder(0,1,buf,sizeof(buf),hp,&seed);
+        printf("buf %llx len.%d\n",*(long long *)buf,newlen);
         if ( decode_cipher((void *)dest,buf,&newlen,SUPERNET.myprivkey) != 0 )
             printf("shuffle_decrypt Error: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
     } else printf("cant decrypt another accounts packet\n");
@@ -459,6 +461,19 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
     cJSON *array; struct InstantDEX_quote *iQ = 0; char destNXT[64],buf[2048],*addrstr;
     int32_t createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
     uint64_t _addrs[64],quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
+    if ( 0 )
+    {
+        /* layer.(00905ca20b53e9f3ca418defad6f352363629b6fb014d246b92bd738dc3ac92e5c) len.33 num.2 f3e9530ba25c9000
+        (214c39d66c18750d55120e6feb954c6e624a579d9164cee6dc41b3c3f4a7b9f6ffc1c19801c85b1132b29b16bf49d62633699e30d0f434f6a660c4c9f52bef4c008c8e8e7b49c43c4acdda0c546408fde6b39894643a07618030ea6756fab64b0747aaec3aa701242dbe33a302efc0c97389fc95b461837840a84c8ed768fd100c6b5b14dac21bd89e17a287b561b2b6a62d3a5add48f3fbb1d37a01a85e33b2c123068e9884a1b0ceb3a40f5003a44392894f3def1cbe4893fe0a63e536afa70b54dc1f7f7731e39383eceef6d77ba71fa5067a07501c7ac8f0ba03f4ff01) newlen.223
+        layer.(000000002b6fc77e3c108097b1b132a71026e7ced0138e4fbd99916174) len.29 num.2 7ec76f2b00000000
+        (c110f67806d7bc0bea9178a8c97949b5b33c8427332109d5656fe84d4d435210d0b5af26a58ea505c25a1d55a6a164e2d66bc14c571b07361a1fc331a2cb573600c6e202213bab16b59c5f8459fb3e807751297edf21dd393766e052ef540fe348bf614f2d3b8724aefda6c9008abb37ed90a3f0ed9a8afc86fbf7c7daf2003e38a882b242822dea1525909574dd8fab77424789a43caa0a4d6e0a2d7fc8e021dd574282f4316bb89e45f75840e13254ebccc003fe4d0abfaebc18b85e05f38beac2fb90c0d038e97d0d5b1c1eab7482803edabd98ee26d6dcff07) newlen.219
+        layer.(0000000005f5e1003cd436d78eb1ac86981218f2c5a4bd17fb51465086) len.29 num.2 e1f50500000000
+        (218c63a725ae858d02d4ae0a194c275099cfcc8d168bfe2ab283c7053d1800bb03e506fdcad09f20db4ccf96185b876ed29a2fe69a5ec7b099c9e425835dba0b00297623ab62cff44a723ab55e44ddc973b9cea72834b5e739fabd780c43086c709ba24395a96e88310d5ecb8b2f6082b6018129792632a08c17d69cd5ba2b27b810d20577873489c47539e0f849c227a3194ea5de5e2a710a3e89c3abd7e9d9169f2278bdc1f6fb8a07ab364afb45280f6f721d0d8afbe1522b26d1d945a3a0b928a9e805933cc44b0505c0ca983f08f8c5364369e3ff0b) newlen.216*/
+        cJSON *array = cJSON_CreateArray();
+        jaddistr(array,"214c39d66c18750d55120e6feb954c6e624a579d9164cee6dc41b3c3f4a7b9f6ffc1c19801c85b1132b29b16bf49d62633699e30d0f434f6a660c4c9f52bef4c008c8e8e7b49c43c4acdda0c546408fde6b39894643a07618030ea6756fab64b0747aaec3aa701242dbe33a302efc0c97389fc95b461837840a84c8ed768fd100c6b5b14dac21bd89e17a287b561b2b6a62d3a5add48f3fbb1d37a01a85e33b2c123068e9884a1b0ceb3a40f5003a44392894f3def1cbe4893fe0a63e536afa70b54dc1f7f7731e39383eceef6d77ba71fa5067a07501c7ac8f0ba03f4ff01");
+        shuffle_peel(&addrstr,array,1);
+        getchar();
+    }
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
     coin = coin777_find(base,1);
