@@ -291,10 +291,10 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
             fee = ((numvins >> 1) * coin->mgw.txfee) + (totalinputs >> 10);
             if ( totalinputs < totaloutputs+fee )
             {
-                printf("not enough inputs %.8f for outputs %.8f + fee %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee));
+                printf("not enough inputs %.8f for outputs %.8f + fee %.8f diff %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee),dstr(totaloutputs+fee-totalinputs));
                 return(0);
             }
-            fee = coin->mgw.txfee * numvouts * 2;//shuffle_txfee(coin,numvins,numvouts);
+            fee = coin->mgw.txfee * numvouts;//shuffle_txfee(coin,numvins,numvouts);
             if ( totalinputs < totaloutputs+fee )
             {
                 printf("not enough inputs %.8f for outputs %.8f + fee %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee));
