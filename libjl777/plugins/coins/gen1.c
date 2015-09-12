@@ -45,6 +45,7 @@ char *dumpprivkey(char *coinstr,char *serverport,char *userpass,char *coinaddr);
 char *get_acct_coinaddr(char *coinaddr,char *coinstr,char *serverport,char *userpass,char *NXTaddr);
 int32_t get_pubkey(struct destbuf *pubkey,char *coinstr,char *serverport,char *userpass,char *coinaddr);
 cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass);
+char *get_rawtransaction(char *coinstr,char *serverport,char *userpass,char *txidstr);
 
 #endif
 #else
@@ -738,6 +739,15 @@ char *_get_transaction(char *coinstr,char *serverport,char *userpass,char *txids
 {
     char *rawtransaction=0,txid[4096];
     sprintf(txid,"[\"%s\", 1]",txidstr);
+    //printf("get_transaction.(%s)\n",txidstr);
+    rawtransaction = bitcoind_passthru(coinstr,serverport,userpass,"getrawtransaction",txid);
+    return(rawtransaction);
+}
+
+char *get_rawtransaction(char *coinstr,char *serverport,char *userpass,char *txidstr)
+{
+    char *rawtransaction=0,txid[4096];
+    sprintf(txid,"[\"%s\"]",txidstr);
     //printf("get_transaction.(%s)\n",txidstr);
     rawtransaction = bitcoind_passthru(coinstr,serverport,userpass,"getrawtransaction",txid);
     return(rawtransaction);

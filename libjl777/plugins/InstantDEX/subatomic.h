@@ -265,7 +265,7 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
 {
     char *rawtransaction,*txidstr,*privkey=0,coinaddr[64]; uint64_t value = 0; int32_t n,reqSigs; cJSON *json,*scriptobj,*array,*item,*hexobj;
     *locktimep = -1;
-    if ( (rawtransaction= _get_transaction(coin->name,coin->serverport,coin->userpass,txid)) == 0 )
+    if ( (rawtransaction= get_rawtransaction(coin->name,coin->serverport,coin->userpass,txid)) == 0 )
     {
         printf("shuffle_getprivkey: error getting (%s)\n",txid);
         return(0);
@@ -307,7 +307,8 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
     sigstr[0] = 0;
     if ( (privkey= shuffle_getprivkey(&value,&scriptPubKey,&locktime,coin,vin->tx.txidstr,vin->tx.vout)) != 0 )
     {
-        if ( btc_setprivkey(&key,privkey) > 0 )//&& btc_getpubkey(pubP,data,&key) > 0 )
+        printf("shuffle_getprivkey.(%s)\n",privkey);
+        if ( btc_setprivkey(&key,privkey) == 0 )//&& btc_getpubkey(pubP,data,&key) > 0 )
         {
             for (i=0; i<T->numinputs; i++)
                 strcpy(T->inputs[i].sigs,"00");
@@ -319,10 +320,11 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
         {
             printf("shuffle_signvin: error setting privkey/pubkey\n");
             free(T);
+            free(privkey);
             return(0);
         }
-    }
-    //disp_cointx(&T);
+        free(privkey);
+    } else printf("shuffle_getprivkey null\n");
     emit_cointx(&hash2,data,sizeof(data),T,coin->mgw.oldtx_format,SIGHASH_ALL);
     if ( bp_sign(&key,hash2.bytes,sizeof(hash2),&sig,&siglen) != 0 )
     {
