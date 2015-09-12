@@ -283,7 +283,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                 safecopy(v->coinaddr,coinaddr,sizeof(v->coinaddr));
                 v->value = value;
                 totaloutputs += v->value;
-                printf("%d.(%s %.8f) ",T.numoutputs,v->coinaddr,dstr(value));
+                printf("%d.(%s %s %.8f) ",T.numoutputs,v->coinaddr,v->script,dstr(value));
             } else printf("error converting rmd160.(%s)\n",coinaddr);
             T.numoutputs++;
         }
