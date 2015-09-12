@@ -199,7 +199,7 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
             *vinp = up->vout;
             strcpy(txid,up->txid.buf);
             sprintf(buf,"%02x%s",up->vout,up->txid.buf);
-            printf("shuffle_vin.(%s)<- (%s v%d)\n",buf,up->txid.buf,up->vout);
+            printf("shuffle_vin.(%s)<- (%s v%d) amount %.8f sum %.8f change %.8f\n",buf,up->txid.buf,up->vout,dstr(amount),dstr(up->amount),dstr(*changep));
             retstr = shuffle_layer(buf,addrs,num);
         } else printf("no bestfits: %p\n",up);
         free(utx);
@@ -266,22 +266,22 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
     printf("numinputs.%d numvins.%d total %.8f\n",T.numinputs,numvins,dstr(totalinputs));
     if ( T.numinputs == numvins )
     {
-        for (i=0; i<numvouts; i++)
+        for (T.numoutputs=i=0; i<numvouts; i++)
         {
             decode_hex(data,8,vouts[i]);
             for (value=j=0; j<8; j++)
             {
                 value = (value << 8) | data[7-j];
-                printf("{%02x} ",data[7-j]);
+                //printf("{%02x} ",data[7-j]);
             }
-            printf("decode.(%s %.8f %llx)\n",vouts[i] + 16,dstr(value),(long long)value);
+            //printf("decode.(%s %.8f %llx)\n",vouts[i] + 16,dstr(value),(long long)value);
             decode_hex(rmd160,21,vouts[i] + 16);
             if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )
             {
                 safecopy(T.outputs[T.numoutputs].coinaddr,coinaddr,sizeof(T.outputs[T.numoutputs].coinaddr));
                 T.outputs[T.numoutputs].value = value;
                 totaloutputs += T.outputs[T.numoutputs].value;
-                printf("(%s %.8f) ",coinaddr,dstr(value));
+                printf("%d.(%s %.8f) ",i,coinaddr,dstr(value));
             } else printf("error converting rmd160.(%s)\n",coinaddr);
             T.numoutputs++;
         }
@@ -486,7 +486,7 @@ int32_t shuffle_next(struct shuffle_info *sp,struct coin777 *coin,uint64_t *addr
 
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
-    char buf[8192],destNXT[64],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
+    char buf[8192],destNXT[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
     int32_t createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
     uint64_t _addrs[64],quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
@@ -516,7 +516,7 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
                         if ( num == sizeof(_addrs)/sizeof(*_addrs) )
                             break;
                     }
-                    printf("i.%d j.%d num.%d %llu\n",i,j,num,(long long)addrs[num-1]);
+                    //printf("i.%d j.%d num.%d %llu\n",i,j,num,(long long)addrs[num-1]);
                 }
             }
             free_json(array);
@@ -555,7 +555,10 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
             for (j=0; j<num; j++)
                 jaddi64bits(array,addrs[j]);
             addrstr = jprint(array,1);
-            sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":%u,\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"],\"addrs\":%s}",(long long)sp->shuffleid,sp->timestamp,sp->base,sp->vinstr,sp->voutstr,addrstr);
+            changestr[0] = 0;
+            if ( sp->changestr != 0 )
+                sprintf(changestr,", \"%s\"",sp->changestr);
+            sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":%u,\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"%s],\"addrs\":%s}",(long long)sp->shuffleid,sp->timestamp,sp->base,sp->vinstr,sp->voutstr,changestr,addrstr);
             free(addrstr);
             expand_nxt64bits(destNXT,addrs[i + 1]);
             printf("destNXT.(%s) addrs[%d] %llu\n",destNXT,i+1,(long long)addrs[i+1]);
@@ -594,6 +597,7 @@ int32_t shuffle_incoming(char *jsonstr)
         {
             if ( myind >= 0 && numvins < sizeof(newvins)/sizeof(*newvins)-2 && numvouts < sizeof(newvouts)/sizeof(*newvouts)-2 )
             {
+                printf("incoming numvins.%d numvouts.%d\n",numvins,numvouts);
                 if ( (array= InstantDEX_shuffleorders(&quoteid,SUPERNET.my64bits,base)) != 0 )
                     free_json(array);
                 if ( (iQ= find_iQ(quoteid)) != 0 )
@@ -605,6 +609,7 @@ int32_t shuffle_incoming(char *jsonstr)
                     shuffle_peel(newvouts,vouts,numvouts), newvouts[numvouts++] = clonestr(sp->voutstr);
                     if ( sp->change != 0 )
                         newvouts[numvouts++] = clonestr(sp->changestr);
+                    printf("after adding incoming numvins.%d numvouts.%d\n",numvins,numvouts);
                     for (j=0; j<13; j++)
                         shuffle_strs(newvins,numvins);
                     for (j=0; j<13; j++)
@@ -627,6 +632,7 @@ int32_t shuffle_incoming(char *jsonstr)
                         jadd(newjson,"vins",vins), jadd(newjson,"vouts",vouts);
                         msg = jprint(newjson,1);
                         expand_nxt64bits(destNXT,sp->addrs[myind+1]);
+                        printf("telepathic.(%s)\n",msg);
                         telepathic_PM(destNXT,msg);
                         free(msg);
                         free_json(newjson);
