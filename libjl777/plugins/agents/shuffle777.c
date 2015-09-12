@@ -454,7 +454,7 @@ struct shuffle_info *shuffle_find(uint64_t shuffleid)
 
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
-    cJSON *array; struct InstantDEX_quote *iQ = 0; char destNXT[64],buf[2048],hexstr[4096];
+    cJSON *array; struct InstantDEX_quote *iQ = 0; char destNXT[64],buf[2048];
     int32_t createdflag,i,n,haspubkey,myind = -1; uint32_t now;
     uint64_t _addrs[64],quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
@@ -522,6 +522,7 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
             {
                 sprintf(buf,"{\"shuffleid\":\"%llu\",\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"]}",(long long)sp->shuffleid,sp->base,sp->vinstr,sp->voutstr);
                 expand_nxt64bits(destNXT,addrs[i + 1]);
+                printf("destNXT.(%s) addrs[%d] %llu\n",destNXT,i+1,(long long)addrs[i+1]);
                 //if ( strlen(buf) >= sizeof(hexstr)>>1 )
                 //    return(clonestr("{\"error\":\"shuffle buffer overflow\"}"));
                 //init_hexbytes_noT(hexstr,(void *)buf,strlen(buf)>>1);
