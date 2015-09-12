@@ -300,27 +300,30 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
 char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi)
 {
     char hexstr[1024],pubP[128],*privkey; bits256 hash2; uint8_t data[128],sigbuf[512]; struct bp_key key; struct destbuf scriptPubKey;
-    struct cointx_info T; int32_t i; void *sig = NULL; size_t siglen = 0; struct cointx_input *vin; uint64_t value; uint32_t locktime;
-    T = *refT; vin = &T.inputs[redeemi];
+    struct cointx_info *T; int32_t i; void *sig = NULL; size_t siglen = 0; struct cointx_input *vin; uint64_t value; uint32_t locktime;
+    T = calloc(1,sizeof(*T));
+    *T = *refT;
+    vin = &T->inputs[redeemi];
     sigstr[0] = 0;
     if ( (privkey= shuffle_getprivkey(&value,&scriptPubKey,&locktime,coin,vin->tx.txidstr,vin->tx.vout)) != 0 )
     {
         if ( btc_setprivkey(&key,privkey) > 0 )//&& btc_getpubkey(pubP,data,&key) > 0 )
         {
-            for (i=0; i<T.numinputs; i++)
-                strcpy(T.inputs[i].sigs,"00");
+            for (i=0; i<T->numinputs; i++)
+                strcpy(T->inputs[i].sigs,"00");
             strcpy(vin->sigs,scriptPubKey.buf);
             vin->sequence = (uint32_t)-1;
-            T.nlocktime = 0;
+            T->nlocktime = 0;
         }
         else
         {
             printf("shuffle_signvin: error setting privkey/pubkey\n");
+            free(T);
             return(0);
         }
     }
     //disp_cointx(&T);
-    emit_cointx(&hash2,data,sizeof(data),&T,coin->mgw.oldtx_format,SIGHASH_ALL);
+    emit_cointx(&hash2,data,sizeof(data),T,coin->mgw.oldtx_format,SIGHASH_ALL);
     if ( bp_sign(&key,hash2.bytes,sizeof(hash2),&sig,&siglen) != 0 )
     {
         memcpy(sigbuf,sig,siglen);
@@ -331,8 +334,9 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
         free(sig);
         //printf("after P.(%s) siglen.%02lx\n",vin->sigs,siglen);
     }
-    _emit_cointx(hexstr,sizeof(hexstr),&T,coin->mgw.oldtx_format);
-    disp_cointx(&T);
+    _emit_cointx(hexstr,sizeof(hexstr),T,coin->mgw.oldtx_format);
+    disp_cointx(T);
+    free(T);
     return(clonestr(vin->sigs));
 }
 
@@ -765,23 +769,24 @@ char *subatomic_gen_rawtransaction(char *skipaddr,struct coin777 *coin,struct su
 char *subatomic_signp2sh(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t msigflag,int32_t lockblocks,int32_t redeemi,char *redeemscript,int32_t p2shflag,char *privkeystr,int32_t privkeyind,char *othersig,char *otherpubkey,char *checkprivkey)
 {
     char hexstr[1024],pubP[128],*sig0,*sig1; bits256 hash2; uint8_t data[4096],sigbuf[512]; struct bp_key key,keyV;
-    struct cointx_info T; int32_t i,n; void *sig = NULL; size_t siglen = 0; struct cointx_input *vin;
+    struct cointx_info *T; int32_t i,n; void *sig = NULL; size_t siglen = 0; struct cointx_input *vin;
+    T = calloc(1,sizeof(*T));
     if ( privkeystr != 0 )
         btc_setprivkey(&key,privkeystr);
-    T = *refT; vin = &T.inputs[redeemi];
-    for (i=0; i<T.numinputs; i++)
-        strcpy(T.inputs[i].sigs,"00");
+    *T = *refT; vin = &T->inputs[redeemi];
+    for (i=0; i<T->numinputs; i++)
+        strcpy(T->inputs[i].sigs,"00");
     strcpy(vin->sigs,redeemscript);
     if ( msigflag == 0 )
     {
         vin->sequence = (uint32_t)-1;
-        T.nlocktime = 0;
+        T->nlocktime = 0;
     }
     else
     {
         if ( vin->sequence == 0 )
             vin->sequence = (uint32_t)time(NULL);
-        if ( T.nlocktime == 0 && lockblocks != 0 )
+        if ( T->nlocktime == 0 && lockblocks != 0 )
         {
             if ( lockblocks != 0 )
             {
@@ -789,15 +794,16 @@ char *subatomic_signp2sh(char *sigstr,struct coin777 *coin,struct cointx_info *r
                 if ( coin->ramchain.RTblocknum == 0 )
                 {
                     printf("cant get RTblocknum for %s\n",coin->name);
+                    free(T);
                     return(0);
                 }
                 lockblocks += coin->ramchain.RTblocknum;
             }
-            T.nlocktime = lockblocks;
+            T->nlocktime = lockblocks;
         }
     }
     //disp_cointx(&T);
-    emit_cointx(&hash2,data,sizeof(data),&T,coin->mgw.oldtx_format,SIGHASH_ALL);
+    emit_cointx(&hash2,data,sizeof(data),T,coin->mgw.oldtx_format,SIGHASH_ALL);
     //printf("HASH2.(%llx)\n",(long long)hash2.txid);
     if ( msigflag != 0 )
     {
@@ -808,6 +814,7 @@ char *subatomic_signp2sh(char *sigstr,struct coin777 *coin,struct cointx_info *r
             if ( bp_key_init(&keyV) == 0 || bp_pubkey_set(&keyV,data,n) == 0 )
             {
                 printf("cant set pubkey\n");
+                free(T);
                 return(0);
             }
             n = (int32_t)strlen(othersig) >> 1;
@@ -815,6 +822,7 @@ char *subatomic_signp2sh(char *sigstr,struct coin777 *coin,struct cointx_info *r
             if ( data[n-1] != SIGHASH_ALL )
             {
                 printf("othersig.(%s) hash type mismatch %d != %d\n",othersig,data[n-1],SIGHASH_ALL);
+                free(T);
                 return(0);
             }
             if ( bp_verify(&keyV,hash2.bytes,sizeof(hash2),data,n-1) == 0 )
@@ -859,6 +867,7 @@ char *subatomic_signp2sh(char *sigstr,struct coin777 *coin,struct cointx_info *r
             else
             {
                 printf("error signing\n");
+                free(T);
                 return(0);
             }
         }
@@ -882,8 +891,9 @@ char *subatomic_signp2sh(char *sigstr,struct coin777 *coin,struct cointx_info *r
         sprintf(&vin->sigs[strlen(vin->sigs)],"%s",redeemscript);
     }
     //printf("scriptSig.(%s)\n",vin->sigs);
-    _emit_cointx(hexstr,sizeof(hexstr),&T,coin->mgw.oldtx_format);
+    _emit_cointx(hexstr,sizeof(hexstr),T,coin->mgw.oldtx_format);
     //disp_cointx(&T);
+    free(T);
     return(clonestr(hexstr));
     //printf("T.msigredeem %d -> (%s)\n",msigflag,hexstr);
 }

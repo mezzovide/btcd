@@ -240,35 +240,35 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amoun
 
 char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
 {
-    struct cointx_info T; int32_t i,j; char *txid,coinaddr[128],txbytes[65536]; uint8_t vout,rmd160[21],data[8];
+    struct cointx_info *T; int32_t i,j; char *txid,coinaddr[128],txbytes[65536]; uint8_t vout,rmd160[21],data[8];
     uint64_t totaloutputs,totalinputs,value,fee,sharedfee; struct rawvout *v;
-    memset(&T,0,sizeof(T));
-    T.version = 1;
-    T.timestamp = (uint32_t)time(NULL);
+    T = calloc(1,sizeof(*T));
+    T->version = 1;
+    T->timestamp = (uint32_t)time(NULL);
     totaloutputs = totalinputs = 0;
     for (i=0; i<numvins; i++)
     {
         decode_hex(&vout,1,vins[i]);
         txid = vins[i] + 2;
-        safecopy(T.inputs[T.numinputs].tx.txidstr,txid,sizeof(T.inputs[i].tx.txidstr));
-        T.inputs[T.numinputs].tx.vout = vout;
+        safecopy(T->inputs[T->numinputs].tx.txidstr,txid,sizeof(T->inputs[i].tx.txidstr));
+        T->inputs[T->numinputs].tx.vout = vout;
         printf("(%s v%d) ",txid,vout);
-        T.inputs[T.numinputs].sequence = 0xffffffff;
-        if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T.inputs[T.numinputs].tx.vout)) > 0 )
+        T->inputs[T->numinputs].sequence = 0xffffffff;
+        if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T->inputs[T->numinputs].tx.vout)) > 0 )
             totalinputs += value;
         else
         {
-            printf("error getting unspent.(%s v%d)\n",txid,T.inputs[T.numinputs].tx.vout);
+            printf("error getting unspent.(%s v%d)\n",txid,T->inputs[T->numinputs].tx.vout);
             break;
         }
-        T.numinputs++;
+        T->numinputs++;
     }
-    printf("numinputs.%d numvins.%d total %.8f\n",T.numinputs,numvins,dstr(totalinputs));
-    if ( T.numinputs == numvins )
+    printf("numinputs.%d numvins.%d total %.8f\n",T->numinputs,numvins,dstr(totalinputs));
+    if ( T->numinputs == numvins )
     {
-        for (T.numoutputs=i=0; i<numvouts; i++)
+        for (T->numoutputs=i=0; i<numvouts; i++)
         {
-            v = &T.outputs[T.numoutputs];
+            v = &T->outputs[T->numoutputs];
             decode_hex(data,8,vouts[i]);
             for (value=j=0; j<8; j++)
             {
@@ -283,17 +283,18 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                 safecopy(v->coinaddr,coinaddr,sizeof(v->coinaddr));
                 v->value = value;
                 totaloutputs += v->value;
-                printf("%d.(%s %s %.8f) ",T.numoutputs,v->coinaddr,v->script,dstr(value));
+                printf("%d.(%s %s %.8f) ",T->numoutputs,v->coinaddr,v->script,dstr(value));
             } else printf("error converting rmd160.(%s)\n",coinaddr);
-            T.numoutputs++;
+            T->numoutputs++;
         }
-        printf("numoutputs.%d numvouts.%d total %.8f\n",T.numoutputs,numvouts,dstr(totaloutputs));
-        if ( T.numoutputs == numvouts )
+        printf("numoutputs.%d numvouts.%d total %.8f\n",T->numoutputs,numvouts,dstr(totaloutputs));
+        if ( T->numoutputs == numvouts )
         {
             fee = (numvouts * coin->mgw.txfee);
             if ( totalinputs < totaloutputs+fee )
             {
                 printf("not enough inputs %.8f for outputs %.8f + fee %.8f diff %.8f\n",dstr(totalinputs),dstr(totaloutputs),dstr(fee),dstr(totaloutputs+fee-totalinputs));
+                free(T);
                 return(0);
             }
             if ( (sharedfee= (totalinputs - totaloutputs) - fee) > numvouts )
@@ -301,20 +302,21 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                 printf("sharedfee %.8f\n",dstr(sharedfee));
                 if ( coin->donationaddress[0] != 0 )
                 {
-                    T.outputs[T.numoutputs].value = sharedfee;
-                    strcpy(T.outputs[T.numoutputs].coinaddr,coin->donationaddress);
-                    T.numoutputs++;
+                    T->outputs[T->numoutputs].value = sharedfee;
+                    strcpy(T->outputs[T->numoutputs].coinaddr,coin->donationaddress);
+                    T->numoutputs++;
                 }
                 else
                 {
                     printf("share excess fee %.8f among %d outputs\n",dstr(sharedfee),numvouts);
                     sharedfee /= numvouts;
                     for (i=0; i<numvouts; i++)
-                        T.outputs[i].value += sharedfee;
+                        T->outputs[i].value += sharedfee;
                 }
             }
-            disp_cointx(&T);
-            _emit_cointx(txbytes,sizeof(txbytes),&T,coin->mgw.oldtx_format);
+            disp_cointx(T);
+            _emit_cointx(txbytes,sizeof(txbytes),T,coin->mgw.oldtx_format);
+            free(T);
             return(clonestr(txbytes));
         }
     }
