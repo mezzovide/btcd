@@ -159,7 +159,7 @@ char *shuffle_layer(char *str,uint64_t *addrs,int32_t num)
         return(0);
     }
     decode_hex(data,len,str);
-    printf("layer.(%s) len.%d num.%d %llx\n",str,len,num,*(long long *)data);
+    //printf("layer.(%s) len.%d num.%d %llx\n",str,len,num,*(long long *)data);
     if ( num > 0 )
     {
         for (i=num-1; i>=0; i--)
@@ -170,7 +170,7 @@ char *shuffle_layer(char *str,uint64_t *addrs,int32_t num)
         }
     }
     init_hexbytes_noT((char *)dest,data,len);
-    printf("(%s) newlen.%d\n",(char *)dest,len);
+    //printf("(%s) newlen.%d\n",(char *)dest,len);
     return(clonestr((char *)dest));
 }
 
@@ -217,6 +217,7 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amoun
         for (j=0; j<8; j++,x>>=8)
         {
             val = (x & 0xff);
+            printf("[%02x] ",val);
             init_hexbytes_noT(&buf[j*2],&val,1);
         }
         buf[j*2] = 0;
@@ -227,7 +228,7 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amoun
             char testaddr[64]; uint8_t rmd160[21];
             decode_hex(rmd160,21,hexaddress);
             if ( btc_convrmd160(testaddr,rmd160[0],rmd160+1) == 0 )
-                printf("{%s -> %s} ",destaddress,testaddr);
+                printf("rmd160.{%s -> %s} ",destaddress,testaddr);
         }
         printf("(%s %.8f -> %s) ",destaddress,dstr(amount),buf);
         retstr = shuffle_layer(buf,addrs,num);
@@ -269,7 +270,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
         {
             decode_hex(data,8,vouts[i]);
             for (value=j=0; j<8; j++,value<<=8)
-                value |= data[j];
+                value |= data[7-j];
             printf("decode.(%s %.8f)\n",vouts[i] + 16,dstr(value));
             decode_hex(rmd160,21,vouts[i] + 16);
             if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )
