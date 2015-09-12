@@ -270,7 +270,10 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
         {
             decode_hex(data,8,vouts[i]);
             for (value=j=0; j<8; j++,value<<=8)
-                value |= data[7-j];
+            {
+                value |= data[j];
+                printf("{%02x} ",data[j]);
+            }
             printf("decode.(%s %.8f)\n",vouts[i] + 16,dstr(value));
             decode_hex(rmd160,21,vouts[i] + 16);
             if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )

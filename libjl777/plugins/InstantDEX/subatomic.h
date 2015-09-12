@@ -193,6 +193,7 @@ int32_t btc_convrmd160(char *coinaddr,uint8_t addrtype,uint8_t md160[20])
     {
         strcpy(coinaddr,btc_addr->str);
         cstr_free(btc_addr,true);
+        return(0);
     }
     return(-1);
 }
