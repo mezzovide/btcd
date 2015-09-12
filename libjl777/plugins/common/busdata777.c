@@ -601,12 +601,12 @@ cJSON *privatemessage_encrypt(uint64_t destbits,void *pmstr,int32_t len)
         printf("destNXT.%s has no pubkey\n",destNXT);
         return(cJSON_CreateString(""));
     }
-    printf("[%s].%d ",pmstr,len);
+    //printf("[%s].%d ",pmstr,len);
     crc = _crc32(0,cipher,cipherlen);
     hexstr = malloc((cipherlen + sizeof(uint32_t) + 1)*2 + 1);
     init_hexbytes_noT(hexstr,(void *)&crc,sizeof(crc));
     init_hexbytes_noT(&hexstr[sizeof(crc) << 1],(void *)cipher,cipherlen + 1);
-    printf("len.%d crc.%x encrypt.(%s) -> (%s) dest.%llu\n",len,crc,pmstr,hexstr,(long long)destbits);
+    //printf("len.%d crc.%x encrypt.(%s) -> (%s) dest.%llu\n",len,crc,pmstr,hexstr,(long long)destbits);
     strjson = cJSON_CreateString(hexstr);
     free(hexstr), free(cipher);
     return(strjson);

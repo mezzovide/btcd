@@ -49,10 +49,10 @@ int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len
         return(-1);
     }
     crypto_box_keypair(onetime_pubkey.bytes,onetime_privkey.bytes);
+    memset(seed.bytes,0,sizeof(seed));
+    seed.bytes[0] = 1;
     if ( (cipher= encode_str(&cipherlen,src,len,destpubkey,onetime_privkey,onetime_pubkey)) != 0 )
     {
-        memset(seed.bytes,0,sizeof(seed));
-        seed.bytes[0] = 1;
         memset(dest,0,cipherlen*2);
         _init_HUFF(hp,cipherlen*2,dest);
         ramcoder_encoder(0,1,cipher,cipherlen,hp,&seed);
@@ -83,14 +83,16 @@ int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len
     return(cipherlen);
 }
 
-int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,uint8_t *src,int32_t len)
+int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,int32_t maxlen,uint8_t *src,int32_t len)
 {
     bits256 seed; uint8_t buf[32768]; int32_t newlen = -1; HUFF H,*hp = &H;
     if ( nxt64bits == SUPERNET.my64bits )
     {
         memset(seed.bytes,0,sizeof(seed)), seed.bytes[0] = 1;
-        _init_HUFF(hp,len*2,dest);
+        _init_HUFF(hp,len,src), hp->endpos = len << 3;
+        printf("src %llx len.%d\n",*(long long *)src,len);
         newlen = ramcoder_decoder(0,1,buf,sizeof(buf),hp,&seed);
+        printf("buf %llx len.%d\n",*(long long *)buf,newlen);
         if ( decode_cipher((void *)dest,buf,&newlen,SUPERNET.myprivkey) != 0 )
             printf("shuffle_decrypt Error: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
     } else printf("cant decrypt another accounts packet\n");
@@ -126,15 +128,17 @@ int32_t shuffle_peel(char *peeled[],cJSON *strs,int32_t num)
     {
         if ( (str= jstr(jitem(strs,i),0)) != 0 )
         {
+            printf("peel.(%s) -> ",str);
             len = (int32_t)strlen(str) >> 1;
             src = calloc(1,len+16);
-            dest = calloc(1,len+16);
+            dest = calloc(1,2*len+16);
             decode_hex(src,len,str);
-            n = shuffle_decrypt(SUPERNET.my64bits,dest,src,len);
+            n = shuffle_decrypt(SUPERNET.my64bits,dest,2*len,src,len);
             hexstr = calloc(1,n*2+1);
             init_hexbytes_noT(hexstr,dest,n);
             free(src), free(dest);
             peeled[i] = hexstr;
+            printf("(%s)\n",hexstr);
         }
         else
         {
@@ -142,7 +146,7 @@ int32_t shuffle_peel(char *peeled[],cJSON *strs,int32_t num)
             return(-1);
         }
     }
-    return(i);
+    return(num);
 }
 
 char *shuffle_layer(char *str,uint64_t *addrs,int32_t num)
@@ -195,7 +199,7 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
             *vinp = up->vout;
             strcpy(txid,up->txid.buf);
             sprintf(buf,"%02x%s",up->vout,up->txid.buf);
-            printf("shuffle_vin.(%s)\n",buf);
+            printf("shuffle_vin.(%s)<- (%s v%d)\n",buf,up->txid.buf,up->vout);
             retstr = shuffle_layer(buf,addrs,num);
         } else printf("no bestfits: %p\n",up);
         free(utx);
@@ -205,13 +209,12 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
 
 char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amount,uint64_t *addrs,int32_t num)
 {
-    char buf[512],pubkey[128],hexaddress[64],*destaddress,*retstr = 0; uint8_t rmd160[21];
+    char buf[512],pubkey[128],hexaddress[64],*destaddress,*retstr = 0;
     if ( (destaddress= shuffle_onetimeaddress(pubkey,coin,type)) != 0 )
     {
         btc_convaddr(hexaddress,destaddress);
-        decode_hex(rmd160,21,hexaddress);
-        //btc_convrmd160(testaddr,rmd160[0],rmd160+1);
         sprintf(buf,"%016llx%s",(long long)amount,hexaddress);
+        printf("(%s %.8f) ",destaddress,dstr(amount));
         retstr = shuffle_layer(buf,addrs,num);
         strcpy(destaddr,destaddress);
         free(destaddress);
@@ -221,53 +224,44 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amoun
 
 char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
 {
-    struct cointx_info T; int32_t i; cJSON *item; char *txid,*coinaddr,txbytes[65536]; uint64_t totaloutputs,totalinputs,value,fee,sharedfee;
+    struct cointx_info T; int32_t i,j; char *txid,coinaddr[128],txbytes[65536]; uint8_t vout,rmd160[21],data[8];
+    uint64_t totaloutputs,totalinputs,value,fee,sharedfee;
     memset(&T,0,sizeof(T));
     T.version = 1;
     T.timestamp = (uint32_t)time(NULL);
     totaloutputs = totalinputs = 0;
     for (i=0; i<numvins; i++)
     {
-        if ( (item= cJSON_Parse(vins[i])) != 0 )
+        decode_hex(&vout,1,vins[i]);
+        txid = vins[i] + 2;
+        safecopy(T.inputs[T.numinputs].tx.txidstr,txid,sizeof(T.inputs[i].tx.txidstr));
+        T.inputs[T.numinputs].tx.vout = vout;
+        printf("(%s v%d) ",txid,vout);
+        T.inputs[T.numinputs].sequence = 0xffffffff;
+        if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T.inputs[T.numinputs].tx.vout)) > 0 )
+            totalinputs += value;
+        else
         {
-            if ( is_cJSON_Array(item) != 0 && cJSON_GetArraySize(item) == 2 )
-            {
-                if ( (txid= jstr(jitem(item,0),0)) != 0 )
-                {
-                    safecopy(T.inputs[T.numinputs].tx.txidstr,txid,sizeof(T.inputs[i].tx.txidstr));
-                    T.inputs[T.numinputs].tx.vout = juint(jitem(item,1),0);
-                    T.inputs[T.numinputs].sequence = 0xffffffff;
-                    if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T.inputs[T.numinputs].tx.vout)) > 0 )
-                        totalinputs += value;
-                    else
-                    {
-                        printf("error getting unspent.(%s v%d)\n",txid,T.inputs[T.numinputs].tx.vout);
-                        free_json(item);
-                        break;
-                    }
-                    T.numinputs++;
-                }
-            }
-            free_json(item);
+            printf("error getting unspent.(%s v%d)\n",txid,T.inputs[T.numinputs].tx.vout);
+            break;
         }
+        T.numinputs++;
     }
     if ( T.numinputs == numvins )
     {
         for (i=0; i<numvouts; i++)
         {
-            if ( (item= cJSON_Parse(vouts[i])) != 0 )
+            decode_hex(data,8,vouts[i]);
+            for (value=j=0; j<8; j++,value<<=8)
+                value |= data[j];
+            decode_hex(rmd160,21,vouts[i] + 16);
+            if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )
             {
-                if ( is_cJSON_Array(item) != 0 && cJSON_GetArraySize(item) == 2 )
-                {
-                    if ( (coinaddr= jstr(jitem(item,0),0)) != 0 )
-                    {
-                        safecopy(T.outputs[T.numoutputs].coinaddr,coinaddr,sizeof(T.outputs[T.numoutputs].coinaddr));
-                        T.outputs[T.numoutputs].value = SATOSHIDEN * jdouble(jitem(item,1),0);
-                        totaloutputs += T.outputs[T.numoutputs].value;
-                        T.numoutputs++;
-                    }
-                }
-                free_json(item);
+                safecopy(T.outputs[T.numoutputs].coinaddr,coinaddr,sizeof(T.outputs[T.numoutputs].coinaddr));
+                T.outputs[T.numoutputs].value = SATOSHIDEN * value;
+                totaloutputs += T.outputs[T.numoutputs].value;
+                printf("(%s %.8f) ",coinaddr,dstr(value));
+                T.numoutputs++;
             }
         }
         if ( T.numinputs == numvins )
@@ -452,9 +446,25 @@ struct shuffle_info *shuffle_find(uint64_t shuffleid)
     return(0);
 }
 
+int32_t shuffle_next(struct shuffle_info *sp,struct coin777 *coin,uint64_t *addrs,int32_t num,int32_t i,uint64_t baseamount)
+{
+    sp->amount = baseamount;
+    sp->fee = ((sp->amount>>10) < coin->mgw.txfee) ? coin->mgw.txfee : (sp->amount>>10);
+    sp->vinstr = shuffle_vin(&sp->change,sp->inputtxid,&sp->vin,coin,sp->amount + sp->fee + coin->mgw.txfee,&addrs[i+1],num-i-1);
+    if ( sp->change != 0 )
+        sp->changestr = shuffle_vout(sp->changeaddr,coin,"change",sp->change,&addrs[i+1],num-i-1);
+    sp->voutstr = shuffle_vout(sp->destaddr,coin,"shuffled",sp->amount,&addrs[i+1],num-i-1);
+    if ( sp->amount == 0 || coin == 0 || sp->vinstr == 0 || sp->voutstr == 0 )
+    {
+        printf("num.%d amount %.8f (%s) vinstr.(%s) voutstr.(%s)\n",num,dstr(sp->amount),coin->name,sp->vinstr,sp->voutstr);
+        return(-1);
+    }
+    return(0);
+}
+
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
-    cJSON *array; struct InstantDEX_quote *iQ = 0; char destNXT[64],buf[2048],*addrstr;
+    char buf[8192],destNXT[64],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
     int32_t createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
     uint64_t _addrs[64],quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
@@ -491,6 +501,11 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
         }
     }
 printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
+    if ( num < 2 )
+    {
+        printf("need at least 2 to shuffle\n");
+        return(clonestr("{\"error\":\"not enough shufflers\"}"));
+    }
     if ( (i= myind) > 0 )
     {
         addrs[i] = addrs[0];
@@ -511,34 +526,19 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
         }
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
-            sp->amount = iQ->s.baseamount;
             iQ->s.pending = 1;
-            sp->fee = ((sp->amount>>10) < coin->mgw.txfee) ? coin->mgw.txfee : (sp->amount>>10);
-            sp->vinstr = shuffle_vin(&sp->change,sp->inputtxid,&sp->vin,coin,sp->amount + sp->fee + coin->mgw.txfee,&addrs[i+1],num-i-1);
-            if ( sp->change != 0 )
-                sp->changestr = shuffle_vout(sp->changeaddr,coin,"change",sp->change,&addrs[i+1],num-i-1);
-            sp->voutstr = shuffle_vout(sp->destaddr,coin,"shuffled",sp->amount,&addrs[i+1],num-i-1);
-            if ( sp->amount == 0 || coin == 0 || sp->vinstr == 0 || sp->voutstr == 0 )
-            {
-                printf("num.%d amount %.8f (%s) vinstr.(%s) voutstr.(%s)\n",num,dstr(sp->amount),coin->name,sp->vinstr,sp->voutstr);
+            if ( shuffle_next(sp,coin,addrs,num,i,iQ->s.baseamount) < 0 )
                 return(clonestr("{\"error\":\"this node not shuffling due to calc error\"}"));
-            }
-            else
-            {
-                array = cJSON_CreateArray();
-                for (j=0; j<num; j++)
-                    jaddi64bits(array,addrs[j]);
-                addrstr = jprint(array,1);
-                sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":%u,\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"],\"addrs\":%s}",(long long)sp->shuffleid,sp->timestamp,sp->base,sp->vinstr,sp->voutstr,addrstr);
-                free(addrstr);
-                expand_nxt64bits(destNXT,addrs[i + 1]);
-                printf("destNXT.(%s) addrs[%d] %llu\n",destNXT,i+1,(long long)addrs[i+1]);
-                //if ( strlen(buf) >= sizeof(hexstr)>>1 )
-                //    return(clonestr("{\"error\":\"shuffle buffer overflow\"}"));
-                //init_hexbytes_noT(hexstr,(void *)buf,strlen(buf)>>1);
-                telepathic_PM(destNXT,buf);
-                return(clonestr("{\"success\":\"shuffle created\"}"));
-            }
+            array = cJSON_CreateArray();
+            for (j=0; j<num; j++)
+                jaddi64bits(array,addrs[j]);
+            addrstr = jprint(array,1);
+            sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":%u,\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"],\"addrs\":%s}",(long long)sp->shuffleid,sp->timestamp,sp->base,sp->vinstr,sp->voutstr,addrstr);
+            free(addrstr);
+            expand_nxt64bits(destNXT,addrs[i + 1]);
+            printf("destNXT.(%s) addrs[%d] %llu\n",destNXT,i+1,(long long)addrs[i+1]);
+            telepathic_PM(destNXT,buf);
+            return(clonestr("{\"success\":\"shuffle created\"}"));
         }
     }
     return(clonestr("{\"success\":\"shuffle already there\"}"));
@@ -546,19 +546,22 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
 
 int32_t shuffle_incoming(char *jsonstr)
 {
-    struct coin777 *coin = 0; cJSON *newjson,*json,*vins,*vouts,*array; int32_t i,j,num,createdflag,numvins,numvouts; struct shuffle_info *sp;
-    char *newvins[1024],*newvouts[1024],destNXT[64],buf[8192],*base,*str,*txbytes,*msg; uint64_t shuffleid; uint32_t nonce;
-    uint64_t addrs[64];
+    struct coin777 *coin = 0; cJSON *newjson,*json,*vins,*vouts,*array; int32_t i,j,num,createdflag,numvins,numvouts,myind = -1;
+    char *newvins[1024],*newvouts[1024],destNXT[64],buf[8192],*base,*str,*txbytes,*msg; uint32_t nonce;
+    uint64_t addrs[64],shuffleid,quoteid; struct shuffle_info *sp; struct InstantDEX_quote *iQ;
     if ( (json= cJSON_Parse(jsonstr)) != 0 && (base= jstr(json,"base")) != 0 && (shuffleid= j64bits(json,"shuffleid")) != 0 )
     {
         coin = coin777_find(base,1);
         if ( (sp= shuffle_find(shuffleid)) == 0 )
         {
             if ( (array= jarray(&num,json,"addrs")) != 0 )
+            {
                 for (i=0; i<num; i++)
-                    addrs[i] = j64bits(jitem(array,i),0);
+                    if ( (addrs[i]= j64bits(jitem(array,i),0)) == SUPERNET.my64bits )
+                        myind = i;
+            }
             sp = shuffle_create(&createdflag,base,juint(json,"timestamp"),addrs,num);
-            if ( sp != 0 && sp->shuffleid != shuffleid )
+            if ( sp == 0 || (sp != 0 && sp->shuffleid != shuffleid) )
             {
                 printf("shuffleid mismatch %llu vs %llu\n",(long long)sp->shuffleid,(long long)shuffleid);
                 free_json(json);
@@ -567,41 +570,50 @@ int32_t shuffle_incoming(char *jsonstr)
         }
         if ( sp != 0 && strcmp(sp->base,base) == 0 && coin != 0 && (vins= jarray(&numvins,json,"vins")) != 0 && (vouts= jarray(&numvouts,json,"vouts")) != 0 )
         {
-            if ( numvins < sizeof(newvins)/sizeof(*newvins)-2 && numvouts < sizeof(newvouts)/sizeof(*newvouts)-2 )
+            if ( myind >= 0 && numvins < sizeof(newvins)/sizeof(*newvins)-2 && numvouts < sizeof(newvouts)/sizeof(*newvouts)-2 )
             {
-                shuffle_peel(newvins,vins,numvins), newvins[numvins++] = clonestr(sp->vinstr);
-                shuffle_peel(newvouts,vouts,numvouts), newvouts[numvouts++] = clonestr(sp->voutstr);
-                if ( sp->change != 0 )
-                    newvouts[numvouts++] = clonestr(sp->changestr);
-                for (j=0; j<13; j++)
-                    shuffle_strs(newvins,numvins);
-                for (j=0; j<13; j++)
-                    shuffle_strs(newvouts,numvouts);
-                if ( sp->myind == sp->numaddrs-1 )
+                if ( (array= InstantDEX_shuffleorders(&quoteid,SUPERNET.my64bits,base)) != 0 )
+                    free_json(array);
+                if ( (iQ= find_iQ(quoteid)) != 0 )
                 {
-                    if ( (txbytes= shuffle_cointx(coin,newvins,numvins,newvouts,numvouts)) != 0 )
+                    iQ->s.pending = 1;
+                    if ( shuffle_next(sp,coin,addrs,num,myind,iQ->s.baseamount) < 0 )
+                        return(-1);
+                    shuffle_peel(newvins,vins,numvins), newvins[numvins++] = clonestr(sp->vinstr);
+                    shuffle_peel(newvouts,vouts,numvouts), newvouts[numvouts++] = clonestr(sp->voutstr);
+                    if ( sp->change != 0 )
+                        newvouts[numvouts++] = clonestr(sp->changestr);
+                    for (j=0; j<13; j++)
+                        shuffle_strs(newvins,numvins);
+                    for (j=0; j<13; j++)
+                        shuffle_strs(newvouts,numvouts);
+                    printf("myind.%d numaddrs.%d numvins.%d numvouts.%d\n",myind,sp->numaddrs,numvins,numvouts);
+                    if ( myind == sp->numaddrs-1 )
                     {
-                        sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"shuffle\",\"method\":\"busdata\",\"submethod\":\"validate\",\"rawtx\":\"%s\"}",(long long)sp->shuffleid,sp->timestamp,txbytes);
-                        if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
-                            free(str);
-                        free(txbytes);
+                        if ( (txbytes= shuffle_cointx(coin,newvins,numvins,newvouts,numvouts)) != 0 )
+                        {
+                            sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"shuffle\",\"method\":\"busdata\",\"submethod\":\"validate\",\"rawtx\":\"%s\"}",(long long)sp->shuffleid,sp->timestamp,txbytes);
+                            if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
+                                free(str);
+                            free(txbytes);
+                        } else printf("shuffle_cointx null return\n");
                     }
+                    else
+                    {
+                        newjson = cJSON_CreateObject();
+                        vins = shuffle_strarray(newvins,numvins), vouts = shuffle_strarray(newvouts,numvouts);
+                        jadd(newjson,"vins",vins), jadd(newjson,"vouts",vouts);
+                        msg = jprint(newjson,1);
+                        expand_nxt64bits(destNXT,sp->addrs[myind+1]);
+                        telepathic_PM(destNXT,msg);
+                        free(msg);
+                        free_json(newjson);
+                    }
+                    for (i=0; i<numvins; i++)
+                        free(newvins[i]);
+                    for (i=0; i<numvouts; i++)
+                        free(newvouts[i]);
                 }
-                else
-                {
-                    newjson = cJSON_CreateObject();
-                    vins = shuffle_strarray(newvins,numvins), vouts = shuffle_strarray(newvouts,numvouts);
-                    jadd(newjson,"vins",vins), jadd(newjson,"vouts",vouts);
-                    msg = jprint(newjson,1);
-                    expand_nxt64bits(destNXT,sp->addrs[sp->myind+1]);
-                    telepathic_PM(destNXT,msg);
-                    free(msg);
-                    free_json(newjson);
-                }
-                for (i=0; i<numvins; i++)
-                    free(newvins[i]);
-                for (i=0; i<numvouts; i++)
-                    free(newvouts[i]);
             }
         } else printf("shuffle_incoming: missing sp.%p or coin.%p\n",sp,coin);
         free_json(json);
