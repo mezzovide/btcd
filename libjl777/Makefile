@@ -286,7 +286,7 @@ libccoin: doesntexist; \
      sudo apt-get install libevent-dev libjansson-dev; git clone https://github.com/jgarzik/picocoin; cd picocoin; ./autogen.sh; ./configure; $(MAKE); cp lib/libccoin.a ../libs; cd ..;
 
 onetime: doesntexist; \
-    cd nanomsg; ./autogen.sh && CFLAGS='$(CFLAGS) -fPIC ' ./configure --with-pic; $(MAKE) -lanl; cd ..; \
+    cd nanomsg; ./autogen.sh && ./configure --with-pic; $(MAKE) -lanl; cd ..; \
     cd miniupnpc; $(MAKE); cp libminiupnpc.a ../libs; cd ..; \
     sudo apt-get install libevent-dev libjansson-dev; git clone https://github.com/jgarzik/picocoin; cd picocoin; ./autogen.sh; ./configure; $(MAKE); cp lib/libccoin.a ../libs; cd ..; \
     git clone https://github.com/joewalnes/websocketd; cd websocketd; $(MAKE); cp websocketd ../libs; cd ..; \

@@ -199,7 +199,7 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
             *vinp = up->vout;
             strcpy(txid,up->txid.buf);
             sprintf(buf,"%02x%s",up->vout,up->txid.buf);
-            printf("shuffle_vin.(%s)\n",buf);
+            printf("shuffle_vin.(%s)<- (%s v%d)\n",buf,up->txid.buf,up->vout);
             retstr = shuffle_layer(buf,addrs,num);
         } else printf("no bestfits: %p\n",up);
         free(utx);
@@ -209,13 +209,12 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
 
 char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amount,uint64_t *addrs,int32_t num)
 {
-    char buf[512],pubkey[128],hexaddress[64],*destaddress,*retstr = 0; uint8_t rmd160[21];
+    char buf[512],pubkey[128],hexaddress[64],*destaddress,*retstr = 0;
     if ( (destaddress= shuffle_onetimeaddress(pubkey,coin,type)) != 0 )
     {
         btc_convaddr(hexaddress,destaddress);
-        decode_hex(rmd160,21,hexaddress);
-        //btc_convrmd160(testaddr,rmd160[0],rmd160+1);
         sprintf(buf,"%016llx%s",(long long)amount,hexaddress);
+        printf("(%s %.8f) ",destaddress,dstr(amount));
         retstr = shuffle_layer(buf,addrs,num);
         strcpy(destaddr,destaddress);
         free(destaddress);
@@ -225,53 +224,44 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amoun
 
 char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
 {
-    struct cointx_info T; int32_t i; cJSON *item; char *txid,*coinaddr,txbytes[65536]; uint64_t totaloutputs,totalinputs,value,fee,sharedfee;
+    struct cointx_info T; int32_t i,j; char *txid,coinaddr[128],txbytes[65536]; uint8_t vout,rmd160[21],data[8];
+    uint64_t totaloutputs,totalinputs,value,fee,sharedfee;
     memset(&T,0,sizeof(T));
     T.version = 1;
     T.timestamp = (uint32_t)time(NULL);
     totaloutputs = totalinputs = 0;
     for (i=0; i<numvins; i++)
     {
-        if ( (item= cJSON_Parse(vins[i])) != 0 )
+        decode_hex(&vout,1,vins[i]);
+        txid = vins[i] + 2;
+        safecopy(T.inputs[T.numinputs].tx.txidstr,txid,sizeof(T.inputs[i].tx.txidstr));
+        T.inputs[T.numinputs].tx.vout = vout;
+        printf("(%s v%d) ",txid,vout);
+        T.inputs[T.numinputs].sequence = 0xffffffff;
+        if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T.inputs[T.numinputs].tx.vout)) > 0 )
+            totalinputs += value;
+        else
         {
-            if ( is_cJSON_Array(item) != 0 && cJSON_GetArraySize(item) == 2 )
-            {
-                if ( (txid= jstr(jitem(item,0),0)) != 0 )
-                {
-                    safecopy(T.inputs[T.numinputs].tx.txidstr,txid,sizeof(T.inputs[i].tx.txidstr));
-                    T.inputs[T.numinputs].tx.vout = juint(jitem(item,1),0);
-                    T.inputs[T.numinputs].sequence = 0xffffffff;
-                    if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T.inputs[T.numinputs].tx.vout)) > 0 )
-                        totalinputs += value;
-                    else
-                    {
-                        printf("error getting unspent.(%s v%d)\n",txid,T.inputs[T.numinputs].tx.vout);
-                        free_json(item);
-                        break;
-                    }
-                    T.numinputs++;
-                }
-            }
-            free_json(item);
+            printf("error getting unspent.(%s v%d)\n",txid,T.inputs[T.numinputs].tx.vout);
+            break;
         }
+        T.numinputs++;
     }
     if ( T.numinputs == numvins )
     {
         for (i=0; i<numvouts; i++)
         {
-            if ( (item= cJSON_Parse(vouts[i])) != 0 )
+            decode_hex(data,8,vouts[i]);
+            for (value=j=0; j<8; j++,value<<=8)
+                value |= data[j];
+            decode_hex(rmd160,21,vouts[i] + 16);
+            if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )
             {
-                if ( is_cJSON_Array(item) != 0 && cJSON_GetArraySize(item) == 2 )
-                {
-                    if ( (coinaddr= jstr(jitem(item,0),0)) != 0 )
-                    {
-                        safecopy(T.outputs[T.numoutputs].coinaddr,coinaddr,sizeof(T.outputs[T.numoutputs].coinaddr));
-                        T.outputs[T.numoutputs].value = SATOSHIDEN * jdouble(jitem(item,1),0);
-                        totaloutputs += T.outputs[T.numoutputs].value;
-                        T.numoutputs++;
-                    }
-                }
-                free_json(item);
+                safecopy(T.outputs[T.numoutputs].coinaddr,coinaddr,sizeof(T.outputs[T.numoutputs].coinaddr));
+                T.outputs[T.numoutputs].value = SATOSHIDEN * value;
+                totaloutputs += T.outputs[T.numoutputs].value;
+                printf("(%s %.8f) ",coinaddr,dstr(value));
+                T.numoutputs++;
             }
         }
         if ( T.numinputs == numvins )
@@ -606,7 +596,7 @@ int32_t shuffle_incoming(char *jsonstr)
                             if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                                 free(str);
                             free(txbytes);
-                        }
+                        } else printf("shuffle_cointx null return\n");
                     }
                     else
                     {

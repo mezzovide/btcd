@@ -604,8 +604,10 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
      },*/
     *totalp = *nump = 0;
     sprintf(params,"%d, 99999999",coin->minconfirms);
+    printf("issue listunspent\n");
     if ( (retstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"listunspent",params)) != 0 )
     {
+        printf("got unspents\n");
         //printf("unspents (%s)\n",retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
