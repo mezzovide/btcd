@@ -36,7 +36,7 @@ struct prices777 *prices777_find(int32_t *invertedp,uint64_t baseid,uint64_t rel
             //else printf("(%llu/%llu) != (%llu/%llu)\n",(long long)baseid,(long long)relid,(long long)prices->baseid,(long long)prices->relid);
         } //else fprintf(stderr,"(%s).%d ",prices->exchange,i);
     }
-    printf("CANTFIND.(%s) %llu/%llu\n",exchange,(long long)baseid,(long long)relid);
+    //printf("CANTFIND.(%s) %llu/%llu\n",exchange,(long long)baseid,(long long)relid);
     return(0);
 }
 
@@ -481,6 +481,7 @@ void prices777_orderbook_item(struct prices777 *prices,int32_t bidask,struct pri
     {
         jaddstr(item,"plugin","shuffle"), jaddstr(item,"method","start");
         jaddnum(item,"dotrade",1), jaddnum(item,"volume",volume);
+        jaddnum(item,"timeout",120000);
         jaddstr(item,"base",prices->base);
         if ( (iQ= find_iQ(quoteid)) != 0 )
             jadd64bits(item,"offerNXT",iQ->s.offerNXT);
@@ -1378,7 +1379,7 @@ double prices777_InstantDEX(struct prices777 *prices,int32_t maxdepth)
     cJSON *json; double hbla = 0.;
     if ( (json= InstantDEX_orderbook(prices)) != 0 )
     {
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             printf("InstantDEX.(%s)\n",jprint(json,0));
         prices777_json_orderbook("InstantDEX",prices,maxdepth,json,0,"bids","asks",0,0);
         free_json(json);
