@@ -30,7 +30,7 @@ STRUCTNAME
 {
     uint32_t timestamp,numaddrs;
     uint64_t basebits,addrs[64],shuffleid,quoteid,fee;
-    char base[16],destaddr[64],changeaddr[64],inputtxid[128],sigs[64][256],*vinstr,*voutstr,*changestr,*cointxid;
+    char signedtx[65536],base[16],destaddr[64],changeaddr[64],inputtxid[128],sigs[64][256],*vinstr,*voutstr,*changestr,*cointxid;
     int32_t vin,myind,srcacct; uint64_t change,amount,sigmask;
     struct cointx_info *T;
 } *SHUFFLES[1000];
@@ -239,7 +239,7 @@ int32_t shuffle_next(struct shuffle_info *sp,struct coin777 *coin,uint64_t *addr
 char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
 {
     struct cointx_info *T; int32_t i,j; char *txid,coinaddr[128],txbytes[65536]; uint8_t vout,rmd160[21],data[8];
-    uint64_t totaloutputs,totalinputs,value,fee,sharedfee; struct rawvout *v;
+    uint64_t totaloutputs,totalinputs,value,fee,sharedfee; struct rawvout *v; struct destbuf scriptPubKey;
     T = calloc(1,sizeof(*T));
     T->version = 1;
     T->timestamp = (uint32_t)time(NULL);
@@ -252,6 +252,8 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
         T->inputs[T->numinputs].tx.vout = vout;
         //printf("(%s v%d) ",txid,vout);
         T->inputs[T->numinputs].sequence = 0xffffffff;
+        T->inputs[T->numinputs].value = value = shuffle_getcoinaddr(T->inputs[T->numinputs].coinaddr,&scriptPubKey,coin,txid,vout);
+        strcpy(T->inputs[T->numinputs].sigs,scriptPubKey.buf);
         if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T->inputs[T->numinputs].tx.vout)) > 0 )
             totalinputs += value;
         else
@@ -298,7 +300,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
             if ( (sharedfee= (totalinputs - totaloutputs) - fee) > numvouts )
             {
                 printf("sharedfee %.8f\n",dstr(sharedfee));
-                if ( coin->donationaddress[0] != 0 )
+                if ( coin->donationaddress[0] != 0 && sharedfee >= coin->mgw.txfee )
                 {
                     T->outputs[T->numoutputs].value = sharedfee;
                     strcpy(T->outputs[T->numoutputs].coinaddr,coin->donationaddress);
@@ -370,7 +372,8 @@ char *shuffle_send(struct coin777 *coin,struct shuffle_info *sp)
 
 char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
 {
-    struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1; char buf[8192],coinaddr[64],sigstr[4096],*str; uint8_t rmd160[20];
+    struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1;
+    char buf[8192],coinaddr[64],*sigstr,*str; uint8_t rmd160[20]; struct destbuf scriptPubKey;
     if ( sp == 0 )
     {
         printf("cant find shuffleid.%llu\n",(long long)sp->shuffleid);
@@ -415,6 +418,8 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             for (i=0; i<cointx->numinputs; i++)
             {
                 printf("%s ",cointx->inputs[i].tx.txidstr);
+                cointx->inputs[i].value = shuffle_getcoinaddr(cointx->inputs[i].coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
+                strcpy(cointx->inputs[i].sigs,scriptPubKey.buf);
                 if ( vin < 0 && strcmp(cointx->inputs[i].tx.txidstr,sp->inputtxid) == 0 )
                 {
                     printf("matched input.(%s) vin.%d\n",sp->inputtxid,sp->vin);
@@ -427,8 +432,16 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             }
             if ( vin >= 0 )
             {
-                if ( shuffle_signvin(sigstr,coin,cointx,vin) != 0 )
+                if ( shuffle_signtx(sp->signedtx,sizeof(sp->signedtx),coin,cointx,rawtx) > 0 )
                 {
+                    printf("READY to sendtransaction\n");
+                }
+                if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 )
+   //else  //if ( shuffle_signvin(sigstr,coin,cointx,vin) != 0 )
+                {
+                    free(sp->T);
+                    sp->T = cointx;
+                    sigstr = cointx->inputs[vin].sigs;
                     sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"shuffle\",\"method\":\"busdata\",\"submethod\":\"signed\",\"sig\":\"%s\",\"vin\":%d}",(long long)sp->shuffleid,sp->timestamp,sigstr,vin);
                     if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                         free(str);
@@ -436,7 +449,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     sp->sigmask |= (1LL << vin);
                     strcpy(sp->sigs[vin],sigstr);
                     return(clonestr(buf));
-                } else printf("signing error\n");
+                }
             }
         }
     }
@@ -530,25 +543,28 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,in
                 {
                     i = (j + r) % n;
                     x = j64bits(jitem(array,i),0);
-                    for (k=0; k<num; k++)
-                        if ( x == addrs[k] )
-                            break;
+                    if ( num > 0 )
+                    {
+                        for (k=0; k<num; k++)
+                            if ( x == addrs[k] )
+                                break;
+                    } else k = 0;
                     if ( k == num )
                     {
-                        if ( addrs[num] == SUPERNET.my64bits )
+                        if ( x == SUPERNET.my64bits )
                             myind = num;
-                        expand_nxt64bits(destNXT,addrs[num]);
+                        expand_nxt64bits(destNXT,x);
                         issue_getpubkey(&haspubkey,destNXT);
                         if ( haspubkey == 0 )
                         {
                             RS_encode(rsaddr,addrs[num]);
                             tmp = RS_decode(rsaddr);
                             printf("skipping %s without pubkey RS.%s %llu\n",destNXT,rsaddr,(long long)tmp);
-                        } else num++;
+                        } else addrs[num++] = x;
                         if ( num == sizeof(_addrs)/sizeof(*_addrs) )
                             break;
                     }
-                    //printf("n.%d r.%d i.%d j.%d num.%d %llu\n",n,r,i,j,num,(long long)addrs[num-1]);
+                    printf("n.%d r.%d i.%d j.%d k.%d num.%d %llu\n",n,r,i,j,k,num,(long long)addrs[num-1]);
                 }
             }
             free_json(array);

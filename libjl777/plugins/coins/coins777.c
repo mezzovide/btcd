@@ -188,6 +188,7 @@ struct subatomic_unspent_tx *subatomic_bestfit(struct coin777 *coin,struct subat
 struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,struct coin777 *coin,char *account);
 cJSON *get_decoderaw_json(struct coin777 *coin,char *rawtransaction);
 char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi);
+int32_t shuffle_signtx(char *signedtx,unsigned long destsize,struct coin777 *coin,struct cointx_info *cointx,char *rawbytes);
 
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
 void coin777_disprawblock(struct rawblock *raw);
@@ -227,6 +228,7 @@ char *subatomic_fundingtx(char *refredeemscript,struct subatomic_rawtransaction 
 char *subatomic_spendtx(struct destbuf *spendtxid,char *vintxid,char *refundsig,struct coin777 *coin,char *otherpubkey,char *mypubkey,char *onetimepubkey,uint64_t amount,char *refundtx,char *refredeemscript);
 char *subatomic_validate(struct coin777 *coin,char *pubA,char *pubB,char *pkhash,char *refundtx,char *refundsig);
 char *create_atomictx_scripts(uint8_t addrtype,char *scriptPubKey,char *p2shaddr,char *pubkeyA,char *pubkeyB,char *hash160str);
+uint64_t shuffle_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct coin777 *coin,char *txid,int32_t vout);
 
 #ifdef INSIDE_MGW
 struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize);
