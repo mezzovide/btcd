@@ -422,7 +422,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                 strcpy(cointx->inputs[i].sigs,scriptPubKey.buf);
                 if ( vin < 0 && strcmp(cointx->inputs[i].tx.txidstr,sp->inputtxid) == 0 )
                 {
-                    printf("matched input.(%s) vin.%d\n",sp->inputtxid,sp->vin);
+                    printf("i.%d matched input.(%s) vin.%d\n",i,sp->inputtxid,sp->vin);
                     if ( cointx->inputs[i].tx.vout == sp->vin )
                     {
                         vin = i;
