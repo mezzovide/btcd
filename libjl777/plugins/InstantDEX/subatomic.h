@@ -313,7 +313,7 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
     sigstr[0] = 0;
     if ( (privkey= shuffle_getprivkey(&value,&scriptPubKey,&locktime,coin,vin->tx.txidstr,vin->tx.vout)) != 0 )
     {
-        printf("vin.%d shuffle_getprivkey.(%s) [%s]\n",redeemi,privkey,scriptPubKey.buf);
+        //printf("vin.%d shuffle_getprivkey.(%s) [%s]\n",redeemi,privkey,scriptPubKey.buf);
         if ( btc_setprivkey(&key,privkey) == 0 && btc_getpubkey(pubP,data,&key) > 0 )
         {
             for (i=0; i<T->numinputs; i++)
