@@ -612,7 +612,6 @@ char *gather_account_addresses(struct coin777 *coin,char *account)
     cJSON *array,*retarray,*item; int32_t i,n; char *acct;
     if ( (array= _get_localaddresses(coin->name,coin->serverport,coin->userpass)) != 0 )
     {
-        printf("gather.(%s) %s\n",jprint(array,0),account);
         retarray = cJSON_CreateArray();
         n = cJSON_GetArraySize(array);
         for (i=0; i<n; i++)
@@ -620,7 +619,10 @@ char *gather_account_addresses(struct coin777 *coin,char *account)
             if ( (item= jitem(array,i)) != 0 && is_cJSON_Array(item) != 0 && cJSON_GetArraySize(item) > 2 )
             {
                 if ( (acct= jstr(jitem(item,2),0)) != 0 && strcmp(acct,account) == 0 )
-                    jaddistr(retarray,acct);
+                {
+                    printf("gather.(%s) %s\n",jstr(jitem(item,0),0),account);
+                    jaddistr(retarray,jstr(jitem(item,0),0));
+                }
             }
         }
         free_json(array);

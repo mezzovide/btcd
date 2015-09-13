@@ -172,7 +172,7 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
     if ( srcacct > 0 )
         sprintf(sourceacct,"shuffled.%d",srcacct);
     else if ( srcacct == 0 )
-        strcpy(sourceacct,"shufflechange");
+        strcpy(sourceacct,"telepods");
     if ( (utx= gather_unspents(&total,&n,coin,sourceacct)) != 0  )
     {
         //printf("shufflevin %.8f\n",dstr(amount));
