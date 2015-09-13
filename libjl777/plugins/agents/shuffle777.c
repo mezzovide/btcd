@@ -31,7 +31,7 @@ STRUCTNAME
 {
     uint32_t timestamp,numaddrs;
     uint64_t basebits,addrs[64],shuffleid,quoteid,fee;
-    char base[16],destaddr[64],changeaddr[64],inputtxid[128],sigs[64][256],*vinstr,*voutstr,*changestr;
+    char base[16],destaddr[64],changeaddr[64],inputtxid[128],sigs[64][256],*vinstr,*voutstr,*changestr,*cointxid;
     int32_t vin,myind,srcacct; uint64_t change,amount,sigmask;
     struct cointx_info *T;
 } *SHUFFLES[1000];
@@ -346,6 +346,28 @@ cJSON *shuffle_strarray(char *ptrs[],int32_t num)
     return(array);
 }
 
+char *shuffle_send(struct coin777 *coin,struct shuffle_info *sp)
+{
+    char *tx;
+    if ( sp->T != 0 )
+    {
+        if ( bitweight(sp->sigmask) == sp->T->numinputs )
+        {
+            tx = calloc(1,65536);
+            strcpy(tx,"[\"");
+            _emit_cointx(tx+2,sizeof(tx)-2,sp->T,coin->mgw.oldtx_format);
+            strcat(tx,"\"]");
+            if ( (sp->cointxid= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",tx)) != 0 )
+                printf(">>>>>>>>>>>>> %s BROADCAST.(%s) (%s)\n",coin->name,tx,sp->cointxid);
+            else printf("error sending transaction.(%s)\n",tx);
+            delete_iQ(sp->quoteid);
+            free(tx);
+        }
+        return(sp->cointxid);
+    }
+    return(0);
+}
+
 char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
 {
     struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1; char buf[8192],coinaddr[64],sigstr[4096],*str; uint8_t rmd160[20];
@@ -375,22 +397,14 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                 printf("matched dest.(%s) %.8f\n",sp->destaddr,dstr(sp->amount));
                 if ( cointx->outputs[i].value >= sp->amount )
                     vout = i;
-                else
-                {
-                    printf("warning: amount mismatch %.8f vs %.8f\n",dstr(cointx->outputs[i].value),dstr(sp->amount));
-                    //break;
-                }
+                else printf("warning: amount mismatch %.8f vs %.8f\n",dstr(cointx->outputs[i].value),dstr(sp->amount));
             }
             if ( sp->change != 0 && changeout < 0 && strcmp(coinaddr,sp->changeaddr) == 0 )
             {
                 printf("matched change.(%s) %.8f\n",sp->changeaddr,dstr(sp->change));
                 if ( cointx->outputs[i].value >= sp->change )
                     changeout = i;
-                else
-                {
-                    printf("warning: change mismatch %.8f vs %.8f\n",dstr(cointx->outputs[i].value),dstr(sp->change));
-                    //break;
-                }
+                else printf("warning: change mismatch %.8f vs %.8f\n",dstr(cointx->outputs[i].value),dstr(sp->change));
             }
             if ( (sp->change == 0 || changeout >= 0) && vout >= 0 )
                 break;
@@ -408,12 +422,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     {
                         vin = i;
                         break;
-                    }
-                    else
-                    {
-                        printf("warning: vout mismatch %d vs %d\n",cointx->inputs[i].tx.vout,sp->vin);
-                        //break;
-                    }
+                    } else printf("warning: vout mismatch %d vs %d\n",cointx->inputs[i].tx.vout,sp->vin);
                 }
             }
             if ( vin >= 0 )
@@ -641,6 +650,9 @@ int32_t shuffle_incoming(char *jsonstr)
                             if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                                 free(str);
                             printf("RAWTX.(%s)\n",txbytes);
+                            msleep(250 + (rand() % 2000));
+                            if ( (str= shuffle_validate(coin,txbytes,sp)) != 0 )
+                                free(str);
                             free(txbytes);
                         } else printf("shuffle_cointx null return\n");
                     }
@@ -686,7 +698,7 @@ uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char *resultstr,tx[8192],*methodstr,*rawtx,*sig,*cointxid,*retstr = 0; int32_t vin; uint64_t shuffleid; struct coin777 *coin; struct shuffle_info *sp;
+    char *resultstr,*methodstr,*rawtx,*sig,*retstr = 0; int32_t vin; uint64_t shuffleid; struct coin777 *coin; struct shuffle_info *sp;
     retbuf[0] = 0;
     plugin->allowremote = 1;
     if ( initflag > 0 )
@@ -739,23 +751,14 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 if ( (coin= coin777_find(sp->base,0)) != 0 && (vin= juint(json,"vin")) >= 0 && vin < 64 && strlen(sig) < sizeof(sp->sigs[0]) )
                 {
                     sp->sigmask |= (1LL << vin);
+                    printf("SIGMASK.%d\n",(int32_t)sp->sigmask);
                     if ( sp->T != 0 )
                     {
                         strcpy(sp->T->inputs[vin].sigs,sig);
-                        if ( bitweight(sp->sigmask) == sp->T->numinputs )
-                        {
-                            strcpy(tx,"[\"");
-                            _emit_cointx(tx+2,sizeof(tx)-2,sp->T,coin->mgw.oldtx_format);
-                            strcat(tx,"\"]");
-                            if ( (cointxid= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",tx)) != 0 )
-                            {
-                                printf(">>>>>>>>>>>>> %s BROADCAST.(%s) (%s)\n",coin->name,tx,cointxid);
-                                free(cointxid);
-                            } else printf("error sending transaction.(%s)\n",tx);
-                            delete_iQ(sp->quoteid);
-                        } else retstr = clonestr("{\"success\":\"shuffle accepted sig\"}");
+                        shuffle_send(coin,sp);
                     } else strcpy(sp->sigs[vin],sig);
-                }
+                    retstr = clonestr("{\"success\":\"shuffle accepted sig\"}");
+                } else retstr = clonestr("{\"error\":\"shuffle rejected sig\"}");
             }
             if ( retstr == 0 )
                 retstr = clonestr("{\"error\":\"shuffle signed invalid args\"}");
