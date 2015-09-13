@@ -313,7 +313,7 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
     sigstr[0] = 0;
     if ( (privkey= shuffle_getprivkey(&value,&scriptPubKey,&locktime,coin,vin->tx.txidstr,vin->tx.vout)) != 0 )
     {
-        printf("shuffle_getprivkey.(%s) [%s]\n",privkey,scriptPubKey.buf);
+        printf("vin.%d shuffle_getprivkey.(%s) [%s]\n",redeemi,privkey,scriptPubKey.buf);
         if ( btc_setprivkey(&key,privkey) == 0 && btc_getpubkey(pubP,data,&key) > 0 )
         {
             for (i=0; i<T->numinputs; i++)
@@ -331,9 +331,9 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
                 free(sig);
                 sigbuf[siglen++] = SIGHASH_ALL;
                 init_hexbytes_noT(hexstr,sigbuf,(int32_t)siglen);
-                sprintf(vin->sigs,"%02lx%s%02lx%s%s",siglen,hexstr,strlen(pubP)/2,pubP,"");//scriptPubKey.buf);
+                sprintf(vin->sigs,"%02lx%s%02lx%s%s",siglen,hexstr,strlen(pubP)/2,pubP,scriptPubKey.buf);
                 strcpy(sigstr,vin->sigs);
-                printf("after P.(%s) siglen.%02lx sig.(%s)\n",vin->sigs,siglen,scriptPubKey.buf);
+                printf("after P.(%s) siglen.%02lx sig.(%s)\n",sigstr,siglen,scriptPubKey.buf);
             }
         }
         else
