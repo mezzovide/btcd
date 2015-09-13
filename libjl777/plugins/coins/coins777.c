@@ -188,7 +188,7 @@ struct subatomic_unspent_tx *subatomic_bestfit(struct coin777 *coin,struct subat
 struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,struct coin777 *coin,char *account);
 cJSON *get_decoderaw_json(struct coin777 *coin,char *rawtransaction);
 char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi);
-int32_t shuffle_signtx(char *signedtx,unsigned long destsize,struct coin777 *coin,struct cointx_info *cointx,char *rawbytes);
+int32_t shuffle_signtx(char *signedtx,unsigned long destsize,struct coin777 *coin,char *rawbytes);
 
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
 void coin777_disprawblock(struct rawblock *raw);

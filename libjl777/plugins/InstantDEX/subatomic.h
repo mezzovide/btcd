@@ -502,35 +502,6 @@ cJSON *subatomic_vins_json_params(struct coin777 *coin,struct subatomic_rawtrans
     return(array);
 }
 
-cJSON *cointx_vins_json_params(struct coin777 *coin,struct cointx_info *cointx)
-{
-    int32_t i; cJSON *json,*array; //char coinaddr[128]; struct destbuf scriptPubKey;
-    array = cJSON_CreateArray();
-    for (i=0; i<cointx->numinputs; i++)
-    {
-        json = cJSON_CreateObject();
-        jaddstr(json,"txid",cointx->inputs[i].tx.txidstr);
-        jaddnum(json,"vout",cointx->inputs[i].tx.vout);
-        /*if ( cointx->inputs[i].coinaddr[0] != 0 )
-        {
-            set_spendscript(spendscript,cointx->inputs[i].coinaddr);
-            jaddstr(json,"scriptPubKey",spendscript);
-            printf("%s %s -> spendscript.(%s)\n",cointx->inputs[i].coinaddr,cointx->inputs[i].tx.txidstr,spendscript);
-        }
-        //else if ( cointx->inputs[i].sigs[0] != 0 )
-        //    jaddstr(json,"scriptPubKey",cointx->inputs[i].sigs);
-        else
-        {
-            shuffle_getcoinaddr(coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
-            jaddstr(json,"scriptPubKey",scriptPubKey.buf);
-            printf("%s -> scriptPubKey.(%s)\n",cointx->inputs[i].tx.txidstr,scriptPubKey.buf);
-        }*/
-        jaddstr(json,"scriptPubKey",cointx->inputs[i].sigs);
-        cJSON_AddItemToArray(array,json);
-    }
-    return(array);
-}
-
 cJSON *subatomic_privkeys_json_params(struct coin777 *coin,char **coinaddrs,int32_t n)
 {
     int32_t i; char *privkey; cJSON *array = cJSON_CreateArray();
@@ -593,41 +564,49 @@ char *subatomic_signraw_json_params(char *skipaddr,char *coinaddr,struct coin777
     return(paramstr);
 }
 
-char *cointx_signraw_json_params(struct coin777 *coin,struct cointx_info *cointx,char *rawbytes)
+cJSON *cointx_vins_json_params(struct coin777 *coin,char *rawbytes)
 {
-    int32_t i,j,flag; char *coinaddrs[MAX_SUBATOMIC_INPUTS+1],*paramstr = 0; cJSON *array,*rawobj,*vinsobj;//,*keysobj;
+    int32_t i; cJSON *json,*array; struct cointx_info *cointx;
+    array = cJSON_CreateArray();
+    if ( (cointx= _decode_rawtransaction(rawbytes,coin->mgw.oldtx_format)) != 0 )
+    {
+        for (i=0; i<cointx->numinputs; i++)
+        {
+            json = cJSON_CreateObject();
+            jaddstr(json,"txid",cointx->inputs[i].tx.txidstr);
+            jaddnum(json,"vout",cointx->inputs[i].tx.vout);
+            jaddstr(json,"scriptPubKey",cointx->inputs[i].sigs);
+            cJSON_AddItemToArray(array,json);
+        }
+        free(cointx);
+    }
+    return(array);
+}
+
+char *shuffle_signraw_json_params(struct coin777 *coin,char *rawbytes)
+{
+    char *paramstr = 0; cJSON *array,*rawobj,*vinsobj;//,*keysobj;char *coinaddrs[MAX_SUBATOMIC_INPUTS+1],
     if ( (rawobj= cJSON_CreateString(rawbytes)) != 0 )
     {
-        if ( (vinsobj= cointx_vins_json_params(coin,cointx)) != 0 )
+        if ( (vinsobj= cointx_vins_json_params(coin,rawbytes)) != 0 )
         {
-            // printf("add %d inputs skipaddr.%s coinaddr.%s\n",rp->numinputs,skipaddr,coinaddr);
-            for (i=flag=j=0; i<cointx->numinputs; i++)
-            {
-            }
-            coinaddrs[j] = 0;
-            //keysobj = subatomic_privkeys_json_params(coin,coinaddrs,j);
-            //if ( keysobj != 0 )
-            {
-                array = cJSON_CreateArray();
-                cJSON_AddItemToArray(array,rawobj);
-                cJSON_AddItemToArray(array,vinsobj);
-                //cJSON_AddItemToArray(array,keysobj);
-                paramstr = cJSON_Print(array);
-                free_json(array);
-            }
-            //else free_json(vinsobj);
+            array = cJSON_CreateArray();
+            jaddi(array,rawobj);
+            jaddi(array,vinsobj);
+            //cJSON_AddItemToArray(array,keysobj);
+            paramstr = jprint(array,1);
         }
         else free_json(rawobj);
     }
     return(paramstr);
 }
 
-int32_t shuffle_signtx(char *signedtx,unsigned long destsize,struct coin777 *coin,struct cointx_info *cointx,char *rawbytes)
+int32_t shuffle_signtx(char *signedtx,unsigned long destsize,struct coin777 *coin,char *rawbytes)
 {
     cJSON *json,*compobj; char *retstr,*deststr,*signparams; uint32_t completed = 0;
     signedtx[0] = 0;
     //printf("cp.%d vs %d: subatomic_signtx rawbytes.(%s)\n",cp->coinid,coinid,rawbytes);
-    if ( coin != 0 && (signparams= cointx_signraw_json_params(coin,cointx,rawbytes)) != 0 )
+    if ( coin != 0 && (signparams= shuffle_signraw_json_params(coin,rawbytes)) != 0 )
     {
         _stripwhite(signparams,' ');
         printf("got signparams.(%s)\n",signparams);

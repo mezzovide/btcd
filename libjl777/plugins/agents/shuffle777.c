@@ -373,7 +373,7 @@ char *shuffle_send(struct coin777 *coin,struct shuffle_info *sp)
 char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
 {
     struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1;
-    char buf[8192],coinaddr[64],*sigstr,*str; uint8_t rmd160[20]; struct destbuf scriptPubKey;
+    char buf[8192],coinaddr[64],*sigstr,*str; uint8_t rmd160[20]; //struct destbuf scriptPubKey;
     if ( sp == 0 )
     {
         printf("cant find shuffleid.%llu\n",(long long)sp->shuffleid);
@@ -426,12 +426,11 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             }
             if ( vin >= 0 )
             {
-                if ( shuffle_signtx(sp->signedtx,sizeof(sp->signedtx),coin,cointx,rawtx) > 0 )
+                if ( shuffle_signtx(sp->signedtx,sizeof(sp->signedtx),coin,rawtx) > 0 )
                 {
                     printf("READY to sendtransaction\n");
                 }
-                if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 )
-                //if ( shuffle_signvin(sigstr,coin,cointx,vin) != 0 )
+                if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 ) //if ( shuffle_signvin(sigstr,coin,cointx,vin) != 0 )
                 {
                     free(sp->T);
                     sp->T = cointx;
