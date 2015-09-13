@@ -218,11 +218,9 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,char *type,uint64_t amoun
         for (j=0; j<8; j++,x>>=8)
         {
             val = (x & 0xff);
-            //printf("[%02x] ",val);
             init_hexbytes_noT(&buf[j*2],&val,1);
         }
         buf[j*2] = 0;
-        //sprintf(buf,"%016llx%s",(long long)amount,hexaddress);
         strcat(buf,hexaddress);
         if ( 0 )
         {
@@ -499,6 +497,15 @@ int32_t shuffle_next(struct shuffle_info *sp,struct coin777 *coin,uint64_t *addr
     return(0);
 }
 
+cJSON *shuffle_addrjson(uint64_t *addrs,int32_t num)
+{
+    int32_t j; cJSON *array;
+    array = cJSON_CreateArray();
+    for (j=0; j<num; j++)
+        jaddi64bits(array,addrs[j]);
+    return(array);
+}
+
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
     char buf[8192],destNXT[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
@@ -564,12 +571,9 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
             iQ->s.pending = 1;
-            printf("baseamount %llu\n",(long long)iQ->s.baseamount);
             if ( shuffle_next(sp,coin,addrs,num,i,iQ->s.baseamount) < 0 )
                 return(clonestr("{\"error\":\"this node not shuffling due to calc error\"}"));
-            array = cJSON_CreateArray();
-            for (j=0; j<num; j++)
-                jaddi64bits(array,addrs[j]);
+            array = shuffle_addrjson(addrs,num);
             addrstr = jprint(array,1);
             changestr[0] = 0;
             if ( sp->changestr != 0 )
@@ -647,9 +651,12 @@ int32_t shuffle_incoming(char *jsonstr)
                         newjson = cJSON_CreateObject();
                         vins = shuffle_strarray(newvins,numvins), vouts = shuffle_strarray(newvouts,numvouts);
                         jadd(newjson,"vins",vins), jadd(newjson,"vouts",vouts);
+                        jadd64bits(newjson,"shuffleid",sp->shuffleid);
+                        jaddnum(newjson,"timestamp",sp->timestamp);
+                        jadd(newjson,"addrs",shuffle_addrjson(addrs,num));
                         msg = jprint(newjson,1);
                         expand_nxt64bits(destNXT,sp->addrs[myind+1]);
-                        printf("telepathic.(%s)\n",msg);
+                        printf("telepathic.(%s) -> destNXT.(%s)\n",msg,destNXT);
                         telepathic_PM(destNXT,msg);
                         free(msg);
                         free_json(newjson);
