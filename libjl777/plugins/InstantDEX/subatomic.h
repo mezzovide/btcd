@@ -516,8 +516,8 @@ cJSON *cointx_vins_json_params(struct coin777 *coin,struct cointx_info *cointx)
             set_spendscript(spendscript,cointx->inputs[i].coinaddr);
             jaddstr(json,"scriptPubKey",spendscript);
         }
-        else if ( cointx->inputs[i].sigs[0] != 0 )
-            jaddstr(json,"scriptPubKey",cointx->inputs[i].sigs);
+        //else if ( cointx->inputs[i].sigs[0] != 0 )
+        //    jaddstr(json,"scriptPubKey",cointx->inputs[i].sigs);
         else
         {
             shuffle_getcoinaddr(coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
