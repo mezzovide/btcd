@@ -658,6 +658,7 @@ int32_t shuffle_incoming(char *jsonstr)
                         jadd(newjson,"vins",vins), jadd(newjson,"vouts",vouts);
                         jadd64bits(newjson,"shuffleid",sp->shuffleid);
                         jaddnum(newjson,"timestamp",sp->timestamp);
+                        jaddstr(newjson,"base",sp->base);
                         jadd(newjson,"addrs",shuffle_addrjson(addrs,num));
                         msg = jprint(newjson,1);
                         expand_nxt64bits(destNXT,sp->addrs[myind+1]);
