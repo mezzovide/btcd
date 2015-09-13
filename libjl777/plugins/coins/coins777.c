@@ -173,7 +173,7 @@ struct coin777
     uint8_t p2shtype,addrtype,usep2sh;
     struct subatomic_rawtransaction funding; struct NXTtx trigger; char *refundtx,*signedrefund;
     int32_t minconfirms,verified,lag,estblocktime; uint64_t minoutput;
-    char atomicsendpubkey[128],atomicrecvpubkey[128],atomicrecv[128],atomicsend[128],donationaddress[128],changeaddr[128];
+    char atomicsendpubkey[128],atomicrecvpubkey[128],atomicrecv[128],atomicsend[128],donationaddress[128],donationscript[128],changeaddr[128];
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);

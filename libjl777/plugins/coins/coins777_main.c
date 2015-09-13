@@ -311,7 +311,10 @@ struct coin777 *coin777_create(char *coinstr,cJSON *argjson)
     {
         coin->addrtype = 0, coin->p2shtype = 5;
         if ( coin->donationaddress[0] == 0 )
+        {
             strcpy(coin->donationaddress,"177MRHRjAxCZc7Sr5NViqHRivDu1sNwkHZ");
+            sprintf(coin->donationscript,"76a91443044b8d5dc8f3758dbc83374c596e96d25ead4f88ac");
+        }
     }
     else if ( strcmp(coin->name,"LTC") == 0 )
         coin->addrtype = 48, coin->p2shtype = 5, coin->minconfirms = 1, coin->mgw.txfee = 100000, coin->usep2sh = 0;

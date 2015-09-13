@@ -302,6 +302,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
                 {
                     T->outputs[T->numoutputs].value = sharedfee;
                     strcpy(T->outputs[T->numoutputs].coinaddr,coin->donationaddress);
+                    strcpy(T->outputs[T->numoutputs].script,coin->donationscript);
                     T->numoutputs++;
                 }
                 else
@@ -350,7 +351,7 @@ char *shuffle_send(struct coin777 *coin,struct shuffle_info *sp)
     char *tx; int32_t allocsize = 65536;
     if ( sp->T != 0 )
     {
-        if ( bitweight(sp->sigmask) == sp->numaddrs )
+        if ( bitweight(sp->sigmask) >= sp->numaddrs )
         {
             tx = calloc(1,allocsize);
             strcpy(tx,"[\"");
@@ -361,7 +362,7 @@ char *shuffle_send(struct coin777 *coin,struct shuffle_info *sp)
             else printf("error sending transaction.(%s)\n",tx);
             delete_iQ(sp->quoteid);
             free(tx);
-        }
+        } else printf("sigmask.%d wt.%d vs numaddrs.%d\n",(int32_t)sp->sigmask,(int32_t)bitweight(sp->sigmask),sp->numaddrs);
         return(sp->cointxid);
     }
     return(0);
