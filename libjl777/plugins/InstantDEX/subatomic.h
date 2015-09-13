@@ -568,8 +568,10 @@ cJSON *cointx_vins_json_params(struct coin777 *coin,char *rawbytes)
 {
     int32_t i; cJSON *json,*array; struct cointx_info *cointx;
     array = cJSON_CreateArray();
+    printf("convert.(%s)\n",rawbytes);
     if ( (cointx= _decode_rawtransaction(rawbytes,coin->mgw.oldtx_format)) != 0 )
     {
+        disp_cointx(cointx);
         for (i=0; i<cointx->numinputs; i++)
         {
             json = cJSON_CreateObject();
