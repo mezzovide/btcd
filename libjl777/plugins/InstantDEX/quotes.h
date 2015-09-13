@@ -352,7 +352,7 @@ cJSON *InstantDEX_shuffleorders(uint64_t *quoteidp,uint64_t nxt64bits,char *base
     }
     if ( ismine == 0 )
         free_json(array), array = 0;
-    printf("ismine.%d n.%d array.%d\n",ismine,n,array==0?0:cJSON_GetArraySize(array));
+    //printf("ismine.%d n.%d array.%d\n",ismine,n,array==0?0:cJSON_GetArraySize(array));
     return(array);
 }
 
