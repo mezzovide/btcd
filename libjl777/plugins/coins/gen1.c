@@ -1123,6 +1123,7 @@ cJSON *_get_localaddresses(char *coinstr,char *serverport,char *userpass)
     retstr = bitcoind_passthru(coinstr,serverport,userpass,"listaddressgroupings","");
     if ( retstr != 0 )
     {
+        //printf("listaddressgroupings.(%s)\n",retstr);
         json = cJSON_Parse(retstr);
         free(retstr);
     }

@@ -609,19 +609,29 @@ uint64_t subatomic_donation(struct coin777 *coin,uint64_t amount)
 
 char *gather_account_addresses(struct coin777 *coin,char *account)
 {
-    cJSON *array,*retarray,*item; int32_t i,n; char *acct;
+    cJSON *array,*retarray,*subarray,*item; int32_t i,j,m,n; char *acct;
     if ( (array= _get_localaddresses(coin->name,coin->serverport,coin->userpass)) != 0 )
     {
         retarray = cJSON_CreateArray();
         n = cJSON_GetArraySize(array);
         for (i=0; i<n; i++)
         {
-            if ( (item= jitem(array,i)) != 0 && is_cJSON_Array(item) != 0 && cJSON_GetArraySize(item) > 2 )
+            if ( (subarray= jitem(array,i)) != 0 )
             {
-                if ( (acct= jstr(jitem(item,2),0)) != 0 && strcmp(acct,account) == 0 )
+                //printf("%d of %d: %s\n",i,n,jprint(subarray,0));
+                if ( is_cJSON_Array(subarray) != 0 && (m= cJSON_GetArraySize(subarray)) > 0 )
                 {
-                    printf("gather.(%s) %s\n",jstr(jitem(item,0),0),account);
-                    jaddistr(retarray,jstr(jitem(item,0),0));
+                    for (j=0; j<m; j++)
+                    {
+                        if ( (item= jitem(subarray,j)) != 0 && is_cJSON_Array(item) != 0 && cJSON_GetArraySize(item) > 2 )
+                        {
+                            if ( (acct= jstr(jitem(item,2),0)) != 0 && strcmp(acct,account) == 0 )
+                            {
+                                //printf("gather.(%s) %s\n",jstr(jitem(item,0),0),account);
+                                jaddistr(retarray,jstr(jitem(item,0),0));
+                            }
+                        } //else printf("skip item.%p, %d %d\n",item,is_cJSON_Array(item),cJSON_GetArraySize(item));
+                    }
                 }
             }
         }
@@ -638,7 +648,7 @@ char *gather_account_addresses(struct coin777 *coin,char *account)
 
 struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,struct coin777 *coin,char *account)
 {
-    int32_t i,j,num; struct subatomic_unspent_tx *ups = 0; char params[128],*addrs,*retstr; cJSON *json,*item;
+    int32_t i,j,num; struct subatomic_unspent_tx *ups = 0; char *params,*addrs,*retstr; cJSON *json,*item;
     /*{
      "txid" : "1ccd2a9d0f8d690ed13b6768fc6c041972362f5531922b6b152ed2c98d3fe113",
      "vout" : 1,
@@ -652,12 +662,18 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
     {
         if ( (addrs= gather_account_addresses(coin,account)) != 0 )
         {
-            sprintf(params,"%d, 99999999 [%s]",coin->minconfirms,addrs);
+            params = calloc(1,strlen(addrs) + 128);
+            addrs[strlen(addrs)-1] = 0;
+            sprintf(params,"[%d, 99999999, [%s]]",coin->minconfirms,addrs+1);
             free(addrs);
         } else return(0);
     }
-    else sprintf(params,"%d, 99999999",coin->minconfirms);
-    printf("issue listunspent.(%s)\n",params);
+    else
+    {
+        params = calloc(1,128);
+        sprintf(params,"%d, 99999999",coin->minconfirms);
+    }
+    //printf("issue listunspent.(%s)\n",params);
     if ( (retstr= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"listunspent",params)) != 0 )
     {
         //printf("unspents (%s)\n",retstr);
@@ -697,6 +713,7 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
         }
         free(retstr);
     }
+    free(params);
     if ( *nump == 0 )
         printf("no unspents\n");
     return(ups);
