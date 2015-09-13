@@ -331,7 +331,7 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
                 free(sig);
                 sigbuf[siglen++] = SIGHASH_ALL;
                 init_hexbytes_noT(hexstr,sigbuf,(int32_t)siglen);
-                sprintf(vin->sigs,"%02lx%s%02lx%s%s",siglen,hexstr,strlen(pubP)/2,pubP,scriptPubKey.buf);
+                sprintf(vin->sigs,"%02lx%s%02lx%s%s",siglen,hexstr,strlen(pubP)/2,pubP,"");//scriptPubKey.buf);
                 strcpy(sigstr,vin->sigs);
                 printf("after P.(%s) siglen.%02lx sig.(%s)\n",vin->sigs,siglen,scriptPubKey.buf);
             }
