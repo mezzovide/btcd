@@ -383,12 +383,6 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
     if ( (cointx= _decode_rawtransaction(rawtx,coin->mgw.oldtx_format)) != 0 )
     {
         //printf("validate.(%s) vin.%s vout.%s numoutputs.%d numinputs.%d\n",rawtx,sp->inputtxid,sp->destaddr,cointx->numoutputs,cointx->numinputs);
-        for (i=0; i<sp->numaddrs; i++)
-        {
-            if ( sp->sigs[i][0] != 0 )
-                strcpy(cointx->inputs[i].sigs,sp->sigs[i]);
-            sp->sigs[i][0] = 0;
-        }
         sp->T = cointx;
         for (i=0; i<cointx->numoutputs; i++)
         {
@@ -418,8 +412,8 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             for (i=0; i<cointx->numinputs; i++)
             {
                 printf("%s ",cointx->inputs[i].tx.txidstr);
-                cointx->inputs[i].value = shuffle_getcoinaddr(cointx->inputs[i].coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
-                strcpy(cointx->inputs[i].sigs,scriptPubKey.buf);
+                //cointx->inputs[i].value = shuffle_getcoinaddr(cointx->inputs[i].coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
+                //strcpy(cointx->inputs[i].sigs,scriptPubKey.buf);
                 if ( vin < 0 && strcmp(cointx->inputs[i].tx.txidstr,sp->inputtxid) == 0 )
                 {
                     printf("i.%d matched input.(%s) vin.%d\n",i,sp->inputtxid,sp->vin);
@@ -437,7 +431,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     printf("READY to sendtransaction\n");
                 }
                 if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 )
-   //else  //if ( shuffle_signvin(sigstr,coin,cointx,vin) != 0 )
+                //if ( shuffle_signvin(sigstr,coin,cointx,vin) != 0 )
                 {
                     free(sp->T);
                     sp->T = cointx;
@@ -448,6 +442,12 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
                     printf("signed.(%s)\n",buf);
                     sp->sigmask |= (1LL << vin);
                     strcpy(sp->sigs[vin],sigstr);
+                    for (i=0; i<sp->numaddrs; i++)
+                    {
+                        if ( sp->sigs[i][0] != 0 )
+                            strcpy(cointx->inputs[i].sigs,sp->sigs[i]);
+                        //sp->sigs[i][0] = 0;
+                    }
                     return(clonestr(buf));
                 }
             }

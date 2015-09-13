@@ -504,14 +504,14 @@ cJSON *subatomic_vins_json_params(struct coin777 *coin,struct subatomic_rawtrans
 
 cJSON *cointx_vins_json_params(struct coin777 *coin,struct cointx_info *cointx)
 {
-    int32_t i; cJSON *json,*array; char spendscript[128],coinaddr[128]; struct destbuf scriptPubKey;
+    int32_t i; cJSON *json,*array; //char coinaddr[128]; struct destbuf scriptPubKey;
     array = cJSON_CreateArray();
     for (i=0; i<cointx->numinputs; i++)
     {
         json = cJSON_CreateObject();
         jaddstr(json,"txid",cointx->inputs[i].tx.txidstr);
         jaddnum(json,"vout",cointx->inputs[i].tx.vout);
-        if ( cointx->inputs[i].coinaddr[0] != 0 )
+        /*if ( cointx->inputs[i].coinaddr[0] != 0 )
         {
             set_spendscript(spendscript,cointx->inputs[i].coinaddr);
             jaddstr(json,"scriptPubKey",spendscript);
@@ -524,7 +524,8 @@ cJSON *cointx_vins_json_params(struct coin777 *coin,struct cointx_info *cointx)
             shuffle_getcoinaddr(coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
             jaddstr(json,"scriptPubKey",scriptPubKey.buf);
             printf("%s -> scriptPubKey.(%s)\n",cointx->inputs[i].tx.txidstr,scriptPubKey.buf);
-        }
+        }*/
+        jaddstr(json,"scriptPubKey",cointx->inputs[i].sigs);
         cJSON_AddItemToArray(array,json);
     }
     return(array);
