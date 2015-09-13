@@ -12,7 +12,6 @@
  * Removal or modification of this copyright notice is prohibited.            *
  *                                                                            *
  ******************************************************************************/
-
 #define BUNDLED
 #define PLUGINSTR "shuffle"
 #define PLUGNAME(NAME) shuffle ## NAME
@@ -348,14 +347,14 @@ cJSON *shuffle_strarray(char *ptrs[],int32_t num)
 
 char *shuffle_send(struct coin777 *coin,struct shuffle_info *sp)
 {
-    char *tx;
+    char *tx; int32_t allocsize = 65536;
     if ( sp->T != 0 )
     {
         if ( bitweight(sp->sigmask) == sp->numaddrs )
         {
-            tx = calloc(1,65536);
+            tx = calloc(1,allocsize);
             strcpy(tx,"[\"");
-            _emit_cointx(tx+2,sizeof(tx)-2,sp->T,coin->mgw.oldtx_format);
+            _emit_cointx(tx+2,allocsize-3,sp->T,coin->mgw.oldtx_format);
             strcat(tx,"\"]");
             if ( (sp->cointxid= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",tx)) != 0 )
                 printf(">>>>>>>>>>>>> %s BROADCAST.(%s) (%s)\n",coin->name,tx,sp->cointxid);
