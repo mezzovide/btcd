@@ -504,7 +504,7 @@ cJSON *subatomic_vins_json_params(struct coin777 *coin,struct subatomic_rawtrans
 
 cJSON *cointx_vins_json_params(struct coin777 *coin,struct cointx_info *cointx)
 {
-    int32_t i; cJSON *json,*array; char spendscript[128];
+    int32_t i; cJSON *json,*array; char spendscript[128],coinaddr[128]; struct destbuf scriptPubKey;
     array = cJSON_CreateArray();
     for (i=0; i<cointx->numinputs; i++)
     {
@@ -516,7 +516,14 @@ cJSON *cointx_vins_json_params(struct coin777 *coin,struct cointx_info *cointx)
             set_spendscript(spendscript,cointx->inputs[i].coinaddr);
             jaddstr(json,"scriptPubKey",spendscript);
         }
-        //if ( up->redeemScript.buf[0] != 0 )
+        else if ( cointx->inputs[i].sigs[0] != 0 )
+            jaddstr(json,"scriptPubKey",spendscript);
+        else
+        {
+            shuffle_getcoinaddr(coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
+            jaddstr(json,"scriptPubKey",scriptPubKey.buf);
+        }
+  //if ( up->redeemScript.buf[0] != 0 )
         //    jaddstr(json,"redeemScript",up->redeemScript.buf);
         cJSON_AddItemToArray(array,json);
     }
