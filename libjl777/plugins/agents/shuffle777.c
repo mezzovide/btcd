@@ -508,9 +508,9 @@ cJSON *shuffle_addrjson(uint64_t *addrs,int32_t num)
 
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
 {
-    char buf[8192],destNXT[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
+    char buf[8192],destNXT[64],rsaddr[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
     int32_t createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
-    uint64_t _addrs[64],quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
+    uint64_t _addrs[64],tmp,quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
     coin = coin777_find(base,1);
@@ -534,11 +534,16 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num)
                             myind = num;
                         expand_nxt64bits(destNXT,addrs[num]);
                         issue_getpubkey(&haspubkey,destNXT);
-                        num += haspubkey;
+                        if ( haspubkey == 0 )
+                        {
+                            RS_encode(rsaddr,addrs[num]);
+                            tmp = RS_decode(rsaddr);
+                            printf("skipping %s without pubkey RS.%s %llu\n",destNXT,rsaddr,(long long)tmp);
+                        } else num++;
                         if ( num == sizeof(_addrs)/sizeof(*_addrs) )
                             break;
                     }
-                    //printf("i.%d j.%d num.%d %llu\n",i,j,num,(long long)addrs[num-1]);
+                    printf("n.%d r.%d i.%d j.%d num.%d %llu\n",n,r,i,j,num,(long long)addrs[num-1]);
                 }
             }
             free_json(array);
@@ -639,7 +644,7 @@ int32_t shuffle_incoming(char *jsonstr)
                     {
                         if ( (txbytes= shuffle_cointx(coin,newvins,numvins,newvouts,numvouts)) != 0 )
                         {
-                            sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"shuffle\",\"method\":\"busdata\",\"submethod\":\"validate\",\"rawtx\":\"%s\"}",(long long)sp->shuffleid,sp->timestamp,txbytes);
+                            sprintf(buf,"{\"shuffleid\":\"%llu\",\"base\":\"%s\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"shuffle\",\"method\":\"busdata\",\"submethod\":\"validate\",\"rawtx\":\"%s\"}",(long long)sp->shuffleid,sp->base,sp->timestamp,txbytes);
                             if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                                 free(str);
                             printf("RAWTX.(%s)\n",txbytes);

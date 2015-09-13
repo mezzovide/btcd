@@ -440,7 +440,9 @@ uint64_t set_account_NXTSECRET(char *NXTacct,char *NXTaddr,char *secret,int32_t 
     expand_nxt64bits(NXTaddr,nxt64bits);
     if ( 1 )
         conv_rsacctstr(NXTacct,nxt64bits);
-    printf("(%s) (%s) (%s)\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>");
+    char pubkeystr[128];
+    init_hexbytes_noT(pubkeystr,SUPERNET.mypubkey,32);
+    printf("(%s) (%s) (%s) pubkey.(%s)\n",NXTacct,NXTaddr,Debuglevel > 2 ? secret : "<secret>",pubkeystr);
     return(nxt64bits);
 }
 
