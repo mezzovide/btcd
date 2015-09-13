@@ -509,9 +509,9 @@ cJSON *shuffle_addrjson(uint64_t *addrs,int32_t num)
 
 char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,int32_t srcacct)
 {
-    char buf[8192],destNXT[64],rsaddr[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
-    int32_t createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
-    uint64_t _addrs[64],tmp,quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
+    char buf[65536],destNXT[64],rsaddr[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
+    int32_t k,createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
+    uint64_t _addrs[64],tmp,x,quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
     coin = coin777_find(base,1);
@@ -529,7 +529,11 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,in
                 for (j=0; j<n; j++)
                 {
                     i = (j + r) % n;
-                    if ( (addrs[num]= j64bits(jitem(array,i),0)) != 0 )
+                    x = j64bits(jitem(array,i),0);
+                    for (k=0; k<num; k++)
+                        if ( x == addrs[k] )
+                            break;
+                    if ( k == num )
                     {
                         if ( addrs[num] == SUPERNET.my64bits )
                             myind = num;

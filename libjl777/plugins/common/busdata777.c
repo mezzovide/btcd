@@ -41,8 +41,9 @@
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecret)
 {
     struct destbuf token;
-    char cmd[16384],secret[8192],*jsontxt; cJSON *tokenobj,*json;
+    char *cmd,secret[8192],*jsontxt; cJSON *tokenobj,*json;
     encoded[0] = 0;
+    cmd = calloc(1,strlen(key) + 1024);
     escape_code(secret,origsecret);
     sprintf(cmd,"requestType=generateToken&website=%s&secretPhrase=%s",key,secret);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
@@ -58,8 +59,10 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecr
             free_json(json);
         }
         free(jsontxt);
+        free(cmd);
         return(0);
     }
+    free(cmd);
     return(-1);
 }
 

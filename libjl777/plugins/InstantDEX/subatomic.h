@@ -305,15 +305,16 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
 
 char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi)
 {
-    char hexstr[1024],pubP[128],*privkey; bits256 hash2; uint8_t data[32768],sigbuf[512]; struct bp_key key; struct destbuf scriptPubKey;
+    char hexstr[1024],pubP[128],*privkey; bits256 hash2; uint8_t data[65536],sigbuf[1024]; struct bp_key key; struct destbuf scriptPubKey;
     struct cointx_info *T; int32_t i; void *sig = NULL; size_t siglen = 0; struct cointx_input *vin; uint64_t value; uint32_t locktime;
     T = calloc(1,sizeof(*T));
     *T = *refT;
     vin = &T->inputs[redeemi];
     sigstr[0] = 0;
+    printf("redeemi.%d numinputs.%d sigstr.%p\n",redeemi,T->numinputs,sigstr);
     if ( (privkey= shuffle_getprivkey(&value,&scriptPubKey,&locktime,coin,vin->tx.txidstr,vin->tx.vout)) != 0 )
     {
-        //printf("vin.%d shuffle_getprivkey.(%s) [%s]\n",redeemi,privkey,scriptPubKey.buf);
+        printf("vin.%d shuffle_getprivkey.(%s) [%p]\n",redeemi,privkey,sigstr);
         if ( btc_setprivkey(&key,privkey) == 0 && btc_getpubkey(pubP,data,&key) > 0 )
         {
             for (i=0; i<T->numinputs; i++)
