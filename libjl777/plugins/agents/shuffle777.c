@@ -550,9 +550,9 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,in
         }
     }
 printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
-    if ( num < 2 )
+    if ( num < 3 )
     {
-        printf("need at least 2 to shuffle\n");
+        printf("need at least 3 to shuffle\n");
         return(clonestr("{\"error\":\"not enough shufflers\"}"));
     }
     if ( (i= myind) > 0 )
