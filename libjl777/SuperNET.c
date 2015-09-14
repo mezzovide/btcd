@@ -301,14 +301,14 @@ void SuperNET_loop(void *ipaddr)
     strs[n++] = language_func((char *)"relay","",0,0,1,(char *)"relay",jsonargs,call_system);
     while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"relay",0,0) == 0 )
         poll_daemons();
-    strs[n++] = language_func((char *)"jumblr","",0,0,1,(char *)"jumblr",jsonargs,call_system);
-    while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"jumblr",0,0) == 0 )
-        poll_daemons();
     if ( SUPERNET.iamrelay == 0 )
     {
-        strs[n++] = language_func((char *)"dcnet","",0,0,1,(char *)"dcnet",jsonargs,call_system);
-        while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"dcnet",0,0) == 0 )
+        strs[n++] = language_func((char *)"jumblr","",0,0,1,(char *)"jumblr",jsonargs,call_system);
+        while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"jumblr",0,0) == 0 )
             poll_daemons();
+        //strs[n++] = language_func((char *)"dcnet","",0,0,1,(char *)"dcnet",jsonargs,call_system);
+        //while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"dcnet",0,0) == 0 )
+        //    poll_daemons();
     }
 #ifdef INSIDE_MGW
     if ( SUPERNET.gatewayid >= 0 )
