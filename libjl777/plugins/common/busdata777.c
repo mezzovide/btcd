@@ -149,8 +149,9 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
 
 int32_t issue_decodeToken(struct destbuf *sender,int32_t *validp,char *key,uint8_t encoded[NXT_TOKEN_LEN])
 {
-    char cmd[8192],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr;
+    char *cmd,token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr;
     cJSON *nxtobj,*validobj,*json;
+    cmd = calloc(1,strlen(key) + 1024);
     *validp = -1;
     sender->buf[0] = 0;
     memcpy(token,encoded,NXT_TOKEN_LEN);
@@ -158,6 +159,7 @@ int32_t issue_decodeToken(struct destbuf *sender,int32_t *validp,char *key,uint8
     sprintf(cmd,"requestType=decodeToken&website=%s&token=%s",key,token);
     if ( (retstr = issue_NXTPOST(cmd)) != 0 )
     {
+        free(cmd);
         //printf("(%s) -> (%s)\n",cmd,retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
@@ -174,6 +176,7 @@ int32_t issue_decodeToken(struct destbuf *sender,int32_t *validp,char *key,uint8
         }
         free(retstr);
     }
+    free(cmd);
     return(-1);
 }
 
