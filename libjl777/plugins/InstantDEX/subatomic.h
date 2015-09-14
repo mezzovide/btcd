@@ -593,7 +593,7 @@ char *subatomic_signraw_json_params(char *skipaddr,char *coinaddr,struct coin777
 
 cJSON *cointx_vins_json_params(struct coin777 *coin,char *rawbytes)
 {
-    int32_t i; cJSON *json,*array; struct cointx_info *cointx;
+    int32_t i; cJSON *json,*array; char coinaddr[128]; struct destbuf scriptPubKey; struct cointx_info *cointx;
     array = cJSON_CreateArray();
     printf("convert.(%s)\n",rawbytes);
     if ( (cointx= _decode_rawtransaction(rawbytes,coin->mgw.oldtx_format)) != 0 )
@@ -604,7 +604,13 @@ cJSON *cointx_vins_json_params(struct coin777 *coin,char *rawbytes)
             json = cJSON_CreateObject();
             jaddstr(json,"txid",cointx->inputs[i].tx.txidstr);
             jaddnum(json,"vout",cointx->inputs[i].tx.vout);
-            jaddstr(json,"scriptPubKey",cointx->inputs[i].sigs);
+            if ( cointx->inputs[i].sigs[0] != 0 )
+                jaddstr(json,"scriptPubKey",cointx->inputs[i].sigs);
+            else
+            {
+                jumblr_getcoinaddr(coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
+                jaddstr(json,"scriptPubKey",scriptPubKey.buf);
+            }
             cJSON_AddItemToArray(array,json);
         }
         free(cointx);
