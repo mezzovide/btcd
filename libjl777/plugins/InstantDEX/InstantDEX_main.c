@@ -39,7 +39,7 @@
 #include "../common/txind777.c"
 #undef DEFINES_ONLY
 
-char *Supported_exchanges[] = { INSTANTDEX_NAME, INSTANTDEX_NXTAEUNCONF, INSTANTDEX_NXTAENAME, INSTANTDEX_BASKETNAME, "basketNXT", "basketUSD", "basketBTC", "basketCNY", INSTANTDEX_ACTIVENAME, "wallet", "shuffle", "peggy", // peggy MUST be last of special exchanges
+char *Supported_exchanges[] = { INSTANTDEX_NAME, INSTANTDEX_NXTAEUNCONF, INSTANTDEX_NXTAENAME, INSTANTDEX_BASKETNAME, "basketNXT", "basketUSD", "basketBTC", "basketCNY", INSTANTDEX_ACTIVENAME, "wallet", "jumblr", "peggy", // peggy MUST be last of special exchanges
     "bitfinex", "btc38", "bitstamp", "btce", "poloniex", "bittrex", "huobi", "coinbase", "okcoin", "bityes", "lakebtc", "quadriga",
     "kraken", "gatecoin", "quoine", "jubi", "hitbtc"  // no trading for these exchanges yet
 }; // "bter" <- orderbook is backwards and all entries are needed, later to support, "exmo" flakey apiservers
@@ -357,7 +357,7 @@ int32_t bidask_parse(struct destbuf *exchangestr,struct destbuf *name,struct des
     iQ->s.relbits = stringbits(rel->buf);
     iQ->s.offerNXT = j64bits(json,"offerNXT");
     iQ->s.quoteid = j64bits(json,"quoteid");
-    if ( strcmp(exchangestr->buf,"shuffle") == 0 )
+    if ( strcmp(exchangestr->buf,"jumblr") == 0 )
     {
         if ( iQ->s.price == 0. )
             iQ->s.price = 1.;
@@ -449,7 +449,7 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
             retstr = prices777_allorderbooks();
         /*else if ( strcmp(method.buf,"coinshuffle") == 0 )
         {
-            if ( strcmp(exchangestr.buf,"shuffle") == 0 )
+            if ( strcmp(exchangestr.buf,"jumblr") == 0 )
                 retstr = InstantDEX_coinshuffle(base.buf,&iQ,json);
             else retstr = clonestr("{\"error\":\"coinshuffle must use shuffle exchange\"}");
         }*/
@@ -694,7 +694,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 retstr = bidask_func(0,1,sender,json,jsonstr);
             else if ( strcmp(methodstr,"swap") == 0 )
                 retstr = swap_func(0,1,sender,json,jsonstr);
-            //else if ( strcmp(methodstr,"shuffle") == 0 )
+            //else if ( strcmp(methodstr,"jumblr") == 0 )
             //    retstr = shuffle_func(0,1,sender,json,jsonstr);
         } else retstr = clonestr("{\"result\":\"relays only relay\"}");
     }

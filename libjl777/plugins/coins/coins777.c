@@ -173,7 +173,7 @@ struct coin777
     uint8_t p2shtype,addrtype,usep2sh;
     struct subatomic_rawtransaction funding; struct NXTtx trigger; char *refundtx,*signedrefund;
     int32_t minconfirms,verified,lag,estblocktime; uint64_t minoutput;
-    char atomicsendpubkey[128],atomicrecvpubkey[128],atomicrecv[128],atomicsend[128],donationaddress[128],changeaddr[128];
+    char atomicsendpubkey[128],atomicrecvpubkey[128],atomicrecv[128],atomicsend[128],donationaddress[128],donationscript[128],changeaddr[128];
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
@@ -185,9 +185,10 @@ int32_t rawblock_load(struct rawblock *raw,char *coinstr,char *serverport,char *
 void rawblock_patch(struct rawblock *raw);
 char *subatomic_txid(char *txbytes,struct coin777 *coin,char *destaddr,uint64_t amount,int32_t future);
 struct subatomic_unspent_tx *subatomic_bestfit(struct coin777 *coin,struct subatomic_unspent_tx *unspents,int32_t numunspents,uint64_t value,int32_t mode);
-struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,struct coin777 *coin,char *skipcoinaddr);
+struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,struct coin777 *coin,char *account);
 cJSON *get_decoderaw_json(struct coin777 *coin,char *rawtransaction);
-char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi);
+char *jumblr_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi);
+int32_t jumblr_signtx(char *signedtx,unsigned long destsize,struct coin777 *coin,char *rawbytes);
 
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
 void coin777_disprawblock(struct rawblock *raw);
@@ -227,6 +228,7 @@ char *subatomic_fundingtx(char *refredeemscript,struct subatomic_rawtransaction 
 char *subatomic_spendtx(struct destbuf *spendtxid,char *vintxid,char *refundsig,struct coin777 *coin,char *otherpubkey,char *mypubkey,char *onetimepubkey,uint64_t amount,char *refundtx,char *refredeemscript);
 char *subatomic_validate(struct coin777 *coin,char *pubA,char *pubB,char *pkhash,char *refundtx,char *refundsig);
 char *create_atomictx_scripts(uint8_t addrtype,char *scriptPubKey,char *p2shaddr,char *pubkeyA,char *pubkeyB,char *hash160str);
+uint64_t jumblr_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct coin777 *coin,char *txid,int32_t vout);
 
 #ifdef INSIDE_MGW
 struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize);

@@ -41,8 +41,9 @@
 int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecret)
 {
     struct destbuf token;
-    char cmd[16384],secret[8192],*jsontxt; cJSON *tokenobj,*json;
+    char *cmd,secret[8192],*jsontxt; cJSON *tokenobj,*json;
     encoded[0] = 0;
+    cmd = calloc(1,strlen(key) + 1024);
     escape_code(secret,origsecret);
     sprintf(cmd,"requestType=generateToken&website=%s&secretPhrase=%s",key,secret);
     if ( (jsontxt= issue_NXTPOST(cmd)) != 0 )
@@ -58,8 +59,10 @@ int32_t issue_generateToken(char encoded[NXT_TOKEN_LEN],char *key,char *origsecr
             free_json(json);
         }
         free(jsontxt);
+        free(cmd);
         return(0);
     }
+    free(cmd);
     return(-1);
 }
 
@@ -138,7 +141,7 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
     if ( SUPERNET.iamrelay == 0 )
         sprintf(tokenized,"[%s, {\"token\":\"%s\"%s}]",cmdjson,encoded,broadcaststr);
     else if ( NXTACCTSECRET == GENESIS_SECRET )
-        sprintf(tokenized,"[%s, {\"token\":\"%s\"\"forwarder\":\"%s\"%s}]",cmdjson,encoded,GENESISACCT,broadcaststr);
+        sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s}]",cmdjson,encoded,GENESISACCT,broadcaststr);
     else sprintf(tokenized,"[%s, {\"token\":\"%s\",\"forwarder\":\"%s\"%s%s}]",cmdjson,encoded,SUPERNET.NXTADDR,ftokenstr,broadcaststr);
     return((int32_t)strlen(tokenized)+1);
 }
@@ -638,13 +641,13 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
                 decoded = calloc(1,len3);
                 if ( decode_cipher((void *)decoded,&databuf[n + sizeof(crc)],&len3,SUPERNET.myprivkey) == 0 )
                 {
-                    int32_t shuffle_incoming(char *jsonstr);
+                    int32_t jumblr_incoming(char *jsonstr);
                     uint64_t shuffleid; cJSON *pmjson;
                     decoded[len3] = 0;
                     if ( (pmjson= cJSON_Parse(decoded)) != 0 && (shuffleid= j64bits(pmjson,"shuffleid")) != 0 )
                     {
                         printf("got PM.(%s) shuffleid.%llu\n",decoded,(long long)shuffleid);
-                        shuffle_incoming(decoded);
+                        jumblr_incoming(decoded);
                     }
                     else
                     {
@@ -775,12 +778,12 @@ char *busdata_deref(char *tokenstr,struct destbuf *forwarder,struct destbuf *sen
                 str = busdata_duppacket(dupjson);
                 if ( RELAYS.pubrelays >= 0 && (strcmp(broadcaststr,"allrelays") == 0 || strcmp(broadcaststr,"join") == 0) )
                 {
-                    printf("[%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
+                    printf("[%s] broadcast.(%ld) forwarder.%llu vs %s\n",broadcaststr,strlen(str),(long long)forwardbits,SUPERNET.NXTADDR);
                     nn_send(RELAYS.pubrelays,str,(int32_t)strlen(str)+1,0);
                 }
                 else if ( RELAYS.pubglobal >= 0 && strcmp(broadcaststr,"allnodes") == 0 )
                 {
-                    printf("ALL [%s] broadcast.(%s) forwarder.%llu vs %s\n",broadcaststr,str,(long long)forwardbits,SUPERNET.NXTADDR);
+                    printf("ALL [%s] broadcast.(%ld) forwarder.%llu vs %s\n",broadcaststr,strlen(str),(long long)forwardbits,SUPERNET.NXTADDR);
                     nn_send(RELAYS.pubglobal,str,(int32_t)strlen(str)+1,0);
                     if ( strcmp(method.buf,"telepathy") == 0 )
                     {

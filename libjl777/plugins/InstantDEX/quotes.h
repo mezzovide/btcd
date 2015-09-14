@@ -314,15 +314,18 @@ cJSON *InstantDEX_shuffleorders(uint64_t *quoteidp,uint64_t nxt64bits,char *base
     *quoteidp = 0;
     HASH_ITER(hh,AllQuotes,iQ,tmp)
     {
+        //printf("iter Q.%llu b.%llu\n",(long long)iQ->s.quoteid,(long long)iQ->s.basebits);
         if ( (duration= iQ->s.duration) == 0 )
             duration = ORDERBOOK_EXPIRATION;
         if ( iQ->s.timestamp > (now + duration) )
         {
             iQ->s.expired = iQ->s.closed = 1;
+            printf("expire order %llu\n",(long long)iQ->s.quoteid);
             continue;
         }
         if ( iQ->s.basebits == basebits )
         {
+            //printf("matched basebits\n");
             if ( n > 0 )
             {
                 for (i=0; i<n; i++)
@@ -330,23 +333,26 @@ cJSON *InstantDEX_shuffleorders(uint64_t *quoteidp,uint64_t nxt64bits,char *base
                     if ( iQ->s.offerNXT == j64bits(jitem(array,i),0) )
                         break;
                 }
+                //printf("found duplicate\n");
             } else i = 0;
             if ( i == n )
             {
-                if ( *quoteidp == 0 )
-                    *quoteidp = iQ->s.quoteid;
+                if ( iQ->s.offerNXT == nxt64bits )
+                {
+                    ismine = 1;
+                    if ( *quoteidp == 0 )
+                        *quoteidp = iQ->s.quoteid;
+                }
                 if ( array == 0 )
                     array = cJSON_CreateArray();
-                if ( iQ->s.offerNXT == nxt64bits )
-                    ismine = 1;
                 jaddi64bits(array,iQ->s.offerNXT);
-                if ( ++n >= 13 )
-                    break;
+                //printf("add %llu\n",(long long)iQ->s.offerNXT);
             }
-        }
+        } //else printf("quote.%llu basebits.%llu\n",(long long)iQ->s.quoteid,(long long)iQ->s.basebits);
     }
     if ( ismine == 0 )
         free_json(array), array = 0;
+    //printf("ismine.%d n.%d array.%d\n",ismine,n,array==0?0:cJSON_GetArraySize(array));
     return(array);
 }
 
@@ -625,7 +631,7 @@ void InstantDEX_update(char *NXTaddr,char *NXTACCTSECRET)
 
 int32_t is_specialexchange(char *exchangestr)
 {
-    if ( strcmp(exchangestr,"InstantDEX") == 0 || strcmp(exchangestr,"shuffle") == 0 || strcmp(exchangestr,"peggy") == 0 || strcmp(exchangestr,"wallet") == 0 || strcmp(exchangestr,"active") == 0 || strncmp(exchangestr,"basket",strlen("basket")) == 0 )
+    if ( strcmp(exchangestr,"InstantDEX") == 0 || strcmp(exchangestr,"jumblr") == 0 || strcmp(exchangestr,"peggy") == 0 || strcmp(exchangestr,"wallet") == 0 || strcmp(exchangestr,"active") == 0 || strncmp(exchangestr,"basket",strlen("basket")) == 0 )
         return(1);
     return(0);
 }

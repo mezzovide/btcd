@@ -77,7 +77,7 @@ int32_t bitweight(uint64_t x)
 {
     int i,wt = 0;
     for (i=0; i<64; i++)
-        if ( (1 << i) & x )
+        if ( (1LL << i) & x )
             wt++;
     return(wt);
 }
