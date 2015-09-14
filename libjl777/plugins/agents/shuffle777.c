@@ -363,11 +363,12 @@ int32_t jumblr_idle(struct plugin_info *plugin)
             {
                 if ( coin->jpubP[0] == 0 && coin->jvinkey == 0 && coin->junspent == 0 && coin->jvintxid[0] == 0 && coin->jvin < 0 && coin->jscriptPubKey[0] == 0 && coin->jvinaddr[0] >= 0 )
                 {
-                    if ( jumblr_vintxid(&coin->junspent,coin->jvinaddr,coin->jscriptPubKey,coin->jvintxid,coin,jumblr_amount(coin,SATOSHIDEN*10000),-1) != 0 )
+                    strcpy(coin->jvintxid,"error getting unspent txid");
+                    if ( jumblr_vintxid(&coin->junspent,coin->jvinaddr,coin->jscriptPubKey,coin->jvintxid,coin,jumblr_amount(coin,SATOSHIDEN*10000),-1) >= 0 )
                     {
-                    if ( coin->jvinaddr[0] != 0 )
-                        coin->jvinkey = jumblr_bpkey(coin->jpubP,coin,coin->jvinaddr);
-                    } else strcpy(coin->jvintxid,"error getting unspent txid");
+                        if ( coin->jvinaddr[0] != 0 )
+                            coin->jvinkey = jumblr_bpkey(coin->jpubP,coin,coin->jvinaddr);
+                    }
                 }
                 if ( coin->jchangehex[0] == 0 && coin->jchangeaddr[0] == 0 )
                     jumblr_destaddress(coin->jchangehex,coin->jchangeaddr,coin,0);
