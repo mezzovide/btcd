@@ -172,6 +172,7 @@ char *jumblr_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coin
         sprintf(sourceacct,"jumblr.%d",srcacct);
     else if ( srcacct == 0 )
         strcpy(sourceacct,"jumblrchange");
+    printf("call gather_unspents.%s\n",sourceacct);
     if ( (utx= gather_unspents(&total,&n,coin,sourceacct)) != 0  )
     {
         //printf("shufflevin %.8f\n",dstr(amount));
@@ -427,7 +428,7 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
             }
             if ( vin >= 0 )
             {
-                sigstr = cointx->inputs[vin].sigs;
+                //sigstr = sigbuf;//cointx->inputs[vin].sigs;
                 if ( jumblr_signtx(sp->signedtx,sizeof(sp->signedtx),coin,rawtx) > 0 )
                     printf("READY to sendtransaction\n");
                 if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 )
@@ -435,12 +436,12 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
                 {
                     free(sp->T);
                     sp->T = cointx;
-                    sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"jumblr\",\"method\":\"busdata\",\"submethod\":\"signed\",\"sig\":\"%s\",\"vin\":%d}",(long long)sp->shuffleid,sp->timestamp,sigstr,vin);
+                    strcpy(sp->sigs[vin],cointx->inputs[vin].sigs);
+                    sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"jumblr\",\"method\":\"busdata\",\"submethod\":\"signed\",\"sig\":\"%s\",\"vin\":%d}",(long long)sp->shuffleid,sp->timestamp,sp->sigs[vin],vin);
                     if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                         free(str);
                     printf("signed.(%s)\n",buf);
                     sp->sigmask |= (1LL << vin);
-                    //strcpy(sp->sigs[vin],sigstr);
                     for (i=0; i<sp->numaddrs; i++)
                     {
                         if ( sp->sigs[i][0] != 0 )
@@ -594,11 +595,13 @@ printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
     sp->srcacct = srcacct;
     if ( createdflag != 0 && sp->myind == 0 && addrs[sp->myind] == SUPERNET.my64bits )
     {
+        printf("inside\n");
         if ( quoteid == 0 )
         {
             if ( (array= InstantDEX_shuffleorders(&quoteid,SUPERNET.my64bits,base)) != 0 )
                 free_json(array);
         }
+        printf("quoteid.%llu\n",(long long)quoteid);
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
             iQ->s.pending = 1;
@@ -738,7 +741,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         //coin777_find("LTC",1);
         strcpy(retbuf,"{\"result\":\"shuffle init\"}");
     }
-    else
+    else if ( SUPERNET.iamrelay == 0 )
     {
         fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
@@ -790,7 +793,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             if ( retstr == 0 )
                 retstr = clonestr("{\"error\":\"shuffle signed invalid args\"}");
         }
-    }
+    } else retstr = clonestr("{\"result\":\"relays dont shuffle\"}");
     return(plugin_copyretstr(retbuf,maxlen,retstr));
 }
 
