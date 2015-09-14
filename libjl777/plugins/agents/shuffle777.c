@@ -909,12 +909,13 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 if ( (coin= coin777_find(sp->base,0)) != 0 && (vin= juint(json,"vin")) >= 0 && vin < 64 && strlen(sig) < sizeof(sp->sigs[0]) )
                 {
                     sp->sigmask |= (1LL << vin);
-                    //printf("SIGMASK.%d sp->T %p\n",(int32_t)sp->sigmask,sp->T);
+                    strcpy(sp->sigs[vin],sig);
+                    printf("SIGMASK.%d sp->T %p\n",(int32_t)sp->sigmask,sp->T);
                     if ( sp->T != 0 )
                     {
                         strcpy(sp->T->inputs[vin].sigs,sig);
                         jumblr_send(coin,sp);
-                    } else strcpy(sp->sigs[vin],sig);
+                    }
                     retstr = clonestr("{\"success\":\"shuffle accepted sig\"}");
                 } else retstr = clonestr("{\"error\":\"shuffle rejected sig\"}");
             }
