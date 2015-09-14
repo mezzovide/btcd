@@ -377,6 +377,11 @@ int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct dest
                 maxamount = coin->junspent - coin->mgw.txfee*2 - (coin->junspent>>10);
                 if ( iQ->s.baseamount > maxamount )
                     iQ->s.baseamount = maxamount;
+                else if ( iQ->s.baseamount < coin->mgw.txfee )
+                {
+                    printf("jumblr amount %.8f less than txfee %.8f\n",dstr(iQ->s.baseamount),dstr(coin->mgw.txfee));
+                    return(-1);
+                }
             }
             else
             {

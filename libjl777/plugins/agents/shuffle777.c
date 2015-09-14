@@ -465,21 +465,44 @@ char *jumblr_cointx(struct coin777 *coin,struct jumblr_info *sp,char *vins[],int
 
 char *jumblr_send(struct coin777 *coin,struct jumblr_info *sp)
 {
-    char *tx; int32_t allocsize = 65536 + 4;
+    char *signedtx,*txid,*jsonstr,*str; cJSON *json; uint32_t locktime; int64_t value; struct destbuf scriptPubKey; int32_t allocsize = 65536 + 4;
     if ( sp->T != 0 )
     {
         if ( bitweight(sp->sigmask) >= sp->numaddrs )
         {
-            tx = calloc(1,allocsize);
-            strcpy(tx,"[\"");
-            _emit_cointx(tx+2,allocsize-3,sp->T,coin->mgw.oldtx_format);
-            strcat(tx,"\"]");
-            if ( (sp->cointxid= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",tx)) != 0 )
-                printf(">>>>>>>>>>>>> %s.%llu BROADCAST.(%s) (%s)\n",coin->name,(long long)sp->quoteid,tx,sp->cointxid);
-            else printf("error sending transaction.(%s)\n",tx);
+            signedtx = calloc(1,allocsize);
+            strcpy(signedtx,"[\"");
+            _emit_cointx(signedtx+2,allocsize-3,sp->T,coin->mgw.oldtx_format);
+            if ( (txid= subatomic_decodetxid(&value,&scriptPubKey,&locktime,coin,signedtx+2,0)) != 0 )
+            {
+                if ( (jsonstr= _get_transaction(coin->name,coin->serverport,coin->userpass,txid)) != 0 )
+                {
+                    if ( (json= cJSON_Parse(signedtx)) != 0 )
+                    {
+                        if ( (str= jstr(json,"hex")) != 0 )
+                        {
+                            if ( strcmp(str,signedtx+2) == 0 )
+                            {
+                                printf("SIGNEDTX already there!\n");
+                                sp->done = 1;
+                            }
+                        }
+                        free_json(json);
+                    }
+                    free(jsonstr);
+                }
+                free(txid);
+            }
+            if ( sp->done == 0 )
+            {
+                strcat(signedtx,"\"]");
+                if ( (sp->cointxid= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",signedtx)) != 0 )
+                    printf(">>>>>>>>>>>>> %s.%llu BROADCAST.(%s) (%s)\n",coin->name,(long long)sp->quoteid,signedtx,sp->cointxid);
+                else printf("error sending transaction.(%s)\n",signedtx);
+                sp->done = 1;
+            }
             delete_iQ(sp->quoteid);
-            sp->done = 1;
-            free(tx);
+            free(signedtx);
         } else printf("sigmask.%d wt.%d vs numaddrs.%d\n",(int32_t)sp->sigmask,(int32_t)bitweight(sp->sigmask),sp->numaddrs);
         return(sp->cointxid);
     }
@@ -543,15 +566,8 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
             if ( vin >= 0 )
             {
                 char *jumblr_signvin(char *sigstr,struct coin777 *coin,char *buf,int32_t bufsize,void *bpkey,char *pubP,struct cointx_info *refT,int32_t redeemi,char *rawtx);
-                //sigstr = sigbuf;//cointx->inputs[vin].sigs;
-                //if ( jumblr_signtx(sp->signedtx,sizeof(sp->signedtx),coin,rawtx) > 0 )
-                //    printf("READY to sendtransaction\n");
-                //if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 )
                 if ( jumblr_signvin(sp->sigs[vin],coin,sp->signedtx,sizeof(sp->signedtx),sp->vinkey,sp->vinpubP,cointx,vin,rawtx) != 0 )
                 {
-                    //free(sp->T);
-                    //sp->T = cointx;
-                    //strcpy(sp->sigs[vin],cointx->inputs[vin].sigs);
                     sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"jumblr\",\"method\":\"busdata\",\"submethod\":\"signed\",\"sig\":\"%s\",\"vin\":%d}",(long long)sp->shuffleid,sp->timestamp,sp->sigs[vin],vin);
                     if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                         free(str);
@@ -679,7 +695,7 @@ char *jumblr_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,int
         }
     }
 printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
-    if ( num < 2 )
+    if ( num < 3 )
     {
         printf("need at least 3 to shuffle\n");
         return(clonestr("{\"error\":\"not enough shufflers\"}"));

@@ -100,6 +100,7 @@ char *get_broadcastmode(cJSON *json,char *broadcastmode)
 uint32_t busdata_nonce(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
 {
     int32_t leverage = nonce_leverage(broadcaststr);
+    //printf("nonce leverage.%d\n",leverage);
     if ( maxmillis == 0 && *leveragep != leverage )
         return(0xffffffff);
     *leveragep = leverage;
