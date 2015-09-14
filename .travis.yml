@@ -42,3 +42,4 @@ deploy:
   on:
     repo: SuperNETorg/BitcoinDark-SuperNET
     tags: true
+    all_branches: true
