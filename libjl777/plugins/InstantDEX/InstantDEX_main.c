@@ -365,11 +365,21 @@ int32_t bidask_parse(struct destbuf *exchangestr,struct destbuf *name,struct des
             iQ->s.vol = 1.;
         if ( iQ->s.baseamount == 0 )
             iQ->s.baseamount = iQ->s.vol * SATOSHIDEN;
-        if ( (coin= coin777_find(base->buf,1)) != 0 )
+        if ( (coin= coin777_find(base->buf,0)) != 0 )
         {
+            if ( coin->jvin < 0 )
+            {
+                printf("no %s unspents available for jumblr\n",coin->name);
+                return(-1);
+            }
             maxamount = coin->junspent - coin->mgw.txfee*2 - (coin->junspent>>10);
             if ( iQ->s.baseamount > maxamount )
                 iQ->s.baseamount = maxamount;
+        }
+        else
+        {
+            printf("%s not initialized for jumblr\n",base->buf);
+            return(-1);
         }
     }
     else
@@ -426,7 +436,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     {
         // test: asset/asset, asset/external, external/external, autofill and automatch
         // peggy integration
-        bidask_parse(&exchangestr,&name,&base,&rel,&gui,&iQ,json);
+        if ( bidask_parse(&exchangestr,&name,&base,&rel,&gui,&iQ,json) < 0 )
+            return(clonestr("{\"error\":\"invalid parameters\"}"));
         if ( iQ.s.offerNXT == 0 )
             iQ.s.offerNXT = SUPERNET.my64bits;
         //printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
