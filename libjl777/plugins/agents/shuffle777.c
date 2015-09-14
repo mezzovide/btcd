@@ -733,6 +733,9 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 SuperNET_initconf(json), free_json(json);
             free(jsonstr);
         }*/
+        coin777_find("BTC",1);
+        coin777_find("BTCD",1);
+        //coin777_find("LTC",1);
         strcpy(retbuf,"{\"result\":\"shuffle init\"}");
     }
     else
