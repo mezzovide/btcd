@@ -861,13 +861,13 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
 
 struct subatomic_unspent_tx *subatomic_bestfit(struct coin777 *coin,struct subatomic_unspent_tx *unspents,int32_t numunspents,uint64_t value,int32_t mode)
 {
-    int32_t i; uint64_t above,below,gap,atx_value; struct subatomic_unspent_tx *vin,*abovevin,*belowvin; char coinaddr[64]; struct destbuf scriptPubKey;
+    int32_t i; uint64_t above,below,gap,atx_value; struct subatomic_unspent_tx *vin,*abovevin,*belowvin; //char coinaddr[64]; struct destbuf scriptPubKey;
     abovevin = belowvin = 0;
     for (above=below=i=0; i<numunspents; i++)
     {
         vin = &unspents[i];
-        jumblr_getcoinaddr(coinaddr,&scriptPubKey,coin,vin->txid.buf,vin->vout);
-        if ( scriptPubKey.buf[0] != 0 )
+        //jumblr_getcoinaddr(coinaddr,&scriptPubKey,coin,vin->txid.buf,vin->vout);
+        //if ( scriptPubKey.buf[0] != 0 )
         {
             atx_value = vin->amount;
             //printf("(%.8f vs %.8f)\n",dstr(atx_value),dstr(value));
