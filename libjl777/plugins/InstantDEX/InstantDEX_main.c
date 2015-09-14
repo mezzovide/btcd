@@ -301,7 +301,7 @@ cJSON *InstantDEX_lottostats()
 
 int32_t bidask_parse(struct destbuf *exchangestr,struct destbuf *name,struct destbuf *base,struct destbuf *rel,struct destbuf *gui,struct InstantDEX_quote *iQ,cJSON *json)
 {
-    uint64_t basemult,relmult,baseamount,relamount; double price,volume; int32_t exchangeid,keysize,flag; char key[1024],buf[64],*methodstr;
+    struct coin777 *coin; uint64_t basemult,relmult,baseamount,relamount,maxamount; double price,volume; int32_t exchangeid,keysize,flag; char key[1024],buf[64],*methodstr;
     memset(iQ,0,sizeof(*iQ));
     iQ->s.baseid = j64bits(json,"baseid"); iQ->s.relid = j64bits(json,"relid");
     iQ->s.baseamount = j64bits(json,"baseamount"), iQ->s.relamount = j64bits(json,"relamount");
@@ -365,6 +365,12 @@ int32_t bidask_parse(struct destbuf *exchangestr,struct destbuf *name,struct des
             iQ->s.vol = 1.;
         if ( iQ->s.baseamount == 0 )
             iQ->s.baseamount = iQ->s.vol * SATOSHIDEN;
+        if ( (coin= coin777_find(base->buf,1)) != 0 )
+        {
+            maxamount = coin->junspent - coin->mgw.txfee*2 - (coin->junspent>>10);
+            if ( iQ->s.baseamount > maxamount )
+                iQ->s.baseamount = maxamount;
+        }
     }
     else
     {

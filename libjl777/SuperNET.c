@@ -177,10 +177,10 @@ char *process_nn_message(int32_t sock,char *jsonstr)
     return(retstr);
 }
 
-char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
+char *process_jl777_msg(char *buf,char *previpaddr,char *jsonstr,int32_t duration)
 {
     char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout);
-    struct destbuf plugin,method,request; char buf[65536],*bstr,*retstr;
+    struct destbuf plugin,method,request; char *bstr,*retstr;
     uint64_t daemonid,instanceid,tag;
     int32_t override=0,broadcastflag = 0;
     cJSON *json;
@@ -235,12 +235,16 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
 
 char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
 {
-     return(process_jl777_msg(0,jsonstr,60));
+    char *buf,*retstr;
+    buf = calloc(1,65536);
+    retstr = process_jl777_msg(buf,0,jsonstr,60);
+    free(buf);
+    return(retstr);
 }
 
 char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
 {
-    struct destbuf request,name; char *retstr = 0;;
+    struct destbuf request,name; char *buf,*retstr = 0;;
     uint64_t daemonid,instanceid;
     cJSON *json;
     fprintf(stderr,"call_SuperNET_JSON\n");
@@ -255,7 +259,13 @@ char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
             daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
             instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"instanceid"));
             retstr = register_daemon(name.buf,daemonid,instanceid,cJSON_GetObjectItem(json,"methods"),cJSON_GetObjectItem(json,"pubmethods"),cJSON_GetObjectItem(json,"authmethods"));
-        } else retstr = process_jl777_msg(0,JSONstr,60);
+        }
+        else
+        {
+            buf = calloc(1,65536);
+            retstr = process_jl777_msg(buf,0,JSONstr,60);
+            free(buf);
+        }
         free_json(json);
     }
     if ( retstr == 0 )
