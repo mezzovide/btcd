@@ -37,9 +37,8 @@ deploy:
   provider: releases
   api_key:
     secure: 1E4x709kbR3eXe3mtN6uvjQ1wo8Px67pCQDxmxSJ9S4e2tZCAsRKjYYnm/tpphAE8ACFl7ErhEq2koFGRxmA9rr4xDgvv8vmagHy63T9C7wqkJUAZBtTvV50+/ARYErLLYo+sFeLszcNugijb/MAZaRFjEmvce3rW0tTN/B7BM633Ptw0WZOBpHnQBYIKrGbHIe4Av8WETvzXNEFlfMFJhW+4ywaysDEm6JTMCrkHhi5DzK/RyKj+1qgxqZWx6nf6lPoajMtSxmKBvSWzjkjDn1zMszAn6Zj7m9ld77uEcWaCRNxvjvM1fCqpBobNuNy8uiaciHpUC6Z2F5HBktO1QdIjEPpP9yjr11LA0ClYwB0c5jHjBEdJ+53TIfdjZBViX8XIlOazp1tC+kkYoKiJ1AbF89CXEfp/cMl6Ab7aeanlcdnQ71s5mNKvNb0E69u32cQ2n8AVCsQssHRBEvM8ZyNQSrCdFC5NoAlgx4lUz9q0gMr/qVvkSpNTO6HJmxkEVpaNEs7pZvdP0xnD2yb64bTjBD0evV31p/DIb+Vw+7MX7vQatmnYBFQsJPtprkZms0/sh/TWJAF3NjCYJAjX5lxMFgsYgeDzAvOxksfHy0xwdyzm3Qpby7lgqfMaIbzoAvcvd3jCMhwD3JGq/vYwg+QwU/nueRMbfWhDORfL8Y=
-  file: 
-  - libjl777/BitcoinDarkd
+  file: libjl777/BitcoinDarkd
+  skip_cleanup: true
   on:
     repo: SuperNETorg/BitcoinDark-SuperNET
     tags: true
-    all_branches: true
