@@ -228,7 +228,7 @@ char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr
             //if ( previpaddr == 0 || previpaddr[0] == 0 )
             //    sprintf(buf + strlen(buf)-1,",\"rand\":\"%d\"}",rand());
             return(process_nn_message(-1,buf));
-        }
+        } else printf("jsonstr too big %ld vs %d\n",strlen(jsonstr),bufsize);
     }
     return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
 }

@@ -861,7 +861,7 @@ printf("bypass deref (%s) (%s) (%s)\n",buf.buf,method.buf,servicename.buf);
         cJSON_DeleteItemFromObject(argjson,"submethod");
         cJSON_DeleteItemFromObject(argjson,"destplugin");
         str = cJSON_Print(argjson), _stripwhite(str,' ');
-        if ( Debuglevel > 2 )
+        //if ( Debuglevel > 2 )
             printf("call (%s %s) (%s)\n",plugin.buf,method.buf,str);
         retstr = plugin_method(-1,0,0,plugin.buf,method.buf,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2,tokenstr);
         free_json(origjson);
@@ -872,8 +872,11 @@ printf("bypass deref (%s) (%s) (%s)\n",buf.buf,method.buf,servicename.buf);
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
-    cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint8_t databuf[65536]; uint64_t destbits;
+    static uint8_t *databuf;
+    cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint64_t destbits;
     struct destbuf usedest,key,src,destNXT,forwarder,sender; char *str,*tokenstr=0,*broadcaststr,*retstr = 0;
+    if ( databuf == 0 )
+        databuf = calloc(1,65536);
     if ( len > sizeof(databuf) )
     {
         printf("nn_busdata_processor packet too big len.%d\n",len);
@@ -1247,7 +1250,8 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*retstr,*jsonstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
+    static char tokenized[65536];
+    char *msg,*retstr,*jsonstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
