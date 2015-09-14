@@ -418,9 +418,9 @@ char *jumblr_signvin(char *sigstr,struct coin777 *coin,void *bpkey,char *pubP,st
         free(sig);
         sigbuf[siglen++] = SIGHASH_ALL;
         init_hexbytes_noT(hexstr,sigbuf,(int32_t)siglen);
-        sprintf(vin->sigs,"%02lx%s%02lx%s%s",siglen,hexstr,strlen(pubP)/2,pubP,redeem);
+        sprintf(vin->sigs,"%02lx%s%02lx%s",siglen,hexstr,strlen(pubP)/2,pubP);
         strcpy(sigstr,vin->sigs);
-        printf("after P.(%s) siglen.%02lx -> %s\n",sigstr,siglen,vin->sigs);
+        printf("after P.(%s) siglen.%02lx -> %s redeem.(%s)\n",sigstr,siglen,vin->sigs,redeem);
     }
     free(T);
     if ( sigstr[0] != 0 )
