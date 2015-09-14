@@ -542,11 +542,12 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
             }
             if ( vin >= 0 )
             {
+                char *jumblr_signvin(char *sigstr,struct coin777 *coin,char *buf,int32_t bufsize,void *bpkey,char *pubP,struct cointx_info *refT,int32_t redeemi,char *rawtx);
                 //sigstr = sigbuf;//cointx->inputs[vin].sigs;
                 //if ( jumblr_signtx(sp->signedtx,sizeof(sp->signedtx),coin,rawtx) > 0 )
                 //    printf("READY to sendtransaction\n");
                 //if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 )
-                if ( jumblr_signvin(sp->sigs[vin],coin,sp->vinkey,sp->vinpubP,cointx,vin) != 0 )
+                if ( jumblr_signvin(sp->sigs[vin],coin,sp->signedtx,sizeof(sp->signedtx),sp->vinkey,sp->vinpubP,cointx,vin,rawtx) != 0 )
                 {
                     //free(sp->T);
                     //sp->T = cointx;
