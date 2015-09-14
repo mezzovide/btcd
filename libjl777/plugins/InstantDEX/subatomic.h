@@ -410,6 +410,7 @@ char *jumblr_signvin(char *sigstr,struct coin777 *coin,void *bpkey,char *pubP,st
     vin->sequence = (uint32_t)-1;
     T->nlocktime = 0;
     data = malloc(65536);
+    disp_cointx(T);
     emit_cointx(&hash2,data,sizeof(data),T,coin->mgw.oldtx_format,SIGHASH_ALL);
     free(data);
     if ( bp_sign(bpkey,hash2.bytes,sizeof(hash2),&sig,&siglen) != 0 && sig != 0 )
@@ -420,7 +421,7 @@ char *jumblr_signvin(char *sigstr,struct coin777 *coin,void *bpkey,char *pubP,st
         init_hexbytes_noT(hexstr,sigbuf,(int32_t)siglen);
         sprintf(vin->sigs,"%02lx%s%02lx%s",siglen,hexstr,strlen(pubP)/2,pubP);
         strcpy(sigstr,vin->sigs);
-        printf("after P.(%s) siglen.%02lx -> %s redeem.(%s)\n",sigstr,siglen,vin->sigs,redeem);
+        printf("after P.(%s) siglen.%02lx -> %s pubP.(%s)\n",sigstr,siglen,vin->sigs,pubP);
     }
     free(T);
     if ( sigstr[0] != 0 )

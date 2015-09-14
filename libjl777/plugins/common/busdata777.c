@@ -72,13 +72,13 @@ int32_t nonce_leverage(char *broadcaststr)
     if ( broadcaststr != 0 && broadcaststr[0] != 0 )
     {
         if ( strcmp(broadcaststr,"allnodes") == 0 )
-            leverage = 5;
+            leverage = 4;
         else if ( strcmp(broadcaststr,"join") == 0 )
-            leverage = 9;
+            leverage = 8;
         else if ( strcmp(broadcaststr,"servicerequest") == 0 )
-            leverage = 4;
+            leverage = 3;
         else if ( strcmp(broadcaststr,"allrelays") == 0 )
-            leverage = 4;
+            leverage = 3;
         else if ( myatoi(broadcaststr,33) != 0 )
             leverage = myatoi(broadcaststr,33);
     }
