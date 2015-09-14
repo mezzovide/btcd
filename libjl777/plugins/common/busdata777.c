@@ -877,7 +877,7 @@ char *nn_busdata_processor(uint8_t *msg,int32_t len)
     struct destbuf usedest,key,src,destNXT,forwarder,sender; char *str,*tokenstr=0,*broadcaststr,*retstr = 0;
     if ( databuf == 0 )
         databuf = calloc(1,65536);
-    if ( len > sizeof(databuf) )
+    if ( len > 65536 )
     {
         printf("nn_busdata_processor packet too big len.%d\n",len);
         return(clonestr("{\"error\":\"packet too big\"}"));
