@@ -270,7 +270,7 @@ int32_t script_coinaddr(char *coinaddr,cJSON *scriptobj)
 
 uint64_t shuffle_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct coin777 *coin,char *txid,int32_t vout)
 {
-    char *rawtransaction,*txidstr; uint64_t value = 0; int32_t n,reqSigs; cJSON *json,*scriptobj,*array,*item,*hexobj;
+    char *rawtransaction,*txidstr,*asmstr; uint64_t value = 0; int32_t n,m,len,reqSigs; cJSON *json,*scriptobj,*array,*item,*hexobj;
     scriptPubKey->buf[0] = 0;
     if ( (rawtransaction= _get_transaction(coin->name,coin->serverport,coin->userpass,txid)) == 0 )
     {
@@ -296,7 +296,29 @@ uint64_t shuffle_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct 
                 hexobj = cJSON_GetObjectItem(scriptobj,"hex");
                 if ( scriptPubKey != 0 && hexobj != 0 )
                     copy_cJSON(scriptPubKey,hexobj);
-                else set_spendscript(scriptPubKey->buf,coinaddr);
+                else
+                {
+                    // OP_DUP OP_HASH160 f563e867027dedd109c9bb5f3354c3cc41dc7c7f OP_EQUALVERIFY OP_CHECKSIG
+                    // 0318d4f6cdcbe6c822b979fc318dbe4ad58287223c8fb57b7bec0c88cd58a4b16a OP_CHECKSIG
+                    if ( (asmstr= jstr(item,"asm")) != 0 )
+                    {
+                        len = (int32_t)strlen(asmstr);
+                        m = (int32_t)strlen(" OP_CHECKSIG");
+                        if ( strcmp(&asmstr[len - m]," OP_CHECKSIG") == 0 )
+                        {
+                            sprintf(scriptPubKey->buf,"%02x",(len-m)/2);
+                            memcpy(&scriptPubKey->buf[2],asmstr,(len - m));
+                            scriptPubKey->buf[2 + (len - m)] = 0;
+                            strcat(scriptPubKey->buf,"ac");
+                        }
+                        else
+                        {
+                            m = (int32_t)strlen(" OP_EQUALVERIFY OP_CHECKSIG");
+                            if ( strcmp(asmstr,"OP_DUP OP_HASH160 ") == 0 && strcmp(&asmstr[len - m]," OP_EQUALVERIFY OP_CHECKSIG") == 0 )
+                                set_spendscript(scriptPubKey->buf,coinaddr);
+                        }
+                    }
+                }
             } else printf("null scriptobj.%p (%s)\n",scriptobj,coinaddr);
         }
         free_json(json);
@@ -839,31 +861,35 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
 
 struct subatomic_unspent_tx *subatomic_bestfit(struct coin777 *coin,struct subatomic_unspent_tx *unspents,int32_t numunspents,uint64_t value,int32_t mode)
 {
-    int32_t i; uint64_t above,below,gap,atx_value; struct subatomic_unspent_tx *vin,*abovevin,*belowvin;
+    int32_t i; uint64_t above,below,gap,atx_value; struct subatomic_unspent_tx *vin,*abovevin,*belowvin; char coinaddr[64]; struct destbuf scriptPubKey;
     abovevin = belowvin = 0;
     for (above=below=i=0; i<numunspents; i++)
     {
         vin = &unspents[i];
-        atx_value = vin->amount;
-        //printf("(%.8f vs %.8f)\n",dstr(atx_value),dstr(value));
-        if ( atx_value == value )
-            return(vin);
-        else if ( atx_value > value )
+        shuffle_getcoinaddr(coinaddr,&scriptPubKey,coin,vin->txid.buf,vin->vout);
+        if ( scriptPubKey.buf[0] != 0 )
         {
-            gap = (atx_value - value);
-            if ( above == 0 || gap < above )
+            atx_value = vin->amount;
+            //printf("(%.8f vs %.8f)\n",dstr(atx_value),dstr(value));
+            if ( atx_value == value )
+                return(vin);
+            else if ( atx_value > value )
             {
-                above = gap;
-                abovevin = vin;
+                gap = (atx_value - value);
+                if ( above == 0 || gap < above )
+                {
+                    above = gap;
+                    abovevin = vin;
+                }
             }
-        }
-        else if ( mode == 0 )
-        {
-            gap = (value - atx_value);
-            if ( below == 0 || gap < below )
+            else if ( mode == 0 )
             {
-                below = gap;
-                belowvin = vin;
+                gap = (value - atx_value);
+                if ( below == 0 || gap < below )
+                {
+                    below = gap;
+                    belowvin = vin;
+                }
             }
         }
     }
