@@ -645,6 +645,8 @@ char *InstantDEX_placebidask(char *remoteaddr,uint64_t orderid,char *exchangestr
         secret = SUPERNET.NXTACCTSECRET;
         activenxt = SUPERNET.NXTADDR;
     }
+    if ( strcmp(exchangestr,"jumblr") == 0 )
+        coin777_find(base,1);
    // printf("placebidask.(%s)\n",jprint(origjson,0));
     if ( (obj= jobj(origjson,"wallet")) != 0 )
     {
