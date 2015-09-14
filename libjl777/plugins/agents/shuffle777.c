@@ -427,7 +427,7 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
             }
             if ( vin >= 0 )
             {
-                sigstr = cointx->inputs[vin].sigs;
+                sigstr = buf;//cointx->inputs[vin].sigs;
                 if ( jumblr_signtx(sp->signedtx,sizeof(sp->signedtx),coin,rawtx) > 0 )
                     printf("READY to sendtransaction\n");
                 if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 )
@@ -435,12 +435,12 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
                 {
                     free(sp->T);
                     sp->T = cointx;
+                    strcpy(sp->sigs[vin],sigstr);
                     sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"jumblr\",\"method\":\"busdata\",\"submethod\":\"signed\",\"sig\":\"%s\",\"vin\":%d}",(long long)sp->shuffleid,sp->timestamp,sigstr,vin);
                     if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                         free(str);
                     printf("signed.(%s)\n",buf);
                     sp->sigmask |= (1LL << vin);
-                    //strcpy(sp->sigs[vin],sigstr);
                     for (i=0; i<sp->numaddrs; i++)
                     {
                         if ( sp->sigs[i][0] != 0 )
