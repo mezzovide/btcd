@@ -368,20 +368,20 @@ int32_t jumblr_idle(struct plugin_info *plugin)
                     {
                         if ( coin->jvinaddr[0] != 0 )
                             coin->jvinkey = jumblr_bpkey(coin->jpubP,coin,coin->jvinaddr);
+                        if ( coin->jchangehex[0] == 0 && coin->jchangeaddr[0] == 0 )
+                            jumblr_destaddress(coin->jchangehex,coin->jchangeaddr,coin,0);
+                        if ( coin->jdesthex[0] == 0 || coin->jdestaddr[0] == 0 )
+                            jumblr_destaddress(coin->jdesthex,coin->jdestaddr,coin,1);
                     }
                 }
-                if ( coin->jchangehex[0] == 0 && coin->jchangeaddr[0] == 0 )
-                    jumblr_destaddress(coin->jchangehex,coin->jchangeaddr,coin,0);
-                if ( coin->jdesthex[0] == 0 || coin->jdestaddr[0] == 0 )
-                    jumblr_destaddress(coin->jdesthex,coin->jdestaddr,coin,1);
-                if ( now > lastpurge+60 )
-                {
-                    lastpurge = now;
-                    for (i=0; i<sizeof(SHUFFLES)/sizeof(*SHUFFLES); i++)
-                        if ( SHUFFLES[i] != 0 && SHUFFLES[i]->done != 0 && now > SHUFFLES[i]->timestamp+3600 )
-                            jumblr_free(SHUFFLES[i]);
-                }
             }
+        }
+        if ( now > lastpurge+60 )
+        {
+            lastpurge = now;
+            for (i=0; i<sizeof(SHUFFLES)/sizeof(*SHUFFLES); i++)
+                if ( SHUFFLES[i] != 0 && SHUFFLES[i]->done != 0 && now > SHUFFLES[i]->timestamp+3600 )
+                    jumblr_free(SHUFFLES[i]);
         }
     }
     return(0);
