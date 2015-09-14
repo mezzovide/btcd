@@ -32,7 +32,7 @@ STRUCTNAME
     uint32_t timestamp,numaddrs;
     uint64_t basebits,addrs[64],shuffleid,quoteid,fee,unspent;
     char signedtx[65536],rawtx[65536],base[16],destaddr[64],changeaddr[64],inputtxid[128],vinaddr[128],vinpubP[128],scriptPubKey[4096]; void *vinkey;
-    char sigs[64][256],*vinstr,*voutstr,*changestr,*cointxid;
+    char sigs[64][512],*vinstr,*voutstr,*changestr,*cointxid;
     int32_t vin,myind,srcacct,done; uint64_t change,amount,sigmask;
     struct cointx_info *T;
 } *SHUFFLES[1000];
@@ -806,9 +806,9 @@ int32_t jumblr_incoming(char *jsonstr)
                             if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                                 free(str);
                             printf("RAWTX.(%s)\n",txbytes);
-                            msleep(250 + (rand() % 2000));
-                            if ( (str= jumblr_validate(coin,txbytes,sp)) != 0 )
-                                free(str);
+                            //msleep(250 + (rand() % 2000));
+                            //if ( (str= jumblr_validate(coin,txbytes,sp)) != 0 )
+                            //    free(str);
                         } else printf("jumblr_cointx null return\n");
                     }
                     else
