@@ -1261,7 +1261,7 @@ int32_t busdata_poll()
             {
                 jsonstr = clonestr(msg);
                 nn_freemsg(msg);
-                //if ( Debuglevel > 2 )
+                if ( Debuglevel > 2 )
                     printf("RECV.%d (%s)\n",sock,jsonstr);
                 n++;
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -1288,7 +1288,7 @@ int32_t busdata_poll()
                             if ( noneed == 0 )
                             {
                                 len = construct_tokenized_req(&nonce,tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
-                                fprintf(stderr,"busdatapoll tokenized return.(%s)\n",tokenized);
+                                //fprintf(stderr,"busdatapoll tokenized return.(%s)\n",tokenized);
                                 nn_send(sock,tokenized,len,0);
                             }
                             free(retstr);
