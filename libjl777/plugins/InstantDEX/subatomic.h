@@ -286,13 +286,16 @@ uint64_t jumblr_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct c
             free(rawtransaction);
             return(0);
         }
-        if ( (array= jarray(&n,json,"vout")) != 0 && (item= jitem(array,vout)) != 0 )
+        if ( (array= jarray(&n,json,"vout")) != 0 && vout < n && (item= jitem(array,vout)) != 0 )
         {
+            reqSigs = (int32_t)get_cJSON_int(item,"reqSigs");
+            value = conv_cJSON_float(item,"value");
             scriptobj = cJSON_GetObjectItem(item,"scriptPubKey");
-            if ( scriptobj != 0 && script_coinaddr(coinaddr,scriptobj) == 0 )
+            printf("ITEM.(%s)\n",jprint(item,0));
+            if ( scriptobj != 0 )
             {
-                reqSigs = (int32_t)get_cJSON_int(item,"reqSigs");
-                value = conv_cJSON_float(item,"value");
+                printf("script.(%s)\n",jprint(scriptobj,0));
+                script_coinaddr(coinaddr,scriptobj);
                 hexobj = cJSON_GetObjectItem(scriptobj,"hex");
                 if ( scriptPubKey != 0 && hexobj != 0 )
                     copy_cJSON(scriptPubKey,hexobj);
