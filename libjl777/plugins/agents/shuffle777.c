@@ -855,7 +855,8 @@ int32_t jumblr_incoming(char *jsonstr)
                         jadd(newjson,"addrs",jumblr_addrjson(addrs,num));
                         msg = jprint(newjson,1);
                         expand_nxt64bits(destNXT,sp->addrs[myind+1]);
-                        printf("telepathic.(%s) -> destNXT.(%s)\n",msg,destNXT);
+                        if ( Debuglevel > 2 )
+                            printf("telepathic.(%s) -> destNXT.(%s)\n",msg,destNXT);
                         telepathic_PM(destNXT,msg);
                         free(msg);
                     }
