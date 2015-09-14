@@ -300,12 +300,13 @@ uint64_t jumblr_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct c
                 {
                     // OP_DUP OP_HASH160 f563e867027dedd109c9bb5f3354c3cc41dc7c7f OP_EQUALVERIFY OP_CHECKSIG
                     // 0318d4f6cdcbe6c822b979fc318dbe4ad58287223c8fb57b7bec0c88cd58a4b16a OP_CHECKSIG
-                    if ( (asmstr= jstr(item,"asm")) != 0 )
+                    if ( (asmstr= jstr(scriptobj,"asm")) != 0 )
                     {
                         len = (int32_t)strlen(asmstr);
                         m = (int32_t)strlen(" OP_CHECKSIG");
                         if ( strcmp(&asmstr[len - m]," OP_CHECKSIG") == 0 )
                         {
+                            printf("key sig (%s)\n",asmstr);
                             sprintf(scriptPubKey->buf,"%02x",(len-m)/2);
                             memcpy(&scriptPubKey->buf[2],asmstr,(len - m));
                             scriptPubKey->buf[2 + (len - m)] = 0;
@@ -313,6 +314,7 @@ uint64_t jumblr_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct c
                         }
                         else
                         {
+                            printf("standard (%s)\n",asmstr);
                             m = (int32_t)strlen(" OP_EQUALVERIFY OP_CHECKSIG");
                             if ( strcmp(asmstr,"OP_DUP OP_HASH160 ") == 0 && strcmp(&asmstr[len - m]," OP_EQUALVERIFY OP_CHECKSIG") == 0 )
                                 set_spendscript(scriptPubKey->buf,coinaddr);

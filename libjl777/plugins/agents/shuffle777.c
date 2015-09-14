@@ -250,10 +250,10 @@ char *jumblr_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vout
         txid = vins[i] + 2;
         safecopy(T->inputs[T->numinputs].tx.txidstr,txid,sizeof(T->inputs[i].tx.txidstr));
         T->inputs[T->numinputs].tx.vout = vout;
-        //printf("(%s v%d) ",txid,vout);
         T->inputs[T->numinputs].sequence = 0xffffffff;
         T->inputs[T->numinputs].value = value = jumblr_getcoinaddr(T->inputs[T->numinputs].coinaddr,&scriptPubKey,coin,txid,vout);
         strcpy(T->inputs[T->numinputs].sigs,scriptPubKey.buf);
+        printf("(%s v%d [%s]) ",txid,vout,scriptPubKey.buf);
         if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T->inputs[T->numinputs].tx.vout)) > 0 )
             totalinputs += value;
         else
