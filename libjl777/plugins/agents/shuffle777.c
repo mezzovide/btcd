@@ -239,7 +239,7 @@ int32_t jumblr_next(struct jumblr_info *sp,struct coin777 *coin,uint64_t *addrs,
 char *jumblr_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
 {
     struct cointx_info *T; int32_t i,j; char *txid,coinaddr[128],txbytes[65536]; uint8_t vout,rmd160[21],data[8];
-    uint64_t totaloutputs,totalinputs,value,fee,sharedfee; struct rawvout *v; struct destbuf scriptPubKey;
+    uint64_t totaloutputs,totalinputs,value,fee,sharedfee; struct rawvout *v; struct destbuf scriptPubKey; struct cointx_input *vin;
     T = calloc(1,sizeof(*T));
     T->version = 1;
     T->timestamp = (uint32_t)time(NULL);
@@ -248,17 +248,18 @@ char *jumblr_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vout
     {
         decode_hex(&vout,1,vins[i]);
         txid = vins[i] + 2;
-        safecopy(T->inputs[T->numinputs].tx.txidstr,txid,sizeof(T->inputs[i].tx.txidstr));
-        T->inputs[T->numinputs].tx.vout = vout;
-        T->inputs[T->numinputs].sequence = 0xffffffff;
-        T->inputs[T->numinputs].value = value = jumblr_getcoinaddr(T->inputs[T->numinputs].coinaddr,&scriptPubKey,coin,txid,vout);
-        strcpy(T->inputs[T->numinputs].sigs,scriptPubKey.buf);
-        printf("(%s v%d [%s]) ",txid,vout,scriptPubKey.buf);
-        if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T->inputs[T->numinputs].tx.vout)) > 0 )
+        vin = &T->inputs[T->numinputs];
+        safecopy(vin->tx.txidstr,txid,sizeof(T->inputs[i].tx.txidstr));
+        vin->tx.vout = vout;
+        vin->sequence = 0xffffffff;
+        vin->value = value = jumblr_getcoinaddr(vin->coinaddr,&scriptPubKey,coin,txid,vout);
+        strcpy(vin->sigs,scriptPubKey.buf);
+        printf("jumblr_getcoinaddr.(%s v%d [%s %s]) ",txid,vout,scriptPubKey.buf,vin->coinaddr);
+        if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,vin->tx.vout)) > 0 )
             totalinputs += value;
         else
         {
-            printf("error getting unspent.(%s v%d)\n",txid,T->inputs[T->numinputs].tx.vout);
+            printf("error getting unspent.(%s v%d)\n",txid,vin->tx.vout);
             break;
         }
         T->numinputs++;
@@ -527,6 +528,11 @@ char *jumblr_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,int
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
     coin = coin777_find(base,1);
+    
+    //struct destbuf scriptPubKey;
+    //jumblr_getcoinaddr(rsaddr,&scriptPubKey,coin,"bd45eb7b6fc5af5eb6b08b17ef67ca69262e998371f3e6f998d4e04868e58f58",1);
+    //printf("SCRIPT.(%s)\n",scriptPubKey.buf);
+    //getchar();
     now = (uint32_t)time(NULL);
     if ( timestamp != 0 && now > timestamp+777 )
         return(clonestr("{\"error\":\"shuffle expired\"}"));
