@@ -382,18 +382,21 @@ char *jumblr_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,
     *T = *refT;
     vin = &T->inputs[redeemi];
     sigstr[0] = 0;
-    printf("redeemi.%d numinputs.%d sigstr.%p\n",redeemi,T->numinputs,sigstr);
+    fprintf(stderr,"redeemi.%d numinputs.%d sigstr.%p\n",redeemi,T->numinputs,sigstr);
     if ( (privkey= jumblr_getprivkey(&value,&scriptPubKey,&locktime,coin,vin->tx.txidstr,vin->tx.vout)) != 0 )
     {
-        printf("vin.%d jumblr_getprivkey.(%s) [%p]\n",redeemi,privkey,sigstr);
+        fprintf(stderr,"vin.%d jumblr_getprivkey.(%s) [%p]\n",redeemi,privkey,sigstr);
         if ( btc_setprivkey(&key,privkey) == 0 && btc_getpubkey(pubP,sigbuf,&key) > 0 )
         {
             for (i=0; i<T->numinputs; i++)
                 strcpy(T->inputs[i].sigs,"00");
-            strcpy(scriptPubKey.buf,"76a914");
-            calc_OP_HASH160(scriptPubKey.buf + 6,sigbuf,pubP);
-            strcat(scriptPubKey.buf,"88ac");
-            strcpy(vin->sigs,scriptPubKey.buf);
+            if ( vin->sigs[0] == 0 )
+            {
+                strcpy(scriptPubKey.buf,"76a914");
+                calc_OP_HASH160(scriptPubKey.buf + 6,sigbuf,pubP);
+                strcat(scriptPubKey.buf,"88ac");
+                strcpy(vin->sigs,scriptPubKey.buf);
+            }
             vin->sequence = (uint32_t)-1;
             T->nlocktime = 0;
             data = malloc(65536);
@@ -866,7 +869,7 @@ struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,stru
     }
     free(params);
     if ( *nump == 0 )
-        printf("no unspents\n");
+        printf("no unspents for (%s)\n",account != 0 ? account : "");
     return(ups);
 }
 
