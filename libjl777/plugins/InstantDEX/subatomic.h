@@ -306,21 +306,21 @@ uint64_t jumblr_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct c
                     if ( (asmstr= jstr(scriptobj,"asm")) != 0 )
                     {
                         len = (int32_t)strlen(asmstr);
-                        m = (int32_t)strlen(" OP_CHECKSIG");
-                        if ( strcmp(&asmstr[len - m]," OP_CHECKSIG") == 0 )
-                        {
-                            printf("key sig (%s)\n",asmstr);
-                            sprintf(scriptPubKey->buf,"%02x",(len-m)/2);
-                            memcpy(&scriptPubKey->buf[2],asmstr,(len - m));
-                            scriptPubKey->buf[2 + (len - m)] = 0;
-                            strcat(scriptPubKey->buf,"ac");
-                        }
+                        m = (int32_t)strlen(" OP_EQUALVERIFY OP_CHECKSIG");
+                        if ( strncmp(asmstr,"OP_DUP OP_HASH160 ",strlen("OP_DUP OP_HASH160 ")) == 0 && strcmp(&asmstr[len - m]," OP_EQUALVERIFY OP_CHECKSIG") == 0 )
+                            set_spendscript(scriptPubKey->buf,coinaddr);
                         else
                         {
-                            printf("standard (%s)\n",asmstr);
-                            m = (int32_t)strlen(" OP_EQUALVERIFY OP_CHECKSIG");
-                            if ( strcmp(asmstr,"OP_DUP OP_HASH160 ") == 0 && strcmp(&asmstr[len - m]," OP_EQUALVERIFY OP_CHECKSIG") == 0 )
-                                set_spendscript(scriptPubKey->buf,coinaddr);
+                            printf("nonstandard.(%s)\n",&asmstr[len - m]);
+                            m = (int32_t)strlen(" OP_CHECKSIG");
+                            if ( strcmp(&asmstr[len - m]," OP_CHECKSIG") == 0 )
+                            {
+                                printf("key sig (%s)\n",asmstr);
+                                sprintf(scriptPubKey->buf,"%02x",(len-m)/2);
+                                memcpy(&scriptPubKey->buf[2],asmstr,(len - m));
+                                scriptPubKey->buf[2 + (len - m)] = 0;
+                                strcat(scriptPubKey->buf,"ac");
+                            }
                         }
                     }
                 }
