@@ -172,6 +172,7 @@ char *jumblr_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coin
         sprintf(sourceacct,"jumblr.%d",srcacct);
     else if ( srcacct == 0 )
         strcpy(sourceacct,"jumblrchange");
+    printf("call gather_unspents.%s\n",sourceacct);
     if ( (utx= gather_unspents(&total,&n,coin,sourceacct)) != 0  )
     {
         //printf("shufflevin %.8f\n",dstr(amount));
@@ -594,11 +595,13 @@ printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
     sp->srcacct = srcacct;
     if ( createdflag != 0 && sp->myind == 0 && addrs[sp->myind] == SUPERNET.my64bits )
     {
+        printf("inside\n");
         if ( quoteid == 0 )
         {
             if ( (array= InstantDEX_shuffleorders(&quoteid,SUPERNET.my64bits,base)) != 0 )
                 free_json(array);
         }
+        printf("quoteid.%llu\n",(long long)quoteid);
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
             iQ->s.pending = 1;
