@@ -268,20 +268,20 @@ int32_t script_coinaddr(char *coinaddr,cJSON *scriptobj)
     return(-1);
 }
 
-uint64_t shuffle_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct coin777 *coin,char *txid,int32_t vout)
+uint64_t jumblr_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct coin777 *coin,char *txid,int32_t vout)
 {
     char *rawtransaction,*txidstr,*asmstr; uint64_t value = 0; int32_t n,m,len,reqSigs; cJSON *json,*scriptobj,*array,*item,*hexobj;
     scriptPubKey->buf[0] = 0;
     if ( (rawtransaction= _get_transaction(coin->name,coin->serverport,coin->userpass,txid)) == 0 )
     {
-        printf("shuffle_getprivkey: error getting (%s)\n",txid);
+        printf("jumblr_getprivkey: error getting (%s)\n",txid);
         return(0);
     }
     if ( (json= cJSON_Parse(rawtransaction)) != 0 )
     {
         if ( (txidstr= jstr(json,"txid")) == 0 || strcmp(txidstr,txid) != 0 )
         {
-            printf("shuffle_getcoinaddr no txid or mismatch\n");
+            printf("jumblr_getcoinaddr no txid or mismatch\n");
             free_json(json);
             free(rawtransaction);
             return(0);
@@ -327,14 +327,14 @@ uint64_t shuffle_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct 
     return(value);
 }
 
-char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t *locktimep,struct coin777 *coin,char *txid,int32_t vout)
+char *jumblr_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t *locktimep,struct coin777 *coin,char *txid,int32_t vout)
 {
     char *rawtransaction,*txidstr,*privkey=0,coinaddr[64]; uint64_t value = 0; int32_t n,reqSigs; cJSON *json,*scriptobj,*array,*item,*hexobj;
     *locktimep = -1;
     scriptPubKey->buf[0] = 0;
     if ( (rawtransaction= _get_transaction(coin->name,coin->serverport,coin->userpass,txid)) == 0 )
     {
-        printf("shuffle_getprivkey: error getting (%s)\n",txid);
+        printf("jumblr_getprivkey: error getting (%s)\n",txid);
         return(0);
     }
     if ( (json= cJSON_Parse(rawtransaction)) != 0 )//get_decoderaw_json(coin,rawtransaction)) != 0 )
@@ -342,7 +342,7 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
         *locktimep = (int32_t)get_cJSON_int(json,"locktime");
         if ( (txidstr= jstr(json,"txid")) == 0 || strcmp(txidstr,txid) != 0 )
         {
-            printf("shuffle_getprivkey no txid or mismatch\n");
+            printf("jumblr_getprivkey no txid or mismatch\n");
             free_json(json);
             free(rawtransaction);
             return(0);
@@ -369,7 +369,7 @@ char *shuffle_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t 
     return(privkey);
 }
 
-char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi)
+char *jumblr_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi)
 {
     char hexstr[4096],pubP[1024],*privkey; bits256 hash2; uint8_t *data,sigbuf[1024]; struct bp_key key; struct destbuf scriptPubKey;
     struct cointx_info *T; int32_t i; void *sig = NULL; size_t siglen = 0; struct cointx_input *vin; uint64_t value; uint32_t locktime;
@@ -378,9 +378,9 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
     vin = &T->inputs[redeemi];
     sigstr[0] = 0;
     printf("redeemi.%d numinputs.%d sigstr.%p\n",redeemi,T->numinputs,sigstr);
-    if ( (privkey= shuffle_getprivkey(&value,&scriptPubKey,&locktime,coin,vin->tx.txidstr,vin->tx.vout)) != 0 )
+    if ( (privkey= jumblr_getprivkey(&value,&scriptPubKey,&locktime,coin,vin->tx.txidstr,vin->tx.vout)) != 0 )
     {
-        printf("vin.%d shuffle_getprivkey.(%s) [%p]\n",redeemi,privkey,sigstr);
+        printf("vin.%d jumblr_getprivkey.(%s) [%p]\n",redeemi,privkey,sigstr);
         if ( btc_setprivkey(&key,privkey) == 0 && btc_getpubkey(pubP,sigbuf,&key) > 0 )
         {
             for (i=0; i<T->numinputs; i++)
@@ -407,13 +407,13 @@ char *shuffle_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT
         }
         else
         {
-            printf("shuffle_signvin: error setting privkey/pubkey\n");
+            printf("jumblr_signvin: error setting privkey/pubkey\n");
             free(T);
             free(privkey);
             return(0);
         }
         free(privkey);
-    } else printf("shuffle_getprivkey null\n");
+    } else printf("jumblr_getprivkey null\n");
     free(T);
     if ( sigstr[0] != 0 )
         return(sigstr);
@@ -607,7 +607,7 @@ cJSON *cointx_vins_json_params(struct coin777 *coin,char *rawbytes)
     return(array);
 }
 
-char *shuffle_signraw_json_params(struct coin777 *coin,char *rawbytes)
+char *jumblr_signraw_json_params(struct coin777 *coin,char *rawbytes)
 {
     char *paramstr = 0; cJSON *array,*rawobj,*vinsobj;//,*keysobj;char *coinaddrs[MAX_SUBATOMIC_INPUTS+1],
     if ( (rawobj= cJSON_CreateString(rawbytes)) != 0 )
@@ -625,12 +625,12 @@ char *shuffle_signraw_json_params(struct coin777 *coin,char *rawbytes)
     return(paramstr);
 }
 
-int32_t shuffle_signtx(char *signedtx,unsigned long destsize,struct coin777 *coin,char *rawbytes)
+int32_t jumblr_signtx(char *signedtx,unsigned long destsize,struct coin777 *coin,char *rawbytes)
 {
     cJSON *json,*compobj; char *retstr,*deststr,*signparams; uint32_t completed = 0;
     signedtx[0] = 0;
     //printf("cp.%d vs %d: subatomic_signtx rawbytes.(%s)\n",cp->coinid,coinid,rawbytes);
-    if ( coin != 0 && (signparams= shuffle_signraw_json_params(coin,rawbytes)) != 0 )
+    if ( coin != 0 && (signparams= jumblr_signraw_json_params(coin,rawbytes)) != 0 )
     {
         _stripwhite(signparams,' ');
         printf("got signparams.(%s)\n",signparams);
@@ -866,7 +866,7 @@ struct subatomic_unspent_tx *subatomic_bestfit(struct coin777 *coin,struct subat
     for (above=below=i=0; i<numunspents; i++)
     {
         vin = &unspents[i];
-        shuffle_getcoinaddr(coinaddr,&scriptPubKey,coin,vin->txid.buf,vin->vout);
+        jumblr_getcoinaddr(coinaddr,&scriptPubKey,coin,vin->txid.buf,vin->vout);
         if ( scriptPubKey.buf[0] != 0 )
         {
             atx_value = vin->amount;

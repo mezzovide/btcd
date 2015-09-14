@@ -477,9 +477,9 @@ void prices777_orderbook_item(struct prices777 *prices,int32_t bidask,struct pri
     if ( invert != 0 )
         volume = (origvolume * origprice), price = 1./origprice;
     else price = origprice, volume = origvolume;
-    if ( strcmp(prices->exchange,"shuffle") == 0 )
+    if ( strcmp(prices->exchange,"jumblr") == 0 )
     {
-        jaddstr(item,"plugin","shuffle"), jaddstr(item,"method","start");
+        jaddstr(item,"plugin","jumblr"), jaddstr(item,"method","start");
         jaddnum(item,"dotrade",1), jaddnum(item,"volume",volume);
         jaddnum(item,"timeout",120000);
         jaddstr(item,"base",prices->base);
@@ -1024,7 +1024,7 @@ int32_t create_basketitem(struct prices777_basket *basketitem,cJSON *item,char *
 {
     struct destbuf exchangestr,name,base,rel; char key[512]; uint64_t tmp,baseid,relid; int32_t groupid,keysize,valid; double wt; struct prices777 *prices;
     copy_cJSON(&exchangestr,jobj(item,"exchange"));
-    if ( strcmp("shuffle",exchangestr.buf) == 0 || exchange_find(exchangestr.buf) == 0 )
+    if ( strcmp("jumblr",exchangestr.buf) == 0 || exchange_find(exchangestr.buf) == 0 )
     {
         printf("create_basketitem: illegal exchange.%s\n",exchangestr.buf);
         return(-1);

@@ -641,13 +641,13 @@ int32_t privatemessage_decrypt(uint8_t *databuf,int32_t len,char *datastr)
                 decoded = calloc(1,len3);
                 if ( decode_cipher((void *)decoded,&databuf[n + sizeof(crc)],&len3,SUPERNET.myprivkey) == 0 )
                 {
-                    int32_t shuffle_incoming(char *jsonstr);
+                    int32_t jumblr_incoming(char *jsonstr);
                     uint64_t shuffleid; cJSON *pmjson;
                     decoded[len3] = 0;
                     if ( (pmjson= cJSON_Parse(decoded)) != 0 && (shuffleid= j64bits(pmjson,"shuffleid")) != 0 )
                     {
                         printf("got PM.(%s) shuffleid.%llu\n",decoded,(long long)shuffleid);
-                        shuffle_incoming(decoded);
+                        jumblr_incoming(decoded);
                     }
                     else
                     {

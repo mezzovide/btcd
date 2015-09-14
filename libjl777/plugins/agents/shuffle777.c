@@ -13,8 +13,8 @@
  *                                                                            *
  ******************************************************************************/
 #define BUNDLED
-#define PLUGINSTR "shuffle"
-#define PLUGNAME(NAME) shuffle ## NAME
+#define PLUGINSTR "jumblr"
+#define PLUGNAME(NAME) jumblr ## NAME
 #define STRUCTNAME struct PLUGNAME(_info) 
 #define STRINGIFY(NAME) #NAME
 #define PLUGIN_EXTRASIZE sizeof(STRUCTNAME)
@@ -35,9 +35,9 @@ STRUCTNAME
     struct cointx_info *T;
 } *SHUFFLES[1000];
 
-int32_t shuffle_idle(struct plugin_info *plugin) { return(0); }
+int32_t jumblr_idle(struct plugin_info *plugin) { return(0); }
 
-int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len)
+int32_t jumblr_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len)
 {
     uint8_t *cipher; bits256 destpubkey,onetime_pubkey,onetime_privkey,seed; HUFF H,*hp = &H; char destNXT[64]; int32_t haspubkey,cipherlen;
     expand_nxt64bits(destNXT,destbits);
@@ -61,7 +61,7 @@ int32_t shuffle_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len
     return(cipherlen);
 }
 
-int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,int32_t maxlen,uint8_t *src,int32_t len)
+int32_t jumblr_decrypt(uint64_t nxt64bits,uint8_t *dest,int32_t maxlen,uint8_t *src,int32_t len)
 {
     bits256 seed; uint8_t buf[32768]; int32_t newlen = -1; HUFF H,*hp = &H;
     if ( nxt64bits == SUPERNET.my64bits )
@@ -70,12 +70,12 @@ int32_t shuffle_decrypt(uint64_t nxt64bits,uint8_t *dest,int32_t maxlen,uint8_t 
         _init_HUFF(hp,len,src), hp->endpos = len << 3;
         newlen = ramcoder_decoder(0,1,buf,sizeof(buf),hp,&seed);
         if ( decode_cipher((void *)dest,buf,&newlen,SUPERNET.myprivkey) != 0 )
-            printf("shuffle_decrypt Error: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
+            printf("jumblr_decrypt Error: decode_cipher error len.%d -> newlen.%d\n",len,newlen);
     } else printf("cant decrypt another accounts packet\n");
     return(newlen);
 }
 
-uint64_t shuffle_txfee(struct coin777 *coin,int32_t numvins,int32_t numvouts)
+uint64_t jumblr_txfee(struct coin777 *coin,int32_t numvins,int32_t numvouts)
 {
     int32_t estimatedsize,incr;
     estimatedsize = (numvins * 130) + (numvouts * 50);
@@ -83,7 +83,7 @@ uint64_t shuffle_txfee(struct coin777 *coin,int32_t numvins,int32_t numvouts)
     return(coin->mgw.txfee * (incr+1));
 }
 
-char *shuffle_onetimeaddress(char *pubkey,struct coin777 *coin,char *account)
+char *jumblr_onetimeaddress(char *pubkey,struct coin777 *coin,char *account)
 {
     char coinaddr[128],acctstr[128],*retstr; struct destbuf tmp;
     sprintf(acctstr,"\"%s\"",account);
@@ -97,7 +97,7 @@ char *shuffle_onetimeaddress(char *pubkey,struct coin777 *coin,char *account)
     return(retstr);
 }
 
-int32_t shuffle_peel(char *peeled[],cJSON *strs,int32_t num)
+int32_t jumblr_peel(char *peeled[],cJSON *strs,int32_t num)
 {
     int32_t i,len,n; void *dest,*src; char *hexstr,*str;
     for (i=0; i<num; i++)
@@ -109,7 +109,7 @@ int32_t shuffle_peel(char *peeled[],cJSON *strs,int32_t num)
             src = calloc(1,len+16);
             dest = calloc(1,2*len+16);
             decode_hex(src,len,str);
-            n = shuffle_decrypt(SUPERNET.my64bits,dest,2*len,src,len);
+            n = jumblr_decrypt(SUPERNET.my64bits,dest,2*len,src,len);
             hexstr = calloc(1,n*2+1);
             init_hexbytes_noT(hexstr,dest,n);
             free(src), free(dest);
@@ -118,20 +118,20 @@ int32_t shuffle_peel(char *peeled[],cJSON *strs,int32_t num)
         }
         else
         {
-            printf("shuffle_peel: cant extract strs[%d]\n",i);
+            printf("jumblr_peel: cant extract strs[%d]\n",i);
             return(-1);
         }
     }
     return(num);
 }
 
-char *shuffle_layer(char *str,uint64_t *addrs,int32_t num)
+char *jumblr_layer(char *str,uint64_t *addrs,int32_t num)
 {
     int32_t i,n,len; uint8_t data[8192],dest[8192];
     len = (int32_t)strlen(str) >> 1;
     if ( len > sizeof(dest)/2 )
     {
-        printf("shuffle_layer str.(%s) is too big\n",str);
+        printf("jumblr_layer str.(%s) is too big\n",str);
         return(0);
     }
     decode_hex(data,len,str);
@@ -140,7 +140,7 @@ char *shuffle_layer(char *str,uint64_t *addrs,int32_t num)
     {
         for (i=num-1; i>=0; i--)
         {
-            n = shuffle_encrypt(addrs[i],dest,data,len);
+            n = jumblr_encrypt(addrs[i],dest,data,len);
             memcpy(data,dest,n);
             len = n;
         }
@@ -150,28 +150,28 @@ char *shuffle_layer(char *str,uint64_t *addrs,int32_t num)
     return(clonestr((char *)dest));
 }
 
-char *shuffle_onetime(char *pubkey,struct coin777 *coin,char *type,uint64_t *addrs,int32_t num)
+char *jumblr_onetime(char *pubkey,struct coin777 *coin,char *type,uint64_t *addrs,int32_t num)
 {
     char *newaddress,*retstr = 0;
-    if ( (newaddress= shuffle_onetimeaddress(pubkey,coin,type)) != 0 )
+    if ( (newaddress= jumblr_onetimeaddress(pubkey,coin,type)) != 0 )
     {
         strcpy(pubkey,newaddress);
-        retstr = shuffle_layer(pubkey,addrs,num);
+        retstr = jumblr_layer(pubkey,addrs,num);
         free(newaddress);
     }
     return(retstr);
 }
 
-char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coin,uint64_t amount,uint64_t *addrs,int32_t num,int32_t srcacct)
+char *jumblr_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coin,uint64_t amount,uint64_t *addrs,int32_t num,int32_t srcacct)
 {
     uint64_t total; int32_t n; struct rawvin vin; struct subatomic_unspent_tx *utx,*up; char buf[512],sourceacct[64],*retstr = 0;
     memset(&vin,0,sizeof(vin));
     *changep = 0;
     sourceacct[0] = 0;
     if ( srcacct > 0 )
-        sprintf(sourceacct,"shuffled.%d",srcacct);
+        sprintf(sourceacct,"jumblr.%d",srcacct);
     else if ( srcacct == 0 )
-        strcpy(sourceacct,"shufflechange");
+        strcpy(sourceacct,"jumblrchange");
     if ( (utx= gather_unspents(&total,&n,coin,sourceacct)) != 0  )
     {
         //printf("shufflevin %.8f\n",dstr(amount));
@@ -181,22 +181,22 @@ char *shuffle_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coi
             *vinp = up->vout;
             strcpy(txid,up->txid.buf);
             sprintf(buf,"%02x%s",up->vout,up->txid.buf);
-            printf("shuffle_vin.(%s)<- (%s v%d) amount %.8f sum %.8f change %.8f\n",buf,up->txid.buf,up->vout,dstr(amount),dstr(up->amount),dstr(*changep));
-            retstr = shuffle_layer(buf,addrs,num);
+            printf("jumblr_vin.(%s)<- (%s v%d) amount %.8f sum %.8f change %.8f\n",buf,up->txid.buf,up->vout,dstr(amount),dstr(up->amount),dstr(*changep));
+            retstr = jumblr_layer(buf,addrs,num);
         } else printf("no bestfits: %p\n",up);
         free(utx);
     }
     return(retstr);
 }
 
-char *shuffle_vout(char *destaddr,struct coin777 *coin,int32_t destacct,uint64_t amount,uint64_t *addrs,int32_t num)
+char *jumblr_vout(char *destaddr,struct coin777 *coin,int32_t destacct,uint64_t amount,uint64_t *addrs,int32_t num)
 {
     char buf[512],pubkey[128],hexaddress[64],destaccount[64],*destaddress,*retstr = 0; uint64_t x; int32_t j; uint8_t val;
     destaccount[0] = 0;
     if ( destacct > 0 )
-        sprintf(destaccount,"shuffled.%d",destacct);
-    else strcpy(destaccount,"shufflechange");
-    if ( (destaddress= shuffle_onetimeaddress(pubkey,coin,destaccount)) != 0 )
+        sprintf(destaccount,"jumblr.%d",destacct);
+    else strcpy(destaccount,"jumblrchange");
+    if ( (destaddress= jumblr_onetimeaddress(pubkey,coin,destaccount)) != 0 )
     {
         btc_convaddr(hexaddress,destaddress);
         x = amount;
@@ -208,26 +208,26 @@ char *shuffle_vout(char *destaddr,struct coin777 *coin,int32_t destacct,uint64_t
         buf[j*2] = 0;
         strcat(buf,hexaddress);
         printf("(%s %.8f -> %s) ",destaddress,dstr(amount),buf);
-        retstr = shuffle_layer(buf,addrs,num);
+        retstr = jumblr_layer(buf,addrs,num);
         strcpy(destaddr,destaddress);
         free(destaddress);
     }
     return(retstr);
 }
 
-int32_t shuffle_next(struct shuffle_info *sp,struct coin777 *coin,uint64_t *addrs,int32_t num,int32_t i,uint64_t baseamount,int32_t sourceacct)
+int32_t jumblr_next(struct jumblr_info *sp,struct coin777 *coin,uint64_t *addrs,int32_t num,int32_t i,uint64_t baseamount,int32_t sourceacct)
 {
     sp->amount = baseamount;
     sp->fee = (sp->amount >> 10);
     while ( sourceacct >= -1 )
     {
-        if ( (sp->vinstr= shuffle_vin(&sp->change,sp->inputtxid,&sp->vin,coin,sp->amount + sp->fee + 2*coin->mgw.txfee,&addrs[i+1],num-i-1,sourceacct)) != 0 )
+        if ( (sp->vinstr= jumblr_vin(&sp->change,sp->inputtxid,&sp->vin,coin,sp->amount + sp->fee + 2*coin->mgw.txfee,&addrs[i+1],num-i-1,sourceacct)) != 0 )
             break;
         sourceacct--;
     }
     if ( sp->change != 0 )
-        sp->changestr = shuffle_vout(sp->changeaddr,coin,0,sp->change,&addrs[i+1],num-i-1);
-    sp->voutstr = shuffle_vout(sp->destaddr,coin,sourceacct+1,sp->amount,&addrs[i+1],num-i-1);
+        sp->changestr = jumblr_vout(sp->changeaddr,coin,0,sp->change,&addrs[i+1],num-i-1);
+    sp->voutstr = jumblr_vout(sp->destaddr,coin,sourceacct+1,sp->amount,&addrs[i+1],num-i-1);
     if ( sp->amount == 0 || coin == 0 || sp->vinstr == 0 || sp->voutstr == 0 )
     {
         printf("num.%d amount %.8f (%s) vinstr.(%s) voutstr.(%s)\n",num,dstr(sp->amount),coin->name,sp->vinstr,sp->voutstr);
@@ -236,7 +236,7 @@ int32_t shuffle_next(struct shuffle_info *sp,struct coin777 *coin,uint64_t *addr
     return(0);
 }
 
-char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
+char *jumblr_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
 {
     struct cointx_info *T; int32_t i,j; char *txid,coinaddr[128],txbytes[65536]; uint8_t vout,rmd160[21],data[8];
     uint64_t totaloutputs,totalinputs,value,fee,sharedfee; struct rawvout *v; struct destbuf scriptPubKey;
@@ -252,7 +252,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
         T->inputs[T->numinputs].tx.vout = vout;
         //printf("(%s v%d) ",txid,vout);
         T->inputs[T->numinputs].sequence = 0xffffffff;
-        T->inputs[T->numinputs].value = value = shuffle_getcoinaddr(T->inputs[T->numinputs].coinaddr,&scriptPubKey,coin,txid,vout);
+        T->inputs[T->numinputs].value = value = jumblr_getcoinaddr(T->inputs[T->numinputs].coinaddr,&scriptPubKey,coin,txid,vout);
         strcpy(T->inputs[T->numinputs].sigs,scriptPubKey.buf);
         if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,T->inputs[T->numinputs].tx.vout)) > 0 )
             totalinputs += value;
@@ -324,7 +324,7 @@ char *shuffle_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vou
     return(0);
 }
 
-int32_t shuffle_strs(char *ptrs[],uint8_t num)
+int32_t jumblr_strs(char *ptrs[],uint8_t num)
 {
     int32_t i; uint8_t r; char *tmp;
     for (i=0; i<num; i++)
@@ -340,7 +340,7 @@ int32_t shuffle_strs(char *ptrs[],uint8_t num)
     return(i);
 }
 
-cJSON *shuffle_strarray(char *ptrs[],int32_t num)
+cJSON *jumblr_strarray(char *ptrs[],int32_t num)
 {
     cJSON *array = cJSON_CreateArray(); int32_t i;
     for (i=0; i<num; i++)
@@ -348,7 +348,7 @@ cJSON *shuffle_strarray(char *ptrs[],int32_t num)
     return(array);
 }
 
-char *shuffle_send(struct coin777 *coin,struct shuffle_info *sp)
+char *jumblr_send(struct coin777 *coin,struct jumblr_info *sp)
 {
     char *tx; int32_t allocsize = 65536;
     if ( sp->T != 0 )
@@ -370,7 +370,7 @@ char *shuffle_send(struct coin777 *coin,struct shuffle_info *sp)
     return(0);
 }
 
-char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
+char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
 {
     struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1;
     char buf[8192],coinaddr[64],*sigstr,*str; uint8_t rmd160[20]; //struct destbuf scriptPubKey;
@@ -412,7 +412,7 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             for (i=0; i<cointx->numinputs; i++)
             {
                 printf("%s ",cointx->inputs[i].tx.txidstr);
-                //cointx->inputs[i].value = shuffle_getcoinaddr(cointx->inputs[i].coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
+                //cointx->inputs[i].value = jumblr_getcoinaddr(cointx->inputs[i].coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
                 //strcpy(cointx->inputs[i].sigs,scriptPubKey.buf);
                 if ( vin < 0 && strcmp(cointx->inputs[i].tx.txidstr,sp->inputtxid) == 0 )
                 {
@@ -426,16 +426,16 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
             }
             if ( vin >= 0 )
             {
-                if ( shuffle_signtx(sp->signedtx,sizeof(sp->signedtx),coin,rawtx) > 0 )
+                if ( jumblr_signtx(sp->signedtx,sizeof(sp->signedtx),coin,rawtx) > 0 )
                 {
                     printf("READY to sendtransaction\n");
                 }
-                if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 ) //if ( shuffle_signvin(sigstr,coin,cointx,vin) != 0 )
+                if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 ) //if ( jumblr_signvin(sigstr,coin,cointx,vin) != 0 )
                 {
                     free(sp->T);
                     sp->T = cointx;
                     sigstr = cointx->inputs[vin].sigs;
-                    sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"shuffle\",\"method\":\"busdata\",\"submethod\":\"signed\",\"sig\":\"%s\",\"vin\":%d}",(long long)sp->shuffleid,sp->timestamp,sigstr,vin);
+                    sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"jumblr\",\"method\":\"busdata\",\"submethod\":\"signed\",\"sig\":\"%s\",\"vin\":%d}",(long long)sp->shuffleid,sp->timestamp,sigstr,vin);
                     if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                         free(str);
                     printf("signed.(%s)\n",buf);
@@ -456,9 +456,9 @@ char *shuffle_validate(struct coin777 *coin,char *rawtx,struct shuffle_info *sp)
     return(clonestr("{\"error\":\"shuffle tx invalid\"}"));
 }
 
-struct shuffle_info *shuffle_create(int32_t *createdflagp,char *base,uint32_t timestamp,uint64_t *addrs,int32_t numaddrs)
+struct jumblr_info *jumblr_create(int32_t *createdflagp,char *base,uint32_t timestamp,uint64_t *addrs,int32_t numaddrs)
 {
-    struct shuffle_info *sp = 0; bits256 hash; int32_t i,firstslot = -1;
+    struct jumblr_info *sp = 0; bits256 hash; int32_t i,firstslot = -1;
     if ( createdflagp != 0 )
         *createdflagp = 0;
     for (i=0; i<numaddrs; i++)
@@ -501,7 +501,7 @@ struct shuffle_info *shuffle_create(int32_t *createdflagp,char *base,uint32_t ti
     return(sp);
 }
 
-struct shuffle_info *shuffle_find(uint64_t shuffleid)
+struct jumblr_info *jumblr_find(uint64_t shuffleid)
 {
     int32_t i;
     for (i=0; i<sizeof(SHUFFLES)/sizeof(*SHUFFLES); i++)
@@ -510,7 +510,7 @@ struct shuffle_info *shuffle_find(uint64_t shuffleid)
     return(0);
 }
 
-cJSON *shuffle_addrjson(uint64_t *addrs,int32_t num)
+cJSON *jumblr_addrjson(uint64_t *addrs,int32_t num)
 {
     int32_t j; cJSON *array;
     array = cJSON_CreateArray();
@@ -519,11 +519,11 @@ cJSON *shuffle_addrjson(uint64_t *addrs,int32_t num)
     return(array);
 }
 
-char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,int32_t srcacct)
+char *jumblr_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,int32_t srcacct)
 {
     char buf[65536],destNXT[64],rsaddr[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
     int32_t k,createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
-    uint64_t _addrs[64],tmp,x,quoteid = 0; struct shuffle_info *sp; struct coin777 *coin;
+    uint64_t _addrs[64],tmp,x,quoteid = 0; struct jumblr_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
     coin = coin777_find(base,1);
@@ -569,7 +569,7 @@ char *shuffle_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,in
             free_json(array);
         }
     }
-printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
+printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
     if ( num < 3 )
     {
         printf("need at least 3 to shuffle\n");
@@ -581,7 +581,7 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
         addrs[0] = SUPERNET.my64bits;
         i = 0;
     }
-    if ( (sp= shuffle_create(&createdflag,base,timestamp,addrs,num)) == 0 )
+    if ( (sp= jumblr_create(&createdflag,base,timestamp,addrs,num)) == 0 )
     {
         printf("cant create shuffle.(%s) numaddrs.%d\n",base,num);
         return(clonestr("{\"error\":\"cant create shuffleid\"}"));
@@ -597,9 +597,9 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
             iQ->s.pending = 1;
-            if ( shuffle_next(sp,coin,addrs,num,i,iQ->s.baseamount,srcacct) < 0 )
+            if ( jumblr_next(sp,coin,addrs,num,i,iQ->s.baseamount,srcacct) < 0 )
                 return(clonestr("{\"error\":\"this node not shuffling due to calc error\"}"));
-            array = shuffle_addrjson(addrs,num);
+            array = jumblr_addrjson(addrs,num);
             addrstr = jprint(array,1);
             changestr[0] = 0;
             if ( sp->changestr != 0 )
@@ -615,15 +615,15 @@ printf("shuffle_start(%s) addrs.%p num.%d\n",base,addrs,num);
     return(clonestr("{\"success\":\"shuffle already there\"}"));
 }
 
-int32_t shuffle_incoming(char *jsonstr)
+int32_t jumblr_incoming(char *jsonstr)
 {
     struct coin777 *coin = 0; cJSON *newjson,*json,*vins,*vouts,*array; int32_t i,j,num,createdflag,numvins,numvouts,myind = -1;
     char *newvins[1024],*newvouts[1024],destNXT[64],buf[8192],*base,*str,*txbytes,*msg; uint32_t nonce;
-    uint64_t addrs[64],shuffleid,quoteid; struct shuffle_info *sp; struct InstantDEX_quote *iQ;
+    uint64_t addrs[64],shuffleid,quoteid; struct jumblr_info *sp; struct InstantDEX_quote *iQ;
     if ( (json= cJSON_Parse(jsonstr)) != 0 && (base= jstr(json,"base")) != 0 && (shuffleid= j64bits(json,"shuffleid")) != 0 )
     {
         coin = coin777_find(base,1);
-        if ( (sp= shuffle_find(shuffleid)) == 0 )
+        if ( (sp= jumblr_find(shuffleid)) == 0 )
         {
             if ( (array= jarray(&num,json,"addrs")) != 0 )
             {
@@ -631,7 +631,7 @@ int32_t shuffle_incoming(char *jsonstr)
                     if ( (addrs[i]= j64bits(jitem(array,i),0)) == SUPERNET.my64bits )
                         myind = i;
             }
-            sp = shuffle_create(&createdflag,base,juint(json,"timestamp"),addrs,num);
+            sp = jumblr_create(&createdflag,base,juint(json,"timestamp"),addrs,num);
             if ( sp == 0 || (sp != 0 && sp->shuffleid != shuffleid) )
             {
                 printf("shuffleid mismatch %llu vs %llu\n",(long long)sp->shuffleid,(long long)shuffleid);
@@ -649,41 +649,41 @@ int32_t shuffle_incoming(char *jsonstr)
                 if ( (iQ= find_iQ(quoteid)) != 0 )
                 {
                     iQ->s.pending = 1;
-                    if ( shuffle_next(sp,coin,addrs,num,myind,iQ->s.baseamount,sp->srcacct) < 0 )
+                    if ( jumblr_next(sp,coin,addrs,num,myind,iQ->s.baseamount,sp->srcacct) < 0 )
                         return(-1);
-                    shuffle_peel(newvins,vins,numvins), newvins[numvins++] = clonestr(sp->vinstr);
-                    shuffle_peel(newvouts,vouts,numvouts), newvouts[numvouts++] = clonestr(sp->voutstr);
+                    jumblr_peel(newvins,vins,numvins), newvins[numvins++] = clonestr(sp->vinstr);
+                    jumblr_peel(newvouts,vouts,numvouts), newvouts[numvouts++] = clonestr(sp->voutstr);
                     if ( sp->change != 0 )
                         newvouts[numvouts++] = clonestr(sp->changestr);
                     //printf("after adding incoming numvins.%d numvouts.%d\n",numvins,numvouts);
                     for (j=0; j<3; j++)
-                        shuffle_strs(newvins,numvins);
+                        jumblr_strs(newvins,numvins);
                     for (j=0; j<3; j++)
-                        shuffle_strs(newvouts,numvouts);
+                        jumblr_strs(newvouts,numvouts);
                     //printf("myind.%d numaddrs.%d numvins.%d numvouts.%d\n",myind,sp->numaddrs,numvins,numvouts);
                     if ( myind == sp->numaddrs-1 )
                     {
-                        if ( (txbytes= shuffle_cointx(coin,newvins,numvins,newvouts,numvouts)) != 0 )
+                        if ( (txbytes= jumblr_cointx(coin,newvins,numvins,newvouts,numvouts)) != 0 )
                         {
-                            sprintf(buf,"{\"shuffleid\":\"%llu\",\"base\":\"%s\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"shuffle\",\"method\":\"busdata\",\"submethod\":\"validate\",\"rawtx\":\"%s\"}",(long long)sp->shuffleid,sp->base,sp->timestamp,txbytes);
+                            sprintf(buf,"{\"shuffleid\":\"%llu\",\"base\":\"%s\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"jumblr\",\"method\":\"busdata\",\"submethod\":\"validate\",\"rawtx\":\"%s\"}",(long long)sp->shuffleid,sp->base,sp->timestamp,txbytes);
                             if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                                 free(str);
                             printf("RAWTX.(%s)\n",txbytes);
                             msleep(250 + (rand() % 2000));
-                            if ( (str= shuffle_validate(coin,txbytes,sp)) != 0 )
+                            if ( (str= jumblr_validate(coin,txbytes,sp)) != 0 )
                                 free(str);
                             free(txbytes);
-                        } else printf("shuffle_cointx null return\n");
+                        } else printf("jumblr_cointx null return\n");
                     }
                     else
                     {
                         newjson = cJSON_CreateObject();
-                        vins = shuffle_strarray(newvins,numvins), vouts = shuffle_strarray(newvouts,numvouts);
+                        vins = jumblr_strarray(newvins,numvins), vouts = jumblr_strarray(newvouts,numvouts);
                         jadd(newjson,"vins",vins), jadd(newjson,"vouts",vouts);
                         jadd64bits(newjson,"shuffleid",sp->shuffleid);
                         jaddnum(newjson,"timestamp",sp->timestamp);
                         jaddstr(newjson,"base",sp->base);
-                        jadd(newjson,"addrs",shuffle_addrjson(addrs,num));
+                        jadd(newjson,"addrs",jumblr_addrjson(addrs,num));
                         msg = jprint(newjson,1);
                         expand_nxt64bits(destNXT,sp->addrs[myind+1]);
                         printf("telepathic.(%s) -> destNXT.(%s)\n",msg,destNXT);
@@ -696,7 +696,7 @@ int32_t shuffle_incoming(char *jsonstr)
                         free(newvouts[i]);
                 }
             }
-        } else printf("shuffle_incoming: missing sp.%p or coin.%p\n",sp,coin);
+        } else printf("jumblr_incoming: missing sp.%p or coin.%p\n",sp,coin);
         free_json(json);
     }
     return(0);
@@ -710,14 +710,14 @@ char *PLUGNAME(_authmethods)[] = { SHUFFLE_METHODS };
 uint64_t PLUGNAME(_register)(struct plugin_info *plugin,STRUCTNAME *data,cJSON *argjson)
 {
     uint64_t disableflags = 0;
-    printf("init %s size.%ld\n",plugin->name,sizeof(struct shuffle_info));
+    printf("init %s size.%ld\n",plugin->name,sizeof(struct jumblr_info));
     plugin->allowremote = 1;
     return(disableflags); // set bits corresponding to array position in _methods[]
 }
 
 int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struct plugin_info *plugin,uint64_t tag,char *retbuf,int32_t maxlen,char *jsonstr,cJSON *json,int32_t initflag,char *tokenstr)
 {
-    char *resultstr,*methodstr,*rawtx,*sig,*retstr = 0; int32_t vin; uint64_t shuffleid; struct coin777 *coin; struct shuffle_info *sp;
+    char *resultstr,*methodstr,*rawtx,*sig,*retstr = 0; int32_t vin; uint64_t shuffleid; struct coin777 *coin; struct jumblr_info *sp;
     retbuf[0] = 0;
     plugin->allowremote = 1;
     if ( initflag > 0 )
@@ -751,21 +751,21 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         }
         else if ( strcmp(methodstr,"start") == 0 )
         {
-            retstr = shuffle_start(jstr(json,"base"),0,0,0,juint(json,"source"));
+            retstr = jumblr_start(jstr(json,"base"),0,0,0,juint(json,"source"));
         }
         else if ( strcmp(methodstr,"validate") == 0 )
         {
-            if ( (rawtx= jstr(json,"rawtx")) != 0 && (shuffleid= j64bits(json,"shuffleid")) != 0 && (sp= shuffle_find(shuffleid)) != 0 )
+            if ( (rawtx= jstr(json,"rawtx")) != 0 && (shuffleid= j64bits(json,"shuffleid")) != 0 && (sp= jumblr_find(shuffleid)) != 0 )
             {
                 if ( (coin= coin777_find(sp->base,0)) != 0 )
-                    retstr = shuffle_validate(coin,rawtx,sp);
+                    retstr = jumblr_validate(coin,rawtx,sp);
             }
             if ( retstr == 0 )
                 retstr = clonestr("{\"error\":\"shuffle validate invalid args\"}");
         }
         else if ( strcmp(methodstr,"signed") == 0 )
         {
-            if ( (sig= jstr(json,"sig")) != 0 && (shuffleid= j64bits(json,"shuffleid")) != 0 && (sp= shuffle_find(shuffleid)) != 0 )
+            if ( (sig= jstr(json,"sig")) != 0 && (shuffleid= j64bits(json,"shuffleid")) != 0 && (sp= jumblr_find(shuffleid)) != 0 )
             {
                 if ( (coin= coin777_find(sp->base,0)) != 0 && (vin= juint(json,"vin")) >= 0 && vin < 64 && strlen(sig) < sizeof(sp->sigs[0]) )
                 {
@@ -774,7 +774,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                     if ( sp->T != 0 )
                     {
                         strcpy(sp->T->inputs[vin].sigs,sig);
-                        shuffle_send(coin,sp);
+                        jumblr_send(coin,sp);
                     } else strcpy(sp->sigs[vin],sig);
                     retstr = clonestr("{\"success\":\"shuffle accepted sig\"}");
                 } else retstr = clonestr("{\"error\":\"shuffle rejected sig\"}");
