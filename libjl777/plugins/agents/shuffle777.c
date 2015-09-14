@@ -738,7 +738,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
         //coin777_find("LTC",1);
         strcpy(retbuf,"{\"result\":\"shuffle init\"}");
     }
-    else
+    else if ( SUPERNET.iamrelay == 0 )
     {
         fprintf(stderr,"<<<<<<<<<<<< INSIDE PLUGIN! process %s (%s)\n",plugin->name,jsonstr);
         resultstr = cJSON_str(cJSON_GetObjectItem(json,"result"));
@@ -790,7 +790,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
             if ( retstr == 0 )
                 retstr = clonestr("{\"error\":\"shuffle signed invalid args\"}");
         }
-    }
+    } else retstr = clonestr("{\"result\":\"relays dont shuffle\"}");
     return(plugin_copyretstr(retbuf,maxlen,retstr));
 }
 
