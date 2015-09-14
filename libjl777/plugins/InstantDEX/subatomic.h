@@ -772,7 +772,7 @@ char *gather_account_addresses(struct coin777 *coin,char *account)
         {
             if ( (subarray= jitem(array,i)) != 0 )
             {
-                //printf("%d of %d: %s\n",i,n,jprint(subarray,0));
+                printf("%d of %d: %s\n",i,n,jprint(subarray,0));
                 if ( is_cJSON_Array(subarray) != 0 && (m= cJSON_GetArraySize(subarray)) > 0 )
                 {
                     for (j=0; j<m; j++)
@@ -781,10 +781,10 @@ char *gather_account_addresses(struct coin777 *coin,char *account)
                         {
                             if ( (acct= jstr(jitem(item,2),0)) != 0 && strcmp(acct,account) == 0 )
                             {
-                                //printf("gather.(%s) %s\n",jstr(jitem(item,0),0),account);
+                                printf("gather.(%s) %s\n",jstr(jitem(item,0),0),account);
                                 jaddistr(retarray,jstr(jitem(item,0),0));
                             }
-                        } //else printf("skip item.%p, %d %d\n",item,is_cJSON_Array(item),cJSON_GetArraySize(item));
+                        } else printf("skip item.%p, %d %d\n",item,is_cJSON_Array(item),cJSON_GetArraySize(item));
                     }
                 }
             }
