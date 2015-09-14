@@ -396,11 +396,12 @@ char *jumblr_getprivkey(uint64_t *valuep,struct destbuf *scriptPubKey,uint32_t *
 
 char *jumblr_signvin(char *sigstr,struct coin777 *coin,void *bpkey,char *pubP,struct cointx_info *refT,int32_t redeemi)
 {
-    char hexstr[4096]; bits256 hash2; uint8_t *data,sigbuf[1024];
+    char hexstr[4096],redeem[2048]; bits256 hash2; uint8_t *data,sigbuf[1024];
     struct cointx_info *T; int32_t i; void *sig = NULL; size_t siglen = 0; struct cointx_input *vin;
     T = calloc(1,sizeof(*T));
     *T = *refT;
     vin = &T->inputs[redeemi];
+    safecopy(redeem,vin->sigs,sizeof(redeem));
     sigstr[0] = 0;
     fprintf(stderr,"redeemi.%d numinputs.%d\n",redeemi,T->numinputs);
     for (i=0; i<T->numinputs; i++)
@@ -420,6 +421,7 @@ char *jumblr_signvin(char *sigstr,struct coin777 *coin,void *bpkey,char *pubP,st
         sprintf(vin->sigs,"%02lx%s%02lx%s",siglen,hexstr,strlen(pubP)/2,pubP);
         strcpy(sigstr,vin->sigs);
         printf("after P.(%s) siglen.%02lx -> %s\n",sigstr,siglen,vin->sigs);
+        strcat(vin->sigs,redeem);
     }
     free(T);
     if ( sigstr[0] != 0 )

@@ -678,7 +678,7 @@ char *jumblr_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,int
         }
     }
 printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
-    if ( num < 3 )
+    if ( num < 2 )
     {
         printf("need at least 3 to shuffle\n");
         return(clonestr("{\"error\":\"not enough shufflers\"}"));
@@ -931,3 +931,4 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     return(retcode);
 }
 #include "plugin777.c"
+
