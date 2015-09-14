@@ -475,7 +475,7 @@ char *jumblr_send(struct coin777 *coin,struct jumblr_info *sp)
             _emit_cointx(tx+2,allocsize-3,sp->T,coin->mgw.oldtx_format);
             strcat(tx,"\"]");
             if ( (sp->cointxid= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",tx)) != 0 )
-                printf(">>>>>>>>>>>>> %s BROADCAST.(%s) (%s)\n",coin->name,tx,sp->cointxid);
+                printf(">>>>>>>>>>>>> %s.%llu BROADCAST.(%s) (%s)\n",coin->name,(long long)sp->quoteid,tx,sp->cointxid);
             else printf("error sending transaction.(%s)\n",tx);
             delete_iQ(sp->quoteid);
             sp->done = 1;
@@ -720,6 +720,7 @@ printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
             printf("destNXT.(%s) addrs[%d] %llu\n",destNXT,i+1,(long long)addrs[i+1]);
             telepathic_PM(destNXT,sp->rawtx);
             sp->rawtx[0] = 0;
+            sp->quoteid = iQ->s.quoteid;
             return(clonestr("{\"success\":\"shuffle created\"}"));
         }
     }
@@ -784,6 +785,7 @@ int32_t jumblr_incoming(char *jsonstr)
                 if ( (iQ= find_iQ(quoteid)) != 0 )
                 {
                     iQ->s.pending = 1;
+                    sp->quoteid = quoteid;
                     if ( jumblr_next(sp,coin,addrs,num,myind,jumblr_amount(coin,iQ->s.baseamount),sp->srcacct) < 0 )
                         return(-1);
                     jumblr_peel(newvins,vins,numvins), newvins[numvins++] = clonestr(sp->vinstr);
@@ -907,7 +909,7 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 if ( (coin= coin777_find(sp->base,0)) != 0 && (vin= juint(json,"vin")) >= 0 && vin < 64 && strlen(sig) < sizeof(sp->sigs[0]) )
                 {
                     sp->sigmask |= (1LL << vin);
-                    printf("SIGMASK.%d sp->T %p\n",(int32_t)sp->sigmask,sp->T);
+                    //printf("SIGMASK.%d sp->T %p\n",(int32_t)sp->sigmask,sp->T);
                     if ( sp->T != 0 )
                     {
                         strcpy(sp->T->inputs[vin].sigs,sig);
