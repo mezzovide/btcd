@@ -177,7 +177,7 @@ char *process_nn_message(int32_t sock,char *jsonstr)
     return(retstr);
 }
 
-char *process_jl777_msg(char *buf,char *previpaddr,char *jsonstr,int32_t duration)
+char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr,int32_t duration)
 {
     char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout);
     struct destbuf plugin,method,request; char *bstr,*retstr;
@@ -222,7 +222,7 @@ char *process_jl777_msg(char *buf,char *previpaddr,char *jsonstr,int32_t duratio
             if ( plugin.buf[0] == 0 && set_first_plugin(plugin.buf,method.buf) < 0 )
                 return(clonestr("{\"error\":\"no method or plugin specified, search for requestType failed\"}"));
         }
-        if ( strlen(jsonstr) < sizeof(buf)-1)
+        if ( strlen(jsonstr) < bufsize )
         {
             strcpy(buf,jsonstr);
             //if ( previpaddr == 0 || previpaddr[0] == 0 )
@@ -237,7 +237,7 @@ char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
 {
     char *buf,*retstr;
     buf = calloc(1,65536);
-    retstr = process_jl777_msg(buf,0,jsonstr,60);
+    retstr = process_jl777_msg(buf,65536,0,jsonstr,60);
     free(buf);
     return(retstr);
 }
@@ -263,7 +263,7 @@ char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
         else
         {
             buf = calloc(1,65536);
-            retstr = process_jl777_msg(buf,0,JSONstr,60);
+            retstr = process_jl777_msg(buf,65536,0,JSONstr,60);
             free(buf);
         }
         free_json(json);
