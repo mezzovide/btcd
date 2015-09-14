@@ -764,6 +764,7 @@ uint64_t subatomic_donation(struct coin777 *coin,uint64_t amount)
 char *gather_account_addresses(struct coin777 *coin,char *account)
 {
     cJSON *array,*retarray,*subarray,*item; int32_t i,j,m,n; char *acct;
+    //printf("call listaddressgroupings\n");
     if ( (array= _get_localaddresses(coin->name,coin->serverport,coin->userpass)) != 0 )
     {
         retarray = cJSON_CreateArray();

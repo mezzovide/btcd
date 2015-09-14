@@ -172,7 +172,7 @@ char *jumblr_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coin
         sprintf(sourceacct,"jumblr.%d",srcacct);
     else if ( srcacct == 0 )
         strcpy(sourceacct,"jumblrchange");
-    printf("call gather_unspents.%s\n",sourceacct);
+    //printf("call gather_unspents.%s\n",sourceacct);
     if ( (utx= gather_unspents(&total,&n,coin,sourceacct)) != 0  )
     {
         //printf("shufflevin %.8f\n",dstr(amount));
@@ -375,7 +375,7 @@ char *jumblr_send(struct coin777 *coin,struct jumblr_info *sp)
 char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
 {
     struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1;
-    char buf[8192],coinaddr[64],*sigstr,*str; uint8_t rmd160[20]; //struct destbuf scriptPubKey;
+    char buf[8192],coinaddr[64],*str; uint8_t rmd160[20]; //struct destbuf scriptPubKey;
     if ( sp == 0 )
     {
         printf("cant find shuffleid.%llu\n",(long long)sp->shuffleid);
