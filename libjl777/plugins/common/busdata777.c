@@ -861,7 +861,7 @@ printf("bypass deref (%s) (%s) (%s)\n",buf.buf,method.buf,servicename.buf);
         cJSON_DeleteItemFromObject(argjson,"submethod");
         cJSON_DeleteItemFromObject(argjson,"destplugin");
         str = cJSON_Print(argjson), _stripwhite(str,' ');
-        //if ( Debuglevel > 2 )
+        if ( Debuglevel > 2 )
             printf("call (%s %s) (%s)\n",plugin.buf,method.buf,str);
         retstr = plugin_method(-1,0,0,plugin.buf,method.buf,0,0,str,(int32_t)strlen(str)+1,SUPERNET.PLUGINTIMEOUT/2,tokenstr);
         free_json(origjson);
@@ -1261,7 +1261,7 @@ int32_t busdata_poll()
             {
                 jsonstr = clonestr(msg);
                 nn_freemsg(msg);
-                if ( Debuglevel > 2 )
+                //if ( Debuglevel > 2 )
                     printf("RECV.%d (%s)\n",sock,jsonstr);
                 n++;
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
@@ -1288,7 +1288,7 @@ int32_t busdata_poll()
                             if ( noneed == 0 )
                             {
                                 len = construct_tokenized_req(&nonce,tokenized,retstr,(sock == RELAYS.servicesock) ? SUPERNET.SERVICESECRET : SUPERNET.NXTACCTSECRET,0);
-                                //fprintf(stderr,"busdatapoll tokenized return.(%s)\n",tokenized);
+                                fprintf(stderr,"busdatapoll tokenized return.(%s)\n",tokenized);
                                 nn_send(sock,tokenized,len,0);
                             }
                             free(retstr);
@@ -1305,7 +1305,7 @@ int32_t busdata_poll()
                         //nn_send(sock,"{\"error\":\"duplicate command\"}",(int32_t)strlen("{\"error\":\"duplicate command\"}")+1,0);
                     }
                     free_json(json);
-                } else printf("couldnt parse.(%s)\n",jsonstr);
+                } else fprintf(stderr,"couldnt parse.(%s)\n",jsonstr);
                 free(jsonstr);
             } //else printf("sock.%d nothing\n",sock);
         }
