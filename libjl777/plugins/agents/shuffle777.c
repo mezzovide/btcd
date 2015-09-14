@@ -511,7 +511,7 @@ char *jumblr_send(struct coin777 *coin,struct jumblr_info *sp)
 
 char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
 {
-    struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1;
+    struct cointx_info *cointx; uint32_t nonce; int32_t i,j,vin=-1,vout=-1,changeout=-1;
     char buf[8192],coinaddr[64],*str; uint8_t rmd160[20];
     if ( sp == 0 )
     {
@@ -525,6 +525,14 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
         sp->T = cointx;
         for (i=0; i<cointx->numoutputs; i++)
         {
+            for (j=0; j<cointx->numoutputs; j++)
+                if ( i != j && strcmp(cointx->outputs[i].script,cointx->outputs[j].script) == 0 )
+                {
+                    printf("jumblr_validate: duplicate output error i.%d == j.%d (%s)\n",i,j,cointx->outputs[i].script);
+                    free(sp->T), sp->T = 0;
+                    sp->done = 1;
+                    return(0);
+                }
             decode_hex(rmd160,20,&cointx->outputs[i].script[6]);
             btc_convrmd160(coinaddr,coin->addrtype,rmd160);
             //printf("%d of %d: %s -> %s\n",i,cointx->numoutputs,cointx->outputs[i].script,coinaddr);
@@ -550,6 +558,14 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
         {
             for (i=0; i<cointx->numinputs; i++)
             {
+                for (j=0; j<cointx->numinputs; j++)
+                    if ( i != j && strcmp(cointx->inputs[i].tx.txidstr,cointx->inputs[j].tx.txidstr) == 0 && cointx->inputs[i].tx.vout == cointx->inputs[j].tx.vout )
+                    {
+                        printf("jumblr_validate: duplicate input error i.%d == j.%d (%s/v%d)\n",i,j,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
+                        free(sp->T), sp->T = 0;
+                        sp->done = 1;
+                        return(0);
+                    }
                 printf("%s ",cointx->inputs[i].tx.txidstr);
                 //cointx->inputs[i].value = jumblr_getcoinaddr(cointx->inputs[i].coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
                 //strcpy(cointx->inputs[i].sigs,scriptPubKey.buf);

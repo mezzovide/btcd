@@ -1262,8 +1262,8 @@ int32_t busdata_poll()
             {
                 jsonstr = clonestr(msg);
                 nn_freemsg(msg);
-                if ( Debuglevel > 2 )
-                    printf("RECV.%d (%s)\n",sock,jsonstr);
+                //if ( Debuglevel > 2 )
+                    printf("RECV.%d (%s) len.%ld\n",sock,jsonstr,strlen(jsonstr));
                 n++;
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
                 {
