@@ -1,12 +1,11 @@
 sudo: false
 language: cpp
-compiler:
-- gcc
 addons:
   apt:
     sources:
     - ubuntu-toolchain-r-test
     packages:
+    - gcc
     - g++
     - make
     - cmake
@@ -25,6 +24,11 @@ addons:
     - libminiupnpc-dev
     - libevent-dev
     - libjansson-dev
+    - autopoint
+    - gperf
+    - intltool
+    - libtool-bin
+    - bzip2
 before_script:
 - cd libjl777
 - make -j8 onetime
