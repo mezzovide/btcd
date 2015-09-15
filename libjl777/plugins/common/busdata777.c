@@ -72,13 +72,13 @@ int32_t nonce_leverage(char *broadcaststr)
     if ( broadcaststr != 0 && broadcaststr[0] != 0 )
     {
         if ( strcmp(broadcaststr,"allnodes") == 0 )
-            leverage = 5;
+            leverage = 4;
         else if ( strcmp(broadcaststr,"join") == 0 )
-            leverage = 9;
+            leverage = 8;
         else if ( strcmp(broadcaststr,"servicerequest") == 0 )
-            leverage = 4;
+            leverage = 3;
         else if ( strcmp(broadcaststr,"allrelays") == 0 )
-            leverage = 4;
+            leverage = 3;
         else if ( myatoi(broadcaststr,33) != 0 )
             leverage = myatoi(broadcaststr,33);
     }
@@ -100,6 +100,7 @@ char *get_broadcastmode(cJSON *json,char *broadcastmode)
 uint32_t busdata_nonce(int32_t *leveragep,char *str,char *broadcaststr,int32_t maxmillis,uint32_t nonce)
 {
     int32_t leverage = nonce_leverage(broadcaststr);
+    //printf("nonce leverage.%d\n",leverage);
     if ( maxmillis == 0 && *leveragep != leverage )
         return(0xffffffff);
     *leveragep = leverage;
@@ -148,8 +149,9 @@ int32_t construct_tokenized_req(uint32_t *noncep,char *tokenized,char *cmdjson,c
 
 int32_t issue_decodeToken(struct destbuf *sender,int32_t *validp,char *key,uint8_t encoded[NXT_TOKEN_LEN])
 {
-    char cmd[8192],token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr;
+    char *cmd,token[MAX_JSON_FIELD+2*NXT_TOKEN_LEN+1],*retstr;
     cJSON *nxtobj,*validobj,*json;
+    cmd = calloc(1,strlen(key) + 1024);
     *validp = -1;
     sender->buf[0] = 0;
     memcpy(token,encoded,NXT_TOKEN_LEN);
@@ -157,6 +159,7 @@ int32_t issue_decodeToken(struct destbuf *sender,int32_t *validp,char *key,uint8
     sprintf(cmd,"requestType=decodeToken&website=%s&token=%s",key,token);
     if ( (retstr = issue_NXTPOST(cmd)) != 0 )
     {
+        free(cmd);
         //printf("(%s) -> (%s)\n",cmd,retstr);
         if ( (json= cJSON_Parse(retstr)) != 0 )
         {
@@ -173,6 +176,7 @@ int32_t issue_decodeToken(struct destbuf *sender,int32_t *validp,char *key,uint8
         }
         free(retstr);
     }
+    free(cmd);
     return(-1);
 }
 
@@ -872,9 +876,12 @@ printf("bypass deref (%s) (%s) (%s)\n",buf.buf,method.buf,servicename.buf);
 
 char *nn_busdata_processor(uint8_t *msg,int32_t len)
 {
-    cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint8_t databuf[65536]; uint64_t destbits;
+    static uint8_t *databuf;
+    cJSON *json,*argjson,*dupjson,*tokenobj = 0; uint32_t timestamp; int32_t datalen,valid = -2; uint64_t destbits;
     struct destbuf usedest,key,src,destNXT,forwarder,sender; char *str,*tokenstr=0,*broadcaststr,*retstr = 0;
-    if ( len > sizeof(databuf) )
+    if ( databuf == 0 )
+        databuf = calloc(1,65536);
+    if ( len > 65536 )
     {
         printf("nn_busdata_processor packet too big len.%d\n",len);
         return(clonestr("{\"error\":\"packet too big\"}"));
@@ -1247,7 +1254,8 @@ int32_t complete_relay(struct relayargs *args,char *retstr)
 
 int32_t busdata_poll()
 {
-    char tokenized[65536],*msg,*retstr,*jsonstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
+    static char tokenized[65536];
+    char *msg,*retstr,*jsonstr; cJSON *json,*retjson,*obj; uint64_t tag; int32_t len,noneed,sock,i,n = 0; uint32_t nonce;
     if ( RELAYS.numservers > 0 )
     {
         for (i=0; i<RELAYS.numservers; i++)
@@ -1258,7 +1266,7 @@ int32_t busdata_poll()
                 jsonstr = clonestr(msg);
                 nn_freemsg(msg);
                 if ( Debuglevel > 2 )
-                    printf("RECV.%d (%s)\n",sock,jsonstr);
+                    printf("RECV.%d (%s) len.%ld\n",sock,jsonstr,strlen(jsonstr));
                 n++;
                 if ( (json= cJSON_Parse(jsonstr)) != 0 )
                 {
@@ -1301,7 +1309,7 @@ int32_t busdata_poll()
                         //nn_send(sock,"{\"error\":\"duplicate command\"}",(int32_t)strlen("{\"error\":\"duplicate command\"}")+1,0);
                     }
                     free_json(json);
-                } else printf("couldnt parse.(%s)\n",jsonstr);
+                } else fprintf(stderr,"couldnt parse.(%s)\n",jsonstr);
                 free(jsonstr);
             } //else printf("sock.%d nothing\n",sock);
         }

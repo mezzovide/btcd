@@ -177,10 +177,10 @@ char *process_nn_message(int32_t sock,char *jsonstr)
     return(retstr);
 }
 
-char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
+char *process_jl777_msg(char *buf,int32_t bufsize,char *previpaddr,char *jsonstr,int32_t duration)
 {
     char *process_user_json(char *plugin,char *method,char *cmdstr,int32_t broadcastflag,int32_t timeout);
-    struct destbuf plugin,method,request; char buf[65536],*bstr,*retstr;
+    struct destbuf plugin,method,request; char *bstr,*retstr;
     uint64_t daemonid,instanceid,tag;
     int32_t override=0,broadcastflag = 0;
     cJSON *json;
@@ -222,25 +222,29 @@ char *process_jl777_msg(char *previpaddr,char *jsonstr,int32_t duration)
             if ( plugin.buf[0] == 0 && set_first_plugin(plugin.buf,method.buf) < 0 )
                 return(clonestr("{\"error\":\"no method or plugin specified, search for requestType failed\"}"));
         }
-        if ( strlen(jsonstr) < sizeof(buf)-1)
+        if ( strlen(jsonstr) < bufsize )
         {
             strcpy(buf,jsonstr);
             //if ( previpaddr == 0 || previpaddr[0] == 0 )
             //    sprintf(buf + strlen(buf)-1,",\"rand\":\"%d\"}",rand());
             return(process_nn_message(-1,buf));
-        }
+        } else printf("jsonstr too big %ld vs %d\n",strlen(jsonstr),bufsize);
     }
     return(clonestr("{\"error\":\"couldnt parse JSON\"}"));
 }
 
 char *SuperNET_JSON(char *jsonstr) // BTCD's entry point
 {
-     return(process_jl777_msg(0,jsonstr,60));
+    char *buf,*retstr;
+    buf = calloc(1,65536);
+    retstr = process_jl777_msg(buf,65536,0,jsonstr,60);
+    free(buf);
+    return(retstr);
 }
 
 char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
 {
-    struct destbuf request,name; char *retstr = 0;;
+    struct destbuf request,name; char *buf,*retstr = 0;;
     uint64_t daemonid,instanceid;
     cJSON *json;
     fprintf(stderr,"call_SuperNET_JSON\n");
@@ -255,7 +259,13 @@ char *call_SuperNET_JSON(char *JSONstr) // sub-plugin's entry point
             daemonid = get_API_nxt64bits(cJSON_GetObjectItem(json,"daemonid"));
             instanceid = get_API_nxt64bits(cJSON_GetObjectItem(json,"instanceid"));
             retstr = register_daemon(name.buf,daemonid,instanceid,cJSON_GetObjectItem(json,"methods"),cJSON_GetObjectItem(json,"pubmethods"),cJSON_GetObjectItem(json,"authmethods"));
-        } else retstr = process_jl777_msg(0,JSONstr,60);
+        }
+        else
+        {
+            buf = calloc(1,65536);
+            retstr = process_jl777_msg(buf,65536,0,JSONstr,60);
+            free(buf);
+        }
         free_json(json);
     }
     if ( retstr == 0 )
@@ -291,14 +301,14 @@ void SuperNET_loop(void *ipaddr)
     strs[n++] = language_func((char *)"relay","",0,0,1,(char *)"relay",jsonargs,call_system);
     while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"relay",0,0) == 0 )
         poll_daemons();
-    strs[n++] = language_func((char *)"jumblr","",0,0,1,(char *)"jumblr",jsonargs,call_system);
-    while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"jumblr",0,0) == 0 )
-        poll_daemons();
     if ( SUPERNET.iamrelay == 0 )
     {
-        strs[n++] = language_func((char *)"dcnet","",0,0,1,(char *)"dcnet",jsonargs,call_system);
-        while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"dcnet",0,0) == 0 )
+        strs[n++] = language_func((char *)"jumblr","",0,0,1,(char *)"jumblr",jsonargs,call_system);
+        while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"jumblr",0,0) == 0 )
             poll_daemons();
+        //strs[n++] = language_func((char *)"dcnet","",0,0,1,(char *)"dcnet",jsonargs,call_system);
+        //while ( RELAYS.readyflag == 0 || find_daemoninfo(&ind,"dcnet",0,0) == 0 )
+        //    poll_daemons();
     }
 #ifdef INSIDE_MGW
     if ( SUPERNET.gatewayid >= 0 )

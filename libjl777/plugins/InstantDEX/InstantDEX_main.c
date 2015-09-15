@@ -299,9 +299,9 @@ cJSON *InstantDEX_lottostats()
     return(cJSON_Parse(buf));
 }
 
-int32_t bidask_parse(struct destbuf *exchangestr,struct destbuf *name,struct destbuf *base,struct destbuf *rel,struct destbuf *gui,struct InstantDEX_quote *iQ,cJSON *json)
+int32_t bidask_parse(int32_t localaccess,struct destbuf *exchangestr,struct destbuf *name,struct destbuf *base,struct destbuf *rel,struct destbuf *gui,struct InstantDEX_quote *iQ,cJSON *json)
 {
-    uint64_t basemult,relmult,baseamount,relamount; double price,volume; int32_t exchangeid,keysize,flag; char key[1024],buf[64],*methodstr;
+    struct coin777 *coin; uint64_t basemult,relmult,baseamount,relamount,maxamount; double price,volume; int32_t exchangeid,keysize,flag; char key[1024],buf[64],*methodstr;
     memset(iQ,0,sizeof(*iQ));
     iQ->s.baseid = j64bits(json,"baseid"); iQ->s.relid = j64bits(json,"relid");
     iQ->s.baseamount = j64bits(json,"baseamount"), iQ->s.relamount = j64bits(json,"relamount");
@@ -365,6 +365,30 @@ int32_t bidask_parse(struct destbuf *exchangestr,struct destbuf *name,struct des
             iQ->s.vol = 1.;
         if ( iQ->s.baseamount == 0 )
             iQ->s.baseamount = iQ->s.vol * SATOSHIDEN;
+        if ( localaccess != 0 )
+        {
+            if ( (coin= coin777_find(base->buf,0)) != 0 )
+            {
+                if ( coin->jvin < 0 )
+                {
+                    printf("no %s unspents available for jumblr jvin.%d %.8f\n",coin->name,coin->jvin,dstr(coin->junspent));
+                    return(-1);
+                }
+                maxamount = coin->junspent - coin->mgw.txfee*2 - (coin->junspent>>10);
+                if ( iQ->s.baseamount > maxamount )
+                    iQ->s.baseamount = maxamount;
+                else if ( iQ->s.baseamount < coin->mgw.txfee )
+                {
+                    printf("jumblr amount %.8f less than txfee %.8f\n",dstr(iQ->s.baseamount),dstr(coin->mgw.txfee));
+                    return(-1);
+                }
+            }
+            else
+            {
+                printf("%s not initialized for jumblr\n",base->buf);
+                return(-1);
+            }
+        }
     }
     else
     {
@@ -420,7 +444,8 @@ char *InstantDEX(char *jsonstr,char *remoteaddr,int32_t localaccess)
     {
         // test: asset/asset, asset/external, external/external, autofill and automatch
         // peggy integration
-        bidask_parse(&exchangestr,&name,&base,&rel,&gui,&iQ,json);
+        if ( bidask_parse(localaccess,&exchangestr,&name,&base,&rel,&gui,&iQ,json) < 0 )
+            return(clonestr("{\"error\":\"invalid parameters\"}"));
         if ( iQ.s.offerNXT == 0 )
             iQ.s.offerNXT = SUPERNET.my64bits;
         //printf("isask.%d base.(%s) rel.(%s)\n",iQ.s.isask,base.buf,rel.buf);
@@ -581,7 +606,7 @@ char *bidask_func(int32_t localaccess,int32_t valid,char *sender,cJSON *json,cha
 //printf("got (%s)\n",origargstr);
     if ( strcmp(SUPERNET.NXTADDR,offerNXT.buf) != 0 )
     {
-        if ( bidask_parse(&exchangestr,&name,&base,&rel,&gui,&iQ,json) == 0 )
+        if ( bidask_parse(localaccess,&exchangestr,&name,&base,&rel,&gui,&iQ,json) == 0 )
             return(InstantDEX_placebidask(sender,j64bits(json,"orderid"),exchangestr.buf,name.buf,base.buf,rel.buf,&iQ,jstr(json,"extra"),jstr(json,"secret"),jstr(json,"activenxt"),json));
         else printf("error with incoming bidask\n");
     } else fprintf(stderr,"got my bidask from network (%s)\n",origargstr);

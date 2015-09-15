@@ -174,6 +174,7 @@ struct coin777
     struct subatomic_rawtransaction funding; struct NXTtx trigger; char *refundtx,*signedrefund;
     int32_t minconfirms,verified,lag,estblocktime; uint64_t minoutput;
     char atomicsendpubkey[128],atomicrecvpubkey[128],atomicrecv[128],atomicsend[128],donationaddress[128],donationscript[128],changeaddr[128];
+    char jchangeaddr[128],jchangehex[128],jdestaddr[128],jdesthex[128],jvintxid[128],jscriptPubKey[4096],jvinaddr[128],jpubP[128]; void *jvinkey; int32_t jvin; uint64_t junspent;
 };
 
 char *bitcoind_RPC(char **retstrp,char *debugstr,char *url,char *userpass,char *command,char *params);
@@ -187,8 +188,8 @@ char *subatomic_txid(char *txbytes,struct coin777 *coin,char *destaddr,uint64_t 
 struct subatomic_unspent_tx *subatomic_bestfit(struct coin777 *coin,struct subatomic_unspent_tx *unspents,int32_t numunspents,uint64_t value,int32_t mode);
 struct subatomic_unspent_tx *gather_unspents(uint64_t *totalp,int32_t *nump,struct coin777 *coin,char *account);
 cJSON *get_decoderaw_json(struct coin777 *coin,char *rawtransaction);
-char *jumblr_signvin(char *sigstr,struct coin777 *coin,struct cointx_info *refT,int32_t redeemi);
 int32_t jumblr_signtx(char *signedtx,unsigned long destsize,struct coin777 *coin,char *rawbytes);
+char *subatomic_decodetxid(int64_t *valuep,struct destbuf *scriptPubKey,uint32_t *locktimep,struct coin777 *coin,char *rawtransaction,char *mycoinaddr);
 
 void ram_clear_rawblock(struct rawblock *raw,int32_t totalflag);
 void coin777_disprawblock(struct rawblock *raw);
@@ -229,6 +230,8 @@ char *subatomic_spendtx(struct destbuf *spendtxid,char *vintxid,char *refundsig,
 char *subatomic_validate(struct coin777 *coin,char *pubA,char *pubB,char *pkhash,char *refundtx,char *refundsig);
 char *create_atomictx_scripts(uint8_t addrtype,char *scriptPubKey,char *p2shaddr,char *pubkeyA,char *pubkeyB,char *hash160str);
 uint64_t jumblr_getcoinaddr(char *coinaddr,struct destbuf *scriptPubKey,struct coin777 *coin,char *txid,int32_t vout);
+void *jumblr_bpkey(char *pubP,struct coin777 *coin,char *coinaddr);
+void jumblr_freekey(void *key);
 
 #ifdef INSIDE_MGW
 struct db777 *db777_open(int32_t dispflag,struct env777 *DBs,char *name,char *compression,int32_t flags,int32_t valuesize);

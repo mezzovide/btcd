@@ -12,6 +12,7 @@
  * Removal or modification of this copyright notice is prohibited.            *
  *                                                                            *
  ******************************************************************************/
+
 #define BUNDLED
 #define PLUGINSTR "jumblr"
 #define PLUGNAME(NAME) jumblr ## NAME
@@ -29,13 +30,12 @@
 STRUCTNAME
 {
     uint32_t timestamp,numaddrs;
-    uint64_t basebits,addrs[64],shuffleid,quoteid,fee;
-    char signedtx[65536],base[16],destaddr[64],changeaddr[64],inputtxid[128],sigs[64][256],*vinstr,*voutstr,*changestr,*cointxid;
-    int32_t vin,myind,srcacct; uint64_t change,amount,sigmask;
+    uint64_t basebits,addrs[64],shuffleid,quoteid,fee,unspent;
+    char signedtx[65536],rawtx[65536],base[16],destaddr[64],changeaddr[64],inputtxid[128],vinaddr[128],vinpubP[128],scriptPubKey[4096]; void *vinkey;
+    char sigs[64][512],*vinstr,*voutstr,*changestr,*cointxid;
+    int32_t vin,myind,srcacct,done; uint64_t change,amount,sigmask;
     struct cointx_info *T;
 } *SHUFFLES[1000];
-
-int32_t jumblr_idle(struct plugin_info *plugin) { return(0); }
 
 int32_t jumblr_encrypt(uint64_t destbits,uint8_t *dest,uint8_t *src,int32_t len)
 {
@@ -150,6 +150,144 @@ char *jumblr_layer(char *str,uint64_t *addrs,int32_t num)
     return(clonestr((char *)dest));
 }
 
+int32_t jumblr_decodevin(struct cointx_input *vin,char *vinstr)
+{
+    uint8_t vout,scriptlen; char *scriptPubKey,*txid;
+    decode_hex(&vout,1,vinstr);
+    decode_hex(&scriptlen,1,vinstr+2);
+    scriptPubKey = vinstr + 4;
+    memcpy(vin->sigs,scriptPubKey,scriptlen << 1);
+    vin->sigs[scriptlen << 1] = 0;
+    txid = scriptPubKey + (scriptlen << 1);
+    safecopy(vin->tx.txidstr,txid,sizeof(vin->tx.txidstr));
+    vin->tx.vout = vout;
+    vin->sequence = 0xffffffff;
+    return(0);
+}
+
+char *jumblr_encodevin(uint64_t *changep,char *vintxid,int32_t vout,uint64_t unspent,char *scriptPubKey,struct coin777 *coin,uint64_t amount,uint64_t *addrs,int32_t num)
+{
+    struct rawvin vin; int32_t scriptlen; char buf[4096],*retstr = 0;
+    memset(&vin,0,sizeof(vin));
+    *changep = 0;
+    if ( unspent >= amount  )
+    {
+        if ( (scriptlen= (int32_t)strlen(scriptPubKey)) >= (0xfd<<1) || (scriptlen & 1) != 0 )
+        {
+            printf("script too big to fit.(%s)\n",scriptPubKey);
+            return(0);
+        }
+        *changep = (unspent - amount);
+        sprintf(buf,"%02x%02x%s%s",vout,scriptlen >> 1,scriptPubKey,vintxid);
+        printf("jumblr_vin.(%s)<- (%s v%d) amount %.8f sum %.8f change %.8f\n",buf,vintxid,vout,dstr(amount),dstr(unspent),dstr(*changep));
+        retstr = jumblr_layer(buf,addrs,num);
+    }
+    return(retstr);
+}
+
+char *jumblr_encodevout(char *hexaddress,char *destaddress,struct coin777 *coin,uint64_t amount,uint64_t *addrs,int32_t num)
+{
+    char buf[512],*retstr = 0; uint64_t x; int32_t j; uint8_t val;
+    if ( hexaddress[0] != 0 )
+    {
+        x = amount;
+        for (j=0; j<8; j++,x>>=8)
+        {
+            val = (x & 0xff);
+            init_hexbytes_noT(&buf[j*2],&val,1);
+        }
+        buf[j*2] = 0;
+        strcat(buf,hexaddress);
+        printf("(%s %.8f -> %s) ",destaddress,dstr(amount),buf);
+        retstr = jumblr_layer(buf,addrs,num);
+    }
+    return(retstr);
+}
+
+int32_t jumblr_decodevout(struct rawvout *vout,char *voutstr)
+{
+    uint64_t value; int32_t j; uint8_t data[8],rmd160[21];
+    decode_hex(data,8,voutstr);
+    for (value=j=0; j<8; j++)
+    {
+        value = (value << 8) | data[7-j];
+        //printf("{%02x} ",data[7-j]);
+    }
+    //printf("decode.(%s %.8f %llx)\n",vouts[i] + 16,dstr(value),(long long)value);
+    decode_hex(rmd160,21,voutstr + 16);
+    if ( btc_convrmd160(vout->coinaddr,rmd160[0],rmd160+1) == 0 )
+    {
+        sprintf(vout->script,"76a914%s88ac",voutstr+18); // only pkhash supported for jumblr vouts
+        vout->value = value;
+        return(0);
+        //printf("%d.(%s %s %.8f) ",T->numoutputs,v->coinaddr,v->script,dstr(value));
+    } else printf("error converting rmd160.(%s)\n",vout->coinaddr);
+    return(-1);
+}
+
+int32_t jumblr_next(struct jumblr_info *sp,struct coin777 *coin,uint64_t *addrs,int32_t num,int32_t i,uint64_t baseamount,int32_t sourceacct)
+{
+    sp->amount = baseamount;
+    sp->fee = (sp->amount >> 10);
+    if ( coin->jvinkey == 0 || coin->jpubP[0] == 0 || coin->junspent < baseamount || coin->jvintxid[0] == 0 || coin->jvin < 0 || coin->jscriptPubKey[0] == 0 || coin->jvinaddr[0] == 0 || coin->jchangehex[0] == 0 || coin->jchangeaddr[0] == 0 || coin->jdesthex[0] == 0 || coin->jdestaddr[0] == 0 )
+    {
+        printf(" jumblr vintxid or dest not ready\n");
+        return(-1);
+    }
+    sp->vinstr = jumblr_encodevin(&sp->change,coin->jvintxid,coin->jvin,coin->junspent,coin->jscriptPubKey,coin,sp->amount + sp->fee + 2*coin->mgw.txfee,&addrs[i+1],num-i-1);
+    strcpy(sp->inputtxid,coin->jvintxid), coin->jvintxid[0] = 0;
+    sp->vin = coin->jvin, coin->jvin = -1;
+    sp->unspent = coin->junspent, coin->junspent = 0;
+    strcpy(sp->scriptPubKey,coin->jscriptPubKey);
+    strcpy(sp->vinaddr,coin->jvinaddr);
+    coin->jscriptPubKey[0] = coin->jvinaddr[0] = 0;
+    strcpy(sp->vinpubP,coin->jpubP), coin->jpubP[0] = 0;
+    sp->vinkey = coin->jvinkey, coin->jvinkey = 0;
+    if ( sp->change != 0 )
+    {
+        sp->changestr = jumblr_encodevout(coin->jchangehex,coin->jchangeaddr,coin,sp->change,&addrs[i+1],num-i-1);
+        strcpy(sp->changeaddr,coin->jchangeaddr);
+        coin->jchangeaddr[0] = coin->jchangehex[0] = 0;
+    }
+    sp->voutstr = jumblr_encodevout(coin->jdesthex,coin->jdestaddr,coin,sp->amount,&addrs[i+1],num-i-1);
+    strcpy(sp->destaddr,coin->jdestaddr);
+    coin->jdestaddr[0] = coin->jdesthex[0] = 0;
+    if ( sp->amount == 0 || coin == 0 || sp->vinstr == 0 || sp->voutstr == 0 )
+    {
+        printf("num.%d amount %.8f (%s) vinstr.(%s) voutstr.(%s)\n",num,dstr(sp->amount),coin->name,sp->vinstr,sp->voutstr);
+        return(-1);
+    }
+    return(0);
+}
+
+int32_t jumblr_vintxid(uint64_t *unspentp,char *vinaddr,char *scriptPubKey,char *vintxid,struct coin777 *coin,uint64_t amount,int32_t srcacct)
+{
+    uint64_t total; int32_t n,vout = -1; struct rawvin vin; struct subatomic_unspent_tx *utx,*up; char sourceacct[64];
+    memset(&vin,0,sizeof(vin));
+    *unspentp = 0;
+    sourceacct[0] = 0;
+    if ( srcacct > 0 )
+        sprintf(sourceacct,"jumblr.%d",srcacct);
+    else if ( srcacct == 0 )
+        strcpy(sourceacct,"jumblrchange");
+    else sourceacct[0] = 0;
+    printf("call gather_unspents.%s %.8f\n",sourceacct,dstr(amount));
+    if ( (utx= gather_unspents(&total,&n,coin,sourceacct)) != 0  )
+    {
+        if ( (up= subatomic_bestfit(coin,utx,n,amount,1)) != 0 )
+        {
+            *unspentp = up->amount;
+            strcpy(vintxid,up->txid.buf);
+            strcpy(vinaddr,up->address.buf);
+            strcpy(scriptPubKey,up->scriptPubKey.buf);
+            vout = up->vout;
+            printf("VINTXID.%s srcaccount.(%s) %s/v%d %s %s %.8f\n",coin->name,sourceacct,vintxid,vout,vinaddr,scriptPubKey,dstr(*unspentp));
+        }
+        free(utx);
+    }
+    return(vout);
+}
+
 char *jumblr_onetime(char *pubkey,struct coin777 *coin,char *type,uint64_t *addrs,int32_t num)
 {
     char *newaddress,*retstr = 0;
@@ -162,105 +300,114 @@ char *jumblr_onetime(char *pubkey,struct coin777 *coin,char *type,uint64_t *addr
     return(retstr);
 }
 
-char *jumblr_vin(uint64_t *changep,char *txid,int32_t *vinp,struct coin777 *coin,uint64_t amount,uint64_t *addrs,int32_t num,int32_t srcacct)
+int32_t jumblr_destaddress(char *hexaddress,char *destaddress,struct coin777 *coin,int32_t destacct)
 {
-    uint64_t total; int32_t n; struct rawvin vin; struct subatomic_unspent_tx *utx,*up; char buf[512],sourceacct[64],*retstr = 0;
-    memset(&vin,0,sizeof(vin));
-    *changep = 0;
-    sourceacct[0] = 0;
-    if ( srcacct > 0 )
-        sprintf(sourceacct,"jumblr.%d",srcacct);
-    else if ( srcacct == 0 )
-        strcpy(sourceacct,"jumblrchange");
-    //printf("call gather_unspents.%s\n",sourceacct);
-    if ( (utx= gather_unspents(&total,&n,coin,sourceacct)) != 0  )
-    {
-        //printf("shufflevin %.8f\n",dstr(amount));
-        if ( (up= subatomic_bestfit(coin,utx,n,amount,1)) != 0 )
-        {
-            *changep = (up->amount - amount);
-            *vinp = up->vout;
-            strcpy(txid,up->txid.buf);
-            sprintf(buf,"%02x%s",up->vout,up->txid.buf);
-            printf("jumblr_vin.(%s)<- (%s v%d) amount %.8f sum %.8f change %.8f\n",buf,up->txid.buf,up->vout,dstr(amount),dstr(up->amount),dstr(*changep));
-            retstr = jumblr_layer(buf,addrs,num);
-        } else printf("no bestfits: %p\n",up);
-        free(utx);
-    }
-    return(retstr);
-}
-
-char *jumblr_vout(char *destaddr,struct coin777 *coin,int32_t destacct,uint64_t amount,uint64_t *addrs,int32_t num)
-{
-    char buf[512],pubkey[128],hexaddress[64],destaccount[64],*destaddress,*retstr = 0; uint64_t x; int32_t j; uint8_t val;
+    char pubkey[128],destaccount[64],*str;
     destaccount[0] = 0;
     if ( destacct > 0 )
         sprintf(destaccount,"jumblr.%d",destacct);
     else strcpy(destaccount,"jumblrchange");
-    if ( (destaddress= jumblr_onetimeaddress(pubkey,coin,destaccount)) != 0 )
+    if ( (str= jumblr_onetimeaddress(pubkey,coin,destaccount)) != 0 )
     {
+        strcpy(destaddress,str), free(str);
         btc_convaddr(hexaddress,destaddress);
-        x = amount;
-        for (j=0; j<8; j++,x>>=8)
-        {
-            val = (x & 0xff);
-            init_hexbytes_noT(&buf[j*2],&val,1);
-        }
-        buf[j*2] = 0;
-        strcat(buf,hexaddress);
-        printf("(%s %.8f -> %s) ",destaddress,dstr(amount),buf);
-        retstr = jumblr_layer(buf,addrs,num);
-        strcpy(destaddr,destaddress);
-        free(destaddress);
+        printf("DESTADDRESS.%s (%s) <- (%s) (%s)\n",coin->name,destaccount,destaddress,hexaddress);
+        return(0);
     }
-    return(retstr);
+    return(-1);
 }
 
-int32_t jumblr_next(struct jumblr_info *sp,struct coin777 *coin,uint64_t *addrs,int32_t num,int32_t i,uint64_t baseamount,int32_t sourceacct)
+struct jumblr_info *jumblr_find(uint64_t shuffleid)
 {
-    sp->amount = baseamount;
-    sp->fee = (sp->amount >> 10);
-    while ( sourceacct >= -1 )
-    {
-        if ( (sp->vinstr= jumblr_vin(&sp->change,sp->inputtxid,&sp->vin,coin,sp->amount + sp->fee + 2*coin->mgw.txfee,&addrs[i+1],num-i-1,sourceacct)) != 0 )
+    int32_t i;
+    for (i=0; i<sizeof(SHUFFLES)/sizeof(*SHUFFLES); i++)
+        if ( SHUFFLES[i] != 0 && shuffleid == SHUFFLES[i]->shuffleid )
+            return(SHUFFLES[i]);
+    return(0);
+}
+
+void jumblr_free(struct jumblr_info *sp)
+{
+    int32_t i; void *ptr;
+    for (i=0; i<sizeof(SHUFFLES)/sizeof(*SHUFFLES); i++)
+        if ( SHUFFLES[i] == sp )
+        {
+            SHUFFLES[i] = 0;
             break;
-        sourceacct--;
-    }
-    if ( sp->change != 0 )
-        sp->changestr = jumblr_vout(sp->changeaddr,coin,0,sp->change,&addrs[i+1],num-i-1);
-    sp->voutstr = jumblr_vout(sp->destaddr,coin,sourceacct+1,sp->amount,&addrs[i+1],num-i-1);
-    if ( sp->amount == 0 || coin == 0 || sp->vinstr == 0 || sp->voutstr == 0 )
+        }
+    printf("JUMBLR PURGE %llu\n",(long long)sp->quoteid);
+    if ( (ptr= sp->vinstr) != 0 )
+        sp->vinstr = 0, free(ptr);
+    if ( (ptr= sp->voutstr) != 0 )
+        sp->voutstr = 0, free(ptr);
+    if ( (ptr= sp->changestr) != 0 )
+        sp->changestr = 0, free(ptr);
+    if ( (ptr= sp->cointxid) != 0 )
+        sp->cointxid = 0, free(ptr);
+    if ( (ptr= sp->T) != 0 )
+        sp->T = 0, free(ptr);
+    free(sp);
+}
+
+uint64_t jumblr_amount(struct coin777 *coin,uint64_t amount) { return(amount < coin->mgw.txfee*10000 ? amount : coin->mgw.txfee * 10000); }
+
+int32_t jumblr_idle(struct plugin_info *plugin)
+{
+    static uint32_t lastpurge;
+    struct coin777 *coin; int32_t i; uint32_t now = (uint32_t)time(NULL);
+    if ( SUPERNET.iamrelay == 0 && COINS.num > 0 )
     {
-        printf("num.%d amount %.8f (%s) vinstr.(%s) voutstr.(%s)\n",num,dstr(sp->amount),coin->name,sp->vinstr,sp->voutstr);
-        return(-1);
+        for (i=0; i<COINS.num; i++)
+        {
+            if ( (coin= COINS.LIST[i]) != 0 )
+            {
+                if ( coin->jpubP[0] == 0 && coin->jvinkey == 0 && coin->junspent == 0 && coin->jvintxid[0] == 0 && coin->jvin < 0 && coin->jscriptPubKey[0] == 0 && coin->jvinaddr[0] >= 0 )
+                {
+                    strcpy(coin->jvintxid,"error getting unspent txid");
+                    if ( (coin->jvin= jumblr_vintxid(&coin->junspent,coin->jvinaddr,coin->jscriptPubKey,coin->jvintxid,coin,jumblr_amount(coin,SATOSHIDEN*10000),-1)) >= 0 )
+                    {
+                        if ( coin->jvinaddr[0] != 0 )
+                            coin->jvinkey = jumblr_bpkey(coin->jpubP,coin,coin->jvinaddr);
+                        if ( coin->jchangehex[0] == 0 && coin->jchangeaddr[0] == 0 )
+                            jumblr_destaddress(coin->jchangehex,coin->jchangeaddr,coin,0);
+                        if ( coin->jdesthex[0] == 0 || coin->jdestaddr[0] == 0 )
+                            jumblr_destaddress(coin->jdesthex,coin->jdestaddr,coin,1);
+                    }
+                }
+            }
+        }
+        if ( now > lastpurge+60 )
+        {
+            lastpurge = now;
+            for (i=0; i<sizeof(SHUFFLES)/sizeof(*SHUFFLES); i++)
+                if ( SHUFFLES[i] != 0 && SHUFFLES[i]->done != 0 && now > SHUFFLES[i]->timestamp+3600 )
+                    jumblr_free(SHUFFLES[i]);
+        }
     }
     return(0);
 }
 
-char *jumblr_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
+char *jumblr_cointx(struct coin777 *coin,struct jumblr_info *sp,char *vins[],int32_t numvins,char *vouts[],int32_t numvouts)
 {
-    struct cointx_info *T; int32_t i,j; char *txid,coinaddr[128],txbytes[65536]; uint8_t vout,rmd160[21],data[8];
-    uint64_t totaloutputs,totalinputs,value,fee,sharedfee; struct rawvout *v; struct destbuf scriptPubKey; struct cointx_input *vin;
+    struct cointx_info *T; int32_t i; uint64_t totaloutputs,totalinputs,value,fee,sharedfee; struct rawvout *v; struct cointx_input *vin;
     T = calloc(1,sizeof(*T));
     T->version = 1;
     T->timestamp = (uint32_t)time(NULL);
     totaloutputs = totalinputs = 0;
     for (i=0; i<numvins; i++)
     {
-        decode_hex(&vout,1,vins[i]);
-        txid = vins[i] + 2;
         vin = &T->inputs[T->numinputs];
-        safecopy(vin->tx.txidstr,txid,sizeof(T->inputs[i].tx.txidstr));
-        vin->tx.vout = vout;
-        vin->sequence = 0xffffffff;
-        vin->value = value = jumblr_getcoinaddr(vin->coinaddr,&scriptPubKey,coin,txid,vout);
-        strcpy(vin->sigs,scriptPubKey.buf);
-        printf("jumblr_getcoinaddr.(%s v%d [%s %s]) ",txid,vout,scriptPubKey.buf,vin->coinaddr);
-        if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,txid,vin->tx.vout)) > 0 )
+        if ( jumblr_decodevin(vin,vins[i]) < 0 )
+        {
+            printf("error decoding vin.(%s)\n",vins[i]);
+            break;
+        }
+        printf("jumblr_getcoinaddr.(%s v%d [%s %s]) ",vin->tx.txidstr,vin->tx.vout,vin->sigs,vin->coinaddr);
+        if ( (value= ram_verify_txstillthere(coin->name,coin->serverport,coin->userpass,vin->tx.txidstr,vin->tx.vout)) > 0 )
             totalinputs += value;
         else
         {
-            printf("error getting unspent.(%s v%d)\n",txid,vin->tx.vout);
+            printf("error getting unspent.(%s v%d)\n",vin->tx.txidstr,vin->tx.vout);
             break;
         }
         T->numinputs++;
@@ -271,22 +418,12 @@ char *jumblr_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vout
         for (T->numoutputs=i=0; i<numvouts; i++)
         {
             v = &T->outputs[T->numoutputs];
-            decode_hex(data,8,vouts[i]);
-            for (value=j=0; j<8; j++)
+            if ( jumblr_decodevout(v,vouts[i]) < 0 )
             {
-                value = (value << 8) | data[7-j];
-                //printf("{%02x} ",data[7-j]);
+                printf("error decoding vin.(%s)\n",vins[i]);
+                break;
             }
-            //printf("decode.(%s %.8f %llx)\n",vouts[i] + 16,dstr(value),(long long)value);
-            decode_hex(rmd160,21,vouts[i] + 16);
-            if ( btc_convrmd160(coinaddr,rmd160[0],rmd160+1) == 0 )
-            {
-                sprintf(v->script,"76a914%s88ac",vouts[i]+18);
-                safecopy(v->coinaddr,coinaddr,sizeof(v->coinaddr));
-                v->value = value;
-                totaloutputs += v->value;
-                //printf("%d.(%s %s %.8f) ",T->numoutputs,v->coinaddr,v->script,dstr(value));
-            } else printf("error converting rmd160.(%s)\n",coinaddr);
+            totaloutputs += v->value;
             T->numoutputs++;
         }
         //printf("numoutputs.%d numvouts.%d total %.8f\n",T->numoutputs,numvouts,dstr(totaloutputs));
@@ -318,54 +455,54 @@ char *jumblr_cointx(struct coin777 *coin,char *vins[],int32_t numvins,char *vout
                 }
             }
             disp_cointx(T);
-            _emit_cointx(txbytes,sizeof(txbytes),T,coin->mgw.oldtx_format);
+            _emit_cointx(sp->rawtx,sizeof(sp->rawtx),T,coin->mgw.oldtx_format);
             free(T);
-            return(clonestr(txbytes));
+            return(sp->rawtx);
         }
     }
     return(0);
 }
 
-int32_t jumblr_strs(char *ptrs[],uint8_t num)
-{
-    int32_t i; uint8_t r; char *tmp;
-    for (i=0; i<num; i++)
-    {
-        randombytes(&r,sizeof(r));
-        r %= num;
-        tmp = ptrs[i];
-        ptrs[i] = ptrs[r];
-        ptrs[r] = tmp;
-        //printf("%d<->%d ",i,r);
-    }
-    //printf("shuffle\n");
-    return(i);
-}
-
-cJSON *jumblr_strarray(char *ptrs[],int32_t num)
-{
-    cJSON *array = cJSON_CreateArray(); int32_t i;
-    for (i=0; i<num; i++)
-        jaddistr(array,ptrs[i]);
-    return(array);
-}
-
 char *jumblr_send(struct coin777 *coin,struct jumblr_info *sp)
 {
-    char *tx; int32_t allocsize = 65536;
+    char *signedtx,*txid,*jsonstr,*str; cJSON *json; uint32_t locktime; int64_t value; struct destbuf scriptPubKey; int32_t allocsize = 65536 + 4;
     if ( sp->T != 0 )
     {
         if ( bitweight(sp->sigmask) >= sp->numaddrs )
         {
-            tx = calloc(1,allocsize);
-            strcpy(tx,"[\"");
-            _emit_cointx(tx+2,allocsize-3,sp->T,coin->mgw.oldtx_format);
-            strcat(tx,"\"]");
-            if ( (sp->cointxid= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",tx)) != 0 )
-                printf(">>>>>>>>>>>>> %s BROADCAST.(%s) (%s)\n",coin->name,tx,sp->cointxid);
-            else printf("error sending transaction.(%s)\n",tx);
+            signedtx = calloc(1,allocsize);
+            strcpy(signedtx,"[\"");
+            _emit_cointx(signedtx+2,allocsize-3,sp->T,coin->mgw.oldtx_format);
+            if ( (txid= subatomic_decodetxid(&value,&scriptPubKey,&locktime,coin,signedtx+2,0)) != 0 )
+            {
+                if ( (jsonstr= _get_transaction(coin->name,coin->serverport,coin->userpass,txid)) != 0 )
+                {
+                    if ( (json= cJSON_Parse(signedtx)) != 0 )
+                    {
+                        if ( (str= jstr(json,"hex")) != 0 )
+                        {
+                            if ( strcmp(str,signedtx+2) == 0 )
+                            {
+                                printf("SIGNEDTX already there!\n");
+                                sp->done = 1;
+                            }
+                        }
+                        free_json(json);
+                    }
+                    free(jsonstr);
+                }
+                free(txid);
+            }
+            if ( sp->done == 0 )
+            {
+                strcat(signedtx,"\"]");
+                if ( (sp->cointxid= bitcoind_passthru(coin->name,coin->serverport,coin->userpass,"sendrawtransaction",signedtx)) != 0 )
+                    printf(">>>>>>>>>>>>> %s.%llu BROADCAST.(%s) (%s)\n",coin->name,(long long)sp->quoteid,signedtx,sp->cointxid);
+                else printf("error sending transaction.(%s)\n",signedtx);
+                sp->done = 1;
+            }
             delete_iQ(sp->quoteid);
-            free(tx);
+            free(signedtx);
         } else printf("sigmask.%d wt.%d vs numaddrs.%d\n",(int32_t)sp->sigmask,(int32_t)bitweight(sp->sigmask),sp->numaddrs);
         return(sp->cointxid);
     }
@@ -374,8 +511,8 @@ char *jumblr_send(struct coin777 *coin,struct jumblr_info *sp)
 
 char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
 {
-    struct cointx_info *cointx; uint32_t nonce; int32_t i,vin=-1,vout=-1,changeout=-1;
-    char buf[8192],coinaddr[64],*str; uint8_t rmd160[20]; //struct destbuf scriptPubKey;
+    struct cointx_info *cointx; uint32_t nonce; int32_t i,j,vin=-1,vout=-1,changeout=-1;
+    char buf[8192],coinaddr[64],*str; uint8_t rmd160[20];
     if ( sp == 0 )
     {
         printf("cant find shuffleid.%llu\n",(long long)sp->shuffleid);
@@ -388,6 +525,14 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
         sp->T = cointx;
         for (i=0; i<cointx->numoutputs; i++)
         {
+            for (j=0; j<cointx->numoutputs; j++)
+                if ( i != j && strcmp(cointx->outputs[i].script,cointx->outputs[j].script) == 0 )
+                {
+                    printf("jumblr_validate: duplicate output error i.%d == j.%d (%s)\n",i,j,cointx->outputs[i].script);
+                    free(sp->T), sp->T = 0;
+                    sp->done = 1;
+                    return(0);
+                }
             decode_hex(rmd160,20,&cointx->outputs[i].script[6]);
             btc_convrmd160(coinaddr,coin->addrtype,rmd160);
             //printf("%d of %d: %s -> %s\n",i,cointx->numoutputs,cointx->outputs[i].script,coinaddr);
@@ -413,6 +558,14 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
         {
             for (i=0; i<cointx->numinputs; i++)
             {
+                for (j=0; j<cointx->numinputs; j++)
+                    if ( i != j && strcmp(cointx->inputs[i].tx.txidstr,cointx->inputs[j].tx.txidstr) == 0 && cointx->inputs[i].tx.vout == cointx->inputs[j].tx.vout )
+                    {
+                        printf("jumblr_validate: duplicate input error i.%d == j.%d (%s/v%d)\n",i,j,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
+                        free(sp->T), sp->T = 0;
+                        sp->done = 1;
+                        return(0);
+                    }
                 printf("%s ",cointx->inputs[i].tx.txidstr);
                 //cointx->inputs[i].value = jumblr_getcoinaddr(cointx->inputs[i].coinaddr,&scriptPubKey,coin,cointx->inputs[i].tx.txidstr,cointx->inputs[i].tx.vout);
                 //strcpy(cointx->inputs[i].sigs,scriptPubKey.buf);
@@ -428,15 +581,9 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
             }
             if ( vin >= 0 )
             {
-                //sigstr = sigbuf;//cointx->inputs[vin].sigs;
-                if ( jumblr_signtx(sp->signedtx,sizeof(sp->signedtx),coin,rawtx) > 0 )
-                    printf("READY to sendtransaction\n");
-                if ( (cointx= _decode_rawtransaction(sp->signedtx,coin->mgw.oldtx_format)) != 0 )
-                //if ( jumblr_signvin(sigstr,coin,cointx,vin) != 0 )
+                char *jumblr_signvin(char *sigstr,struct coin777 *coin,char *buf,int32_t bufsize,void *bpkey,char *pubP,struct cointx_info *refT,int32_t redeemi,char *rawtx);
+                if ( jumblr_signvin(sp->sigs[vin],coin,sp->signedtx,sizeof(sp->signedtx),sp->vinkey,sp->vinpubP,cointx,vin,rawtx) != 0 )
                 {
-                    free(sp->T);
-                    sp->T = cointx;
-                    strcpy(sp->sigs[vin],cointx->inputs[vin].sigs);
                     sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"jumblr\",\"method\":\"busdata\",\"submethod\":\"signed\",\"sig\":\"%s\",\"vin\":%d}",(long long)sp->shuffleid,sp->timestamp,sp->sigs[vin],vin);
                     if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                         free(str);
@@ -448,6 +595,7 @@ char *jumblr_validate(struct coin777 *coin,char *rawtx,struct jumblr_info *sp)
                             strcpy(cointx->inputs[i].sigs,sp->sigs[i]);
                         //sp->sigs[i][0] = 0;
                     }
+                    jumblr_send(coin,sp);
                     return(clonestr(buf));
                 }
             }
@@ -502,15 +650,6 @@ struct jumblr_info *jumblr_create(int32_t *createdflagp,char *base,uint32_t time
     return(sp);
 }
 
-struct jumblr_info *jumblr_find(uint64_t shuffleid)
-{
-    int32_t i;
-    for (i=0; i<sizeof(SHUFFLES)/sizeof(*SHUFFLES); i++)
-        if ( SHUFFLES[i] != 0 && shuffleid == SHUFFLES[i]->shuffleid )
-            return(SHUFFLES[i]);
-    return(0);
-}
-
 cJSON *jumblr_addrjson(uint64_t *addrs,int32_t num)
 {
     int32_t j; cJSON *array;
@@ -522,17 +661,13 @@ cJSON *jumblr_addrjson(uint64_t *addrs,int32_t num)
 
 char *jumblr_start(char *base,uint32_t timestamp,uint64_t *addrs,int32_t num,int32_t srcacct)
 {
-    char buf[65536],destNXT[64],rsaddr[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
+    char destNXT[64],rsaddr[64],changestr[2048],*addrstr; cJSON *array; struct InstantDEX_quote *iQ = 0;
     int32_t k,createdflag,i,j,n,r,haspubkey,myind = -1; uint32_t now;
     uint64_t _addrs[64],tmp,x,quoteid = 0; struct jumblr_info *sp; struct coin777 *coin;
     if ( base == 0 || base[0] == 0 )
         return(clonestr("{\"error\":\"no base defined\"}"));
+    srcacct = -1;
     coin = coin777_find(base,1);
-    
-    //struct destbuf scriptPubKey;
-    //jumblr_getcoinaddr(rsaddr,&scriptPubKey,coin,"bd45eb7b6fc5af5eb6b08b17ef67ca69262e998371f3e6f998d4e04868e58f58",1);
-    //printf("SCRIPT.(%s)\n",scriptPubKey.buf);
-    //getchar();
     now = (uint32_t)time(NULL);
     if ( timestamp != 0 && now > timestamp+777 )
         return(clonestr("{\"error\":\"shuffle expired\"}"));
@@ -605,22 +740,48 @@ printf("jumblr_start(%s) addrs.%p num.%d\n",base,addrs,num);
         if ( (iQ= find_iQ(quoteid)) != 0 )
         {
             iQ->s.pending = 1;
-            if ( jumblr_next(sp,coin,addrs,num,i,iQ->s.baseamount,srcacct) < 0 )
+            if ( jumblr_next(sp,coin,addrs,num,i,jumblr_amount(coin,iQ->s.baseamount),srcacct) < 0 )
                 return(clonestr("{\"error\":\"this node not shuffling due to calc error\"}"));
             array = jumblr_addrjson(addrs,num);
             addrstr = jprint(array,1);
             changestr[0] = 0;
             if ( sp->changestr != 0 )
                 sprintf(changestr,", \"%s\"",sp->changestr);
-            sprintf(buf,"{\"shuffleid\":\"%llu\",\"timestamp\":%u,\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"%s],\"addrs\":%s}",(long long)sp->shuffleid,sp->timestamp,sp->base,sp->vinstr,sp->voutstr,changestr,addrstr);
+            sprintf(sp->rawtx,"{\"shuffleid\":\"%llu\",\"timestamp\":%u,\"base\":\"%s\",\"vins\":[\"%s\"],\"vouts\":[\"%s\"%s],\"addrs\":%s}",(long long)sp->shuffleid,sp->timestamp,sp->base,sp->vinstr,sp->voutstr,changestr,addrstr);
             free(addrstr);
             expand_nxt64bits(destNXT,addrs[i + 1]);
             printf("destNXT.(%s) addrs[%d] %llu\n",destNXT,i+1,(long long)addrs[i+1]);
-            telepathic_PM(destNXT,buf);
+            telepathic_PM(destNXT,sp->rawtx);
+            sp->rawtx[0] = 0;
+            sp->quoteid = iQ->s.quoteid;
             return(clonestr("{\"success\":\"shuffle created\"}"));
         }
     }
     return(clonestr("{\"success\":\"shuffle already there\"}"));
+}
+
+int32_t jumblr_strs(char *ptrs[],uint8_t num)
+{
+    int32_t i; uint8_t r; char *tmp;
+    for (i=0; i<num; i++)
+    {
+        randombytes(&r,sizeof(r));
+        r %= num;
+        tmp = ptrs[i];
+        ptrs[i] = ptrs[r];
+        ptrs[r] = tmp;
+        //printf("%d<->%d ",i,r);
+    }
+    //printf("shuffle\n");
+    return(i);
+}
+
+cJSON *jumblr_strarray(char *ptrs[],int32_t num)
+{
+    cJSON *array = cJSON_CreateArray(); int32_t i;
+    for (i=0; i<num; i++)
+        jaddistr(array,ptrs[i]);
+    return(array);
 }
 
 int32_t jumblr_incoming(char *jsonstr)
@@ -657,7 +818,8 @@ int32_t jumblr_incoming(char *jsonstr)
                 if ( (iQ= find_iQ(quoteid)) != 0 )
                 {
                     iQ->s.pending = 1;
-                    if ( jumblr_next(sp,coin,addrs,num,myind,iQ->s.baseamount,sp->srcacct) < 0 )
+                    sp->quoteid = quoteid;
+                    if ( jumblr_next(sp,coin,addrs,num,myind,jumblr_amount(coin,iQ->s.baseamount),sp->srcacct) < 0 )
                         return(-1);
                     jumblr_peel(newvins,vins,numvins), newvins[numvins++] = clonestr(sp->vinstr);
                     jumblr_peel(newvouts,vouts,numvouts), newvouts[numvouts++] = clonestr(sp->voutstr);
@@ -671,16 +833,15 @@ int32_t jumblr_incoming(char *jsonstr)
                     //printf("myind.%d numaddrs.%d numvins.%d numvouts.%d\n",myind,sp->numaddrs,numvins,numvouts);
                     if ( myind == sp->numaddrs-1 )
                     {
-                        if ( (txbytes= jumblr_cointx(coin,newvins,numvins,newvouts,numvouts)) != 0 )
+                        if ( (txbytes= jumblr_cointx(coin,sp,newvins,numvins,newvouts,numvouts)) != 0 )
                         {
                             sprintf(buf,"{\"shuffleid\":\"%llu\",\"base\":\"%s\",\"timestamp\":\"%u\",\"plugin\":\"relay\",\"destplugin\":\"jumblr\",\"method\":\"busdata\",\"submethod\":\"validate\",\"rawtx\":\"%s\"}",(long long)sp->shuffleid,sp->base,sp->timestamp,txbytes);
                             if ( (str= busdata_sync(&nonce,buf,"allnodes",0)) != 0 )
                                 free(str);
                             printf("RAWTX.(%s)\n",txbytes);
-                            msleep(250 + (rand() % 2000));
-                            if ( (str= jumblr_validate(coin,txbytes,sp)) != 0 )
-                                free(str);
-                            free(txbytes);
+                            //msleep(250 + (rand() % 2000));
+                            //if ( (str= jumblr_validate(coin,txbytes,sp)) != 0 )
+                            //    free(str);
                         } else printf("jumblr_cointx null return\n");
                     }
                     else
@@ -694,7 +855,8 @@ int32_t jumblr_incoming(char *jsonstr)
                         jadd(newjson,"addrs",jumblr_addrjson(addrs,num));
                         msg = jprint(newjson,1);
                         expand_nxt64bits(destNXT,sp->addrs[myind+1]);
-                        printf("telepathic.(%s) -> destNXT.(%s)\n",msg,destNXT);
+                        if ( Debuglevel > 2 )
+                            printf("telepathic.(%s) -> destNXT.(%s)\n",msg,destNXT);
                         telepathic_PM(destNXT,msg);
                         free(msg);
                     }
@@ -781,12 +943,13 @@ int32_t PLUGNAME(_process_json)(char *forwarder,char *sender,int32_t valid,struc
                 if ( (coin= coin777_find(sp->base,0)) != 0 && (vin= juint(json,"vin")) >= 0 && vin < 64 && strlen(sig) < sizeof(sp->sigs[0]) )
                 {
                     sp->sigmask |= (1LL << vin);
+                    strcpy(sp->sigs[vin],sig);
                     printf("SIGMASK.%d sp->T %p\n",(int32_t)sp->sigmask,sp->T);
                     if ( sp->T != 0 )
                     {
                         strcpy(sp->T->inputs[vin].sigs,sig);
                         jumblr_send(coin,sp);
-                    } else strcpy(sp->sigs[vin],sig);
+                    }
                     retstr = clonestr("{\"success\":\"shuffle accepted sig\"}");
                 } else retstr = clonestr("{\"error\":\"shuffle rejected sig\"}");
             }
@@ -805,3 +968,4 @@ int32_t PLUGNAME(_shutdown)(struct plugin_info *plugin,int32_t retcode)
     return(retcode);
 }
 #include "plugin777.c"
+
